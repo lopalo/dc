@@ -13,9 +13,9 @@ import qualified Control.Distributed.Process.Node as Node
 
 start :: Process ()
 start = mapM_ startArea areas where
-    startArea name = do
-        areadPid <- spawnLocal $ areaProcess name
-        register name areadPid
+    startArea areaId = do
+        areadPid <- spawnLocal $ areaProcess areaId
+        register areaId areadPid
 
 
 main :: IO ()
