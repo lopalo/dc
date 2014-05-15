@@ -1,7 +1,8 @@
 {-# LANGUAGE DeriveGeneric, DeriveDataTypeable #-}
 
 module Connection (acceptConnection, InputHandler, Connection,
-                   sendToClient, setUser, setArea, close) where
+                   sendCmd, broadcastCmd, setUser, setArea,
+                   close) where
 
 import GHC.Generics (Generic)
 import Data.Binary (Binary)
@@ -10,6 +11,7 @@ import Control.Monad (forever)
 import Data.ByteString.Lazy.UTF8 (toString)
 import qualified Data.ByteString.Lazy as B
 
+import Data.Aeson(ToJSON, encode)
 import Control.Distributed.Process
 import qualified Control.Distributed.Process.Node as Node
 import qualified Network.WebSockets as WS
@@ -53,8 +55,21 @@ acceptConnection node inputHandler pending = do
         loop (Nothing, Nothing) `finally` final
 
 
-sendToClient :: Connection -> B.ByteString -> Process ()
-sendToClient (Connection outputPid _) bytes = send outputPid ("send", bytes)
+logOutput :: B.ByteString -> Process ()
+logOutput bytes = say $ "Output: " ++ toString bytes
+
+logInput :: B.ByteString -> Process ()
+logInput bytes = say $ "Input: " ++ toString bytes
+
+
+--external interface
+sendCmd :: ToJSON a => Connection -> String -> a -> Process ()
+sendCmd (Connection outputPid _) cmd body =
+    send outputPid ("send", (encode (cmd, body)))
+
+broadcastCmd :: ToJSON a => [Connection] -> String -> a -> Process ()
+broadcastCmd connections cmd body =
+    mapM_ (\conn -> sendCmd conn cmd body) connections
 
 setUser :: Connection -> UserPid -> Process ()
 setUser (Connection _ inputPid) userPid = send inputPid userPid
@@ -65,10 +80,5 @@ setArea (Connection _ inputPid) areaPid = send inputPid areaPid
 close :: Connection -> Process ()
 close (Connection _ inputPid) = exit inputPid "close connection"
 
-logOutput :: B.ByteString -> Process ()
-logOutput bytes = say $ "Output: " ++ toString bytes
-
-logInput :: B.ByteString -> Process ()
-logInput bytes = say $ "Input: " ++ toString bytes
 
 
