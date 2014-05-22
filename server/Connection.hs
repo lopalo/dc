@@ -20,7 +20,7 @@ import Types (UserPid, AreaPid)
 
 
 data Connection = Connection {output :: ProcessId, input :: ProcessId}
-                  deriving (Generic, Typeable)
+                  deriving (Eq, Ord, Generic, Typeable)
 instance Binary Connection
 
 
@@ -40,19 +40,23 @@ acceptConnection node inputHandler pending = do
     Node.runProcess node $ do
         inputPid <- getSelfPid
         let conn = Connection outputPid inputPid
+            setUserPid :: ConnState -> UserPid -> Process ConnState
+            setUserPid state _ = return state --TODO: implement
+            setAreaPid :: ConnState -> AreaPid -> Process ConnState
             setAreaPid (userPid, _) areaPid = return (userPid, Just areaPid)
             loop :: ConnState -> Process ()
             loop state = do
                 inputData <- liftIO (WS.receiveData wsConn :: IO B.ByteString)
                 logInput inputData
-                ret <- receiveTimeout 0 [match (setAreaPid state)]
+                ret <- receiveTimeout 0 [match (setUserPid state),
+                                         match (setAreaPid state)]
                 let state' = case ret of
                         Nothing -> state
                         Just newState -> newState
                 inputHandler inputData conn (fst state') (snd state')
                 loop state'
             final = exit outputPid "closed" >> say "Connection closed"
-        loop (Nothing, Nothing) `finally` final
+        link outputPid >> loop (Nothing, Nothing) `finally` final
 
 
 logOutput :: B.ByteString -> Process ()

@@ -7,15 +7,14 @@ import GHC.Generics (Generic)
 import Data.Binary (Binary)
 import Data.Typeable (Typeable)
 
-import Data.String.Utils (split, join)
-
 import Control.Distributed.Process
 
+import Utils (delPrefix)
 
-delPrefix :: String -> String -> String
-delPrefix prefix str =
-    case ":" `split` str of
-        h:rest | h == prefix-> ":" `join` rest
+
+
+delIdPrefix :: String -> String -> String
+delIdPrefix = delPrefix ":"
 
 
 newtype UserId = UserId String deriving (Eq, Ord, Generic, Typeable)
@@ -26,7 +25,7 @@ instance Show UserId where
     show (UserId str) = "user_id:" ++ str
 
 instance Read UserId where
-    readsPrec _ str = [(UserId ("user_id" `delPrefix` str), "")]
+    readsPrec _ str = [(UserId ("user_id" `delIdPrefix` str), "")]
 
 
 newtype UserPid = UserPid ProcessId  deriving (Generic, Typeable)
