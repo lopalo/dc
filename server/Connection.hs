@@ -8,6 +8,7 @@ import GHC.Generics (Generic)
 import Data.Binary (Binary)
 import Data.Typeable (Typeable)
 import Control.Monad (forever)
+import Data.Maybe (fromMaybe)
 import Data.ByteString.Lazy.UTF8 (toString)
 import qualified Data.ByteString.Lazy as B
 
@@ -17,6 +18,7 @@ import qualified Control.Distributed.Process.Node as Node
 import qualified Network.WebSockets as WS
 
 import Types (UserPid, AreaPid)
+import Utils (logDebug)
 
 
 data Connection = Connection {output :: ProcessId, input :: ProcessId}
@@ -50,39 +52,37 @@ acceptConnection node inputHandler pending = do
                 logInput inputData
                 ret <- receiveTimeout 0 [match (setUserPid state),
                                          match (setAreaPid state)]
-                let state' = case ret of
-                        Nothing -> state
-                        Just newState -> newState
-                inputHandler inputData conn (fst state') (snd state')
+                let state' = fromMaybe state ret
+                uncurry (inputHandler inputData conn) state'
                 loop state'
-            final = exit outputPid "closed" >> say "Connection closed"
+            final = exit outputPid "closed" >> logDebug "Connection closed"
         link outputPid >> loop (Nothing, Nothing) `finally` final
 
 
 logOutput :: B.ByteString -> Process ()
-logOutput bytes = say $ "Output: " ++ toString bytes
+logOutput bytes = logDebug $ "Output: " ++ toString bytes
 
 logInput :: B.ByteString -> Process ()
-logInput bytes = say $ "Input: " ++ toString bytes
+logInput bytes = logDebug $ "Input: " ++ toString bytes
 
 
 --external interface
 sendCmd :: ToJSON a => Connection -> String -> a -> Process ()
-sendCmd (Connection outputPid _) cmd body =
-    send outputPid ("send", (encode (cmd, body)))
+sendCmd conn cmd body =
+    send (output conn) ("send", encode (cmd, body))
 
 broadcastCmd :: ToJSON a => [Connection] -> String -> a -> Process ()
 broadcastCmd connections cmd body =
     mapM_ (\conn -> sendCmd conn cmd body) connections
 
 setUser :: Connection -> UserPid -> Process ()
-setUser (Connection _ inputPid) userPid = send inputPid userPid
+setUser (Connection _ inputPid) = send inputPid
 
 setArea :: Connection -> AreaPid -> Process ()
-setArea (Connection _ inputPid) areaPid = send inputPid areaPid
+setArea (Connection _ inputPid) = send inputPid
 
 close :: Connection -> Process ()
-close (Connection _ inputPid) = exit inputPid "close connection"
+close conn = exit (input conn) "close connection"
 
 
 

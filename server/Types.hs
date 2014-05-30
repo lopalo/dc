@@ -7,10 +7,10 @@ import GHC.Generics (Generic)
 import Data.Binary (Binary)
 import Data.Typeable (Typeable)
 
+import Data.Aeson (ToJSON, toJSON, FromJSON, parseJSON)
 import Control.Distributed.Process
 
 import Utils (delPrefix)
-
 
 
 delIdPrefix :: String -> String -> String
@@ -26,6 +26,14 @@ instance Show UserId where
 
 instance Read UserId where
     readsPrec _ str = [(UserId ("user_id" `delIdPrefix` str), "")]
+
+instance ToJSON UserId where
+    toJSON = toJSON . show
+
+instance FromJSON UserId where
+    parseJSON val = do
+        str <- parseJSON val
+        return (read str)
 
 
 newtype UserPid = UserPid ProcessId  deriving (Generic, Typeable)

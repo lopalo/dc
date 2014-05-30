@@ -5,10 +5,10 @@ import Data.Aeson (Value, Result(Success), fromJSON, decode)
 import Data.String.Utils (startswith)
 
 import Connection (Connection, sendCmd, InputHandler)
-import Area (enter, startArea)
-import qualified Area as A
+import qualified Area.Area as A
 import Types (UserId(UserId), UserPid, AreaPid)
 import Utils (delPrefix)
+import qualified Settings as S
 
 
 type Command = (String, Value)
@@ -24,7 +24,7 @@ commandHandler "echo" body conn _ _ = do
 commandHandler "login" body conn _ _ = do
     let Success name = fromJSON body :: Result String
         userId = UserId name
-    enter startArea userId conn name
+    A.enter S.startArea userId conn name
 commandHandler path body conn _ (Just areaPid)
     | "area." `startswith` path = do
         A.clientCmd areaPid ("area" `delPathPrefix` path) body conn
@@ -35,6 +35,7 @@ commandHandler path body conn _ (Just areaPid)
 
 inputHandler :: InputHandler
 inputHandler input conn userPid areaPid = do
+    --TODO: catch exceptions and log
     let Just (cmd, body) = decode input :: Maybe Command
     commandHandler cmd body conn userPid areaPid
 
