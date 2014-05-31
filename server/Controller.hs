@@ -34,10 +34,10 @@ commandHandler path body conn _ (Just areaPid)
 --external interface
 
 inputHandler :: InputHandler
-inputHandler input conn userPid areaPid = do
+inputHandler input conn = do
     --TODO: catch exceptions and log
     let Just (cmd, body) = decode input :: Maybe Command
-    commandHandler cmd body conn userPid areaPid
+    commandHandler cmd body conn
 
 
 

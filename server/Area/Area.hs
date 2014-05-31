@@ -10,7 +10,7 @@ import Control.Concurrent (threadDelay)
 import qualified Data.Map as M
 
 import Data.Aeson(ToJSON, Value, Result(Success), fromJSON)
-import Control.Distributed.Process
+import Control.Distributed.Process hiding (forward)
 import Control.Distributed.Process.Serializable (Serializable)
 
 import Connection (Connection, setArea)
@@ -19,7 +19,7 @@ import qualified Connection as C
 import qualified Settings as S
 import Types (UserId, AreaId, AreaPid(AreaPid))
 import Area.Types (UserName, Pos(..))
-import Area.User (User(..), tickClientInfo)
+import qualified Area.User as U
 import Area.Action (Action(..))
 
 
@@ -31,7 +31,7 @@ type ForwardData = (ProcessId, Connection, String)
 
 
 type Connections = M.Map UserId Connection
-type Users = M.Map UserId User
+type Users = M.Map UserId U.User
 type UserIds = M.Map Connection UserId
 
 data State = State {areaId :: AreaId,
@@ -42,10 +42,10 @@ data State = State {areaId :: AreaId,
 
 
 scheduleTick :: Int -> Process ProcessId
-scheduleTick milliseconds' = do
+scheduleTick ms = do
     selfPid <- getSelfPid
     spawnLocal $ do
-        liftIO $ threadDelay $ milliseconds' * 1000
+        liftIO $ threadDelay $ ms * 1000
         send selfPid TimeTick
 
 handleTick :: State -> TimeTick -> Process State
@@ -55,7 +55,7 @@ handleTick state TimeTick = do
     logDebug $ "handle tick " ++ show tNum ++ " of area: " ++ areaId state
     let state' = state{tickNumber=tNum + 1}
     scheduleTick S.areaTickMilliseconds
-    broadcastCmd state' "tick" $ tickClientData state
+    broadcastCmd state' "tick" $ tickClientData state'
     return state'
 
 handleEnter :: State ->
@@ -64,18 +64,18 @@ handleEnter :: State ->
 handleEnter state ("enter", userInfo, conn) = do
     let (uid, userName) = userInfo
         startPos = S.startAreaPos
-        user = User{userId=uid,
-                    name=userName,
-                    pos=Pos (fst startPos) (snd startPos),
-                    speed=S.areaUserSpeed,
-                    actions=[]}
-        us' = M.insert uid user $ users state
-        uids' = M.insert conn uid $ userIds state
-        cs' = M.insert uid conn $ connections  state
-        state' = state{users=us', connections=cs', userIds=uids'}
+        user = U.User{U.userId=uid,
+                      U.name=userName,
+                      U.pos=Pos (fst startPos) (snd startPos),
+                      U.speed=S.areaUserSpeed,
+                      U.actions=[]}
+        us = M.insert uid user $ users state
+        uids = M.insert conn uid $ userIds state
+        cs = M.insert uid conn $ connections  state
+        state' = state{users=us, connections=cs, userIds=uids}
     selfPid <- makeSelfPid
     setArea conn selfPid
-    broadcastCmd state' "entered" userName
+    broadcastCmd state' "entered" userName --TODO: client info
     return state'
 
 handleEcho :: State -> (String, String, Connection) -> Process State
@@ -87,22 +87,22 @@ handleEcho state ("echo", txt, conn) = do
 handleMoveTo :: State -> (String, Pos, Connection) -> Process State
 handleMoveTo state ("move_to", toPos, conn) = do
     now <- liftIO milliseconds
-    let users' = users state
+    let us = users state
         uid = userByConn conn state
-        user = users' M.! uid
-        actions' = action:actions user
+        user = us M.! uid
+        actions = action:U.actions user
         action = MoveDistance{startTs=now,
                               endTs=now + 4000, --TODO: get real duration
-                              from=pos user,
+                              from=U.pos user,
                               to=toPos}
-        users'' = M.insert uid user{actions=actions'} $ users'
-    return state{users=users''}
+        us' = M.insert uid user{U.actions=actions} $ us
+    return state{users=us'}
 
 
 
 areaProcess :: AreaId -> Process ()
-areaProcess aId = do
-    let state = State{areaId=aId,
+areaProcess aid = do
+    let state = State{areaId=aid,
                       tickNumber=0,
                       connections=M.empty,
                       users=M.empty,
@@ -123,16 +123,16 @@ loop state = receiveWait handlers >>= loop
 
 
 sendCmd :: ToJSON a => Connection -> String -> a -> Process ()
-sendCmd conn cmd body = C.sendCmd conn ("area." ++ cmd) body
+sendCmd conn cmd = C.sendCmd conn ("area." ++ cmd)
 
 
 broadcastCmd :: ToJSON a => State -> String -> a -> Process ()
-broadcastCmd state cmd body =
-    C.broadcastCmd (M.elems (connections state)) ("area." ++ cmd) body
+broadcastCmd state cmd =
+    C.broadcastCmd (M.elems (connections state)) ("area." ++ cmd)
 
 
 tickClientData :: State -> [Value]
-tickClientData = map tickClientInfo . M.elems . users
+tickClientData = map U.tickClientInfo . M.elems . users
 
 
 userByConn :: Connection -> State -> UserId
@@ -143,23 +143,23 @@ makeSelfPid :: Process AreaPid
 makeSelfPid = getSelfPid >>= return . AreaPid
 
 
-forward' :: Serializable a => a -> ForwardData -> Process ()
-forward' parsedBody (areaPid, conn, cmd) = send areaPid (cmd, parsedBody, conn)
+forward :: Serializable a => a -> ForwardData -> Process ()
+forward parsedBody (areaPid, conn, cmd) = send areaPid (cmd, parsedBody, conn)
 
 parseClientCmd :: String -> Value -> ForwardData -> Process ()
 parseClientCmd "echo" body = do
     let Success txt = fromJSON body :: Result String
-    forward' txt
+    forward txt
 parseClientCmd "move_to" body = do
     let Success toPos = fromJSON body :: Result Pos
-    forward' toPos
+    forward toPos
 
 --external interface
 
 enter :: AreaId -> UserId -> Connection -> String -> Process ()
-enter areaId' userId' conn name' = do
-    Just areaPid <- whereis areaId'
-    send areaPid ("enter", (userId', name'), conn)
+enter aid uid conn userName = do
+    Just areaPid <- whereis aid
+    send areaPid ("enter", (uid, userName), conn)
 
 
 clientCmd :: AreaPid -> String -> Value -> Connection -> Process ()
