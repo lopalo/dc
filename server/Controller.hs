@@ -1,5 +1,6 @@
 module Controller (inputHandler) where
 
+
 import Control.Distributed.Process
 import Data.Aeson (Value, Result(Success), fromJSON, decode)
 import Data.String.Utils (startswith)
@@ -7,7 +8,7 @@ import Data.String.Utils (startswith)
 import Connection (Connection, sendCmd, InputHandler)
 import qualified Area.Area as A
 import Types (UserId(UserId), UserPid, AreaPid)
-import Utils (delPrefix)
+import Utils (delPrefix, logException, evaluate)
 import qualified Settings as S
 
 
@@ -18,12 +19,14 @@ delPathPrefix = delPrefix "."
 
 commandHandler :: String -> Value -> Connection -> Maybe UserPid
                   -> Maybe AreaPid -> Process ()
+--NOTE: strict evaluation of parsed data is required to catch a parse error !!!
 commandHandler "echo" body conn _ _ = do
     let Success txt = fromJSON body :: Result String
-    sendCmd conn "echo-reply" $ "Echo: " ++ txt
+    seq txt $ sendCmd conn "echo-reply" $ "Echo: " ++ txt
 commandHandler "login" body conn _ _ = do
     let Success name = fromJSON body :: Result String
         userId = UserId name
+    evaluate userId
     A.enter S.startArea userId conn name
 commandHandler path body conn _ (Just areaPid)
     | "area." `startswith` path = do
@@ -34,10 +37,10 @@ commandHandler path body conn _ (Just areaPid)
 --external interface
 
 inputHandler :: InputHandler
-inputHandler input conn = do
-    --TODO: catch exceptions and log
+inputHandler input conn userPid areaPid = do
     let Just (cmd, body) = decode input :: Maybe Command
-    commandHandler cmd body conn
+        handler = commandHandler cmd body conn userPid areaPid
+    handler `catches` logException ()
 
 
 

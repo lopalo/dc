@@ -14,7 +14,7 @@ import Control.Distributed.Process hiding (forward)
 import Control.Distributed.Process.Serializable (Serializable)
 
 import Connection (Connection, setArea)
-import Utils (milliseconds, logDebug)
+import Utils (milliseconds, logDebug, logException, evaluate)
 import qualified Connection as C
 import qualified Settings as S
 import Types (UserId, AreaId, AreaPid(AreaPid))
@@ -113,13 +113,14 @@ areaProcess aid = do
 
 
 loop :: State -> Process State
-loop state = receiveWait handlers >>= loop
-    --TODO: catch exceptions from handlers and log
-    where prepare h = match (h state)
-          handlers = [prepare handleTick,
-                      prepare handleEnter,
-                      prepare handleMoveTo,
-                      prepare handleEcho]
+loop state = handle >>= loop
+    where
+        prepare h = match (h state)
+        handlers = [prepare handleTick,
+                    prepare handleEnter,
+                    prepare handleMoveTo,
+                    prepare handleEcho]
+        handle = receiveWait handlers `catches` logException state
 
 
 sendCmd :: ToJSON a => Connection -> String -> a -> Process ()
@@ -144,7 +145,9 @@ makeSelfPid = getSelfPid >>= return . AreaPid
 
 
 forward :: Serializable a => a -> ForwardData -> Process ()
-forward parsedBody (areaPid, conn, cmd) = send areaPid (cmd, parsedBody, conn)
+forward parsedBody (areaPid, conn, cmd) = do
+    evaluate parsedBody
+    send areaPid (cmd, parsedBody, conn)
 
 parseClientCmd :: String -> Value -> ForwardData -> Process ()
 parseClientCmd "echo" body = do
