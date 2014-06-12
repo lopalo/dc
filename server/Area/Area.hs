@@ -6,9 +6,13 @@ import GHC.Generics (Generic)
 import Data.Binary (Binary)
 import Data.Typeable (Typeable)
 import Control.Monad (forever)
+import Control.Monad.State (StateT, execStateT, get, gets, lift)
 import Control.Concurrent (threadDelay)
 import qualified Data.Map as M
+import Text.Printf (printf)
 
+import Data.Lens.Common (lens, Lens)
+import Data.Lens.Lazy (access, (~=), (+=), (%=))
 import Data.Aeson(ToJSON, Value, Result(Success), fromJSON)
 import Control.Distributed.Process hiding (forward)
 import Control.Distributed.Process.Serializable (Serializable)
@@ -18,9 +22,9 @@ import Utils (milliseconds, logDebug, logException, evaluate)
 import qualified Connection as C
 import qualified Settings as S
 import Types (UserId, AreaId, AreaPid(AreaPid))
-import Area.Types (UserName, Pos(..))
+import Area.Types (UserName, Pos(..), Ts)
 import qualified Area.User as U
-import Area.Action (Action(..))
+import Area.Action (Active(applyActions), Action(..))
 
 
 
@@ -34,11 +38,26 @@ type Connections = M.Map UserId Connection
 type Users = M.Map UserId U.User
 type UserIds = M.Map Connection UserId
 
+--TODO: move to Area/Types
 data State = State {areaId :: AreaId,
                     tickNumber :: Int,
+                    timestamp :: Ts,
                     connections :: Connections,
                     userIds :: UserIds,
                     users :: Users} --TODO: add settings
+
+tickNumber' :: Lens State Int
+tickNumber' = lens tickNumber (\v s -> s{tickNumber=v})
+
+timestamp' :: Lens State Ts
+timestamp' = lens timestamp (\v s -> s{timestamp=v})
+
+users' :: Lens State Users
+users' = lens users (\v s -> s{users=v})
+
+
+--TODO: move to Area/Tick
+type State' a = StateT State Process a
 
 
 scheduleTick :: Int -> Process ProcessId
@@ -48,15 +67,33 @@ scheduleTick ms = do
         liftIO $ threadDelay $ ms * 1000
         send selfPid TimeTick
 
-handleTick :: State -> TimeTick -> Process State
-handleTick state TimeTick = do
-    --TODO: use StateT
-    let tNum = tickNumber state
-    logDebug $ "handle tick " ++ show tNum ++ " of area: " ++ areaId state
-    let state' = state{tickNumber=tNum + 1}
-    scheduleTick S.areaTickMilliseconds
-    broadcastCmd state' "tick" $ tickClientData state'
-    return state'
+--TODO: move to Area/Tick
+handleTick :: TimeTick -> State -> Process State
+handleTick TimeTick = execStateT handleTick' where
+    handleTick' :: State' ()
+    handleTick' = do
+        lift $ scheduleTick S.areaTickMilliseconds
+        liftIO milliseconds >>= (timestamp' ~=)
+        tnum <- access tickNumber'
+        aid <- gets areaId
+        lift $ logDebug $ printf "Handle tick %d of area '%s'" tnum aid
+        handleActions
+        tickNumber' += 1
+        --TODO: broadcast not on every tick
+        broadcastCmd' "tick" =<< tickClientData
+
+handleActions :: State' ()
+handleActions = do
+    now <- access timestamp'
+    let foldActive :: (Ord a, Active b) => M.Map a b -> M.Map a b
+        foldActive = M.foldWithKey handleActive M.empty
+        handleActive ident act res =
+            case applyActions now act of
+                Nothing -> res
+                Just act' -> M.insert ident act' res
+    users' %= foldActive
+    return ()
+    --TODO: update other active objects
 
 handleEnter :: State ->
                (String, (UserId, UserName), Connection) ->
@@ -75,7 +112,7 @@ handleEnter state ("enter", userInfo, conn) = do
         state' = state{users=us, connections=cs, userIds=uids}
     selfPid <- makeSelfPid
     setArea conn selfPid
-    broadcastCmd state' "entered" userName --TODO: client info
+    broadcastCmd state' "entered" $ U.initClientInfo user
     return state'
 
 handleEcho :: State -> (String, String, Connection) -> Process State
@@ -92,7 +129,7 @@ handleMoveTo state ("move_to", toPos, conn) = do
         user = us M.! uid
         actions = action:U.actions user
         action = MoveDistance{startTs=now,
-                              endTs=now + 4000, --TODO: get real duration
+                              endTs=now + 14000, --TODO: get real duration
                               from=U.pos user,
                               to=toPos}
         us' = M.insert uid user{U.actions=actions} $ us
@@ -102,8 +139,10 @@ handleMoveTo state ("move_to", toPos, conn) = do
 
 areaProcess :: AreaId -> Process ()
 areaProcess aid = do
+    now <- liftIO milliseconds
     let state = State{areaId=aid,
                       tickNumber=0,
+                      timestamp=now,
                       connections=M.empty,
                       users=M.empty,
                       userIds=M.empty}
@@ -116,7 +155,7 @@ loop :: State -> Process State
 loop state = handle >>= loop
     where
         prepare h = match (h state)
-        handlers = [prepare handleTick,
+        handlers = [prepare (flip handleTick),
                     prepare handleEnter,
                     prepare handleMoveTo,
                     prepare handleEcho]
@@ -132,8 +171,16 @@ broadcastCmd state cmd =
     C.broadcastCmd (M.elems (connections state)) ("area." ++ cmd)
 
 
-tickClientData :: State -> [Value]
-tickClientData = map U.tickClientInfo . M.elems . users
+broadcastCmd' :: ToJSON a => String -> a -> State' ()
+broadcastCmd' cmd body = do
+    state <- get
+    lift $ broadcastCmd state cmd body
+
+
+tickClientData :: State' [Value]
+tickClientData = do
+    us <- gets users
+    return $ map U.tickClientInfo $ M.elems us
 
 
 userByConn :: Connection -> State -> UserId
