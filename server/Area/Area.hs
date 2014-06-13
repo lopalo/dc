@@ -55,7 +55,8 @@ handleEcho state ("echo", txt, conn) = do
 handleMoveTo :: State -> (String, Pos, Connection) -> Process State
 handleMoveTo state ("move_to", toPos, conn) = do
     now <- liftIO milliseconds
-    let user = userByConn conn state
+    let uid = uidByConn conn state
+        user = userByConn conn state
         dt = distance (U.pos user) toPos / (fromIntegral (U.speed user) / 1000)
         action = MoveDistance{startTs=now,
                               endTs=now + round dt,
@@ -64,16 +65,16 @@ handleMoveTo state ("move_to", toPos, conn) = do
         replace MoveDistance{} = True
         replace _ = False
     --TODO: catch key error inside error handler
-    return $ replaceUserAction user replace action state
+    return $ replaceUserAction uid replace action state
 
 
 handleIgnite :: State -> (String, Float, Connection) -> Process State
 handleIgnite state ("ignite", dmgSpeed, conn) = do
     now <- liftIO milliseconds
-    let user = userByConn conn state
+    let uid = uidByConn conn state
         action = Burning{previousTs=now,
                          damageSpeed=dmgSpeed}
-    return $ addUserAction user action state
+    return $ addUserAction uid action state
 
 
 areaProcess :: AreaId -> Process ()
@@ -108,23 +109,24 @@ uidByConn conn state = userIds state M.! conn
 userByConn :: Connection -> State -> U.User
 userByConn conn state = users state M.! uidByConn conn state
 
---TODO: use UserId instead U.User
-updateUserActions :: ([Action] -> [Action]) -> U.User -> State -> State
-updateUserActions f user state =
+updateUserActions :: ([Action] -> [Action]) -> UserId -> State -> State
+updateUserActions f uid state =
     let actions = f $ U.actions user
-        us = M.insert (U.userId user) user{U.actions=actions} (users state)
-    in state{users=us}
+        us = users state
+        user = us M.! uid
+        us' = M.insert uid user{U.actions=actions} us
+    in state{users=us'}
 
 
-addUserAction :: U.User -> Action -> State -> State
-addUserAction user action = updateUserActions (action:) user
+addUserAction :: UserId -> Action -> State -> State
+addUserAction uid action = updateUserActions (action:) uid
 
-cancelUserAction :: U.User -> (Action -> Bool) -> State -> State
-cancelUserAction user f = updateUserActions (filter (not . f)) user
+cancelUserAction :: UserId -> (Action -> Bool) -> State -> State
+cancelUserAction uid f = updateUserActions (filter (not . f)) uid
 
-replaceUserAction :: U.User -> (Action -> Bool) -> Action -> State -> State
-replaceUserAction user f action = addUserAction user action --TODO: use updated user
-                                . cancelUserAction user f
+replaceUserAction :: UserId -> (Action -> Bool) -> Action -> State -> State
+replaceUserAction uid f action = addUserAction uid action
+                                . cancelUserAction uid f
 
 
 makeSelfPid :: Process AreaPid

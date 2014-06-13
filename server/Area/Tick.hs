@@ -61,8 +61,9 @@ handleActions = do
                 Nothing -> res
                 Just act' -> M.insert ident act' res
     users' %= foldActive
-    return ()
+    --TODO: update connections and userIds
     --TODO: update other active objects
+    return ()
 
 tickClientData :: State' [Value]
 tickClientData = do
