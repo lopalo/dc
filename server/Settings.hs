@@ -10,11 +10,17 @@ startArea :: String
 startArea = "start_area"
 
 areaUserSpeed :: Int
-areaUserSpeed = 30
+areaUserSpeed = 30 --units per second
+
+initUserDurability :: Int
+initUserDurability = 100
 
 startAreaPos :: (Int, Int)
 startAreaPos = (10, 10)
 
 areaTickMilliseconds :: Int
-areaTickMilliseconds = 4000
+areaTickMilliseconds = 100
+
+areaBroadcastEveryTick :: Int
+areaBroadcastEveryTick = 40
 

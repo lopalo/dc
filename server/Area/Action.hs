@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 
-module Area.Action (Active(..), Action(..), moveDistance) where
+module Area.Action (Active(..), Action(..), moveDistance, burning) where
 
 import GHC.Generics (Generic)
 
@@ -34,13 +34,19 @@ data Action = MoveDistance{startTs :: Ts,
                            endTs :: Ts,
                            from :: Pos,
                            to :: Pos}
-            | Shoot{startTs :: Ts,
-                    endTs :: Ts,
-                    target :: Pos}
+            | Burning{damageSpeed :: Float, --units per second
+                      previousTs :: Ts}
             deriving (Generic)
 
 instance ToJSON Action
 
+
+burning :: Action -> Ts -> (Int, Maybe Action)
+burning action@Burning{previousTs=pts, damageSpeed=speed} ts =
+    let damage = round $ speed * fromIntegral (ts - pts) / 1000
+    in if damage > 1
+       then(damage, Just action{previousTs=ts})
+       else (0, Just action)
 
 moveDistance :: Action -> Ts -> (Pos, Maybe Action)
 moveDistance action ts =

@@ -1,99 +1,28 @@
-{-# LANGUAGE DeriveGeneric, DeriveDataTypeable #-}
 
 module Area.Area (areaProcess, AreaPid(AreaPid), enter, clientCmd) where
 
-import GHC.Generics (Generic)
-import Data.Binary (Binary)
-import Data.Typeable (Typeable)
-import Control.Monad (forever)
-import Control.Monad.State (StateT, execStateT, get, gets, lift)
-import Control.Concurrent (threadDelay)
+import Control.Monad (liftM)
 import qualified Data.Map as M
-import Text.Printf (printf)
 
-import Data.Lens.Common (lens, Lens)
-import Data.Lens.Lazy (access, (~=), (+=), (%=))
-import Data.Aeson(ToJSON, Value, Result(Success), fromJSON)
+import Data.Aeson(Value, Result(Success), fromJSON)
 import Control.Distributed.Process hiding (forward)
 import Control.Distributed.Process.Serializable (Serializable)
 
 import Connection (Connection, setArea)
-import Utils (milliseconds, logDebug, logException, evaluate)
-import qualified Connection as C
+import Utils (milliseconds, logException, evaluate)
 import qualified Settings as S
 import Types (UserId, AreaId, AreaPid(AreaPid))
-import Area.Types (UserName, Pos(..), Ts)
+import Area.Types (UserName, Pos(..))
 import qualified Area.User as U
-import Area.Action (Active(applyActions), Action(..))
+import Area.Action (Action(..))
+import Area.Utils (distance, sendCmd, broadcastCmd)
+import Area.State
+import Area.Tick (handleTick, scheduleTick)
 
 
-
-data TimeTick = TimeTick deriving (Generic, Typeable)
-instance Binary TimeTick
 
 type ForwardData = (ProcessId, Connection, String)
 
-
-type Connections = M.Map UserId Connection
-type Users = M.Map UserId U.User
-type UserIds = M.Map Connection UserId
-
---TODO: move to Area/Types
-data State = State {areaId :: AreaId,
-                    tickNumber :: Int,
-                    timestamp :: Ts,
-                    connections :: Connections,
-                    userIds :: UserIds,
-                    users :: Users} --TODO: add settings
-
-tickNumber' :: Lens State Int
-tickNumber' = lens tickNumber (\v s -> s{tickNumber=v})
-
-timestamp' :: Lens State Ts
-timestamp' = lens timestamp (\v s -> s{timestamp=v})
-
-users' :: Lens State Users
-users' = lens users (\v s -> s{users=v})
-
-
---TODO: move to Area/Tick
-type State' a = StateT State Process a
-
-
-scheduleTick :: Int -> Process ProcessId
-scheduleTick ms = do
-    selfPid <- getSelfPid
-    spawnLocal $ do
-        liftIO $ threadDelay $ ms * 1000
-        send selfPid TimeTick
-
---TODO: move to Area/Tick
-handleTick :: TimeTick -> State -> Process State
-handleTick TimeTick = execStateT handleTick' where
-    handleTick' :: State' ()
-    handleTick' = do
-        lift $ scheduleTick S.areaTickMilliseconds
-        liftIO milliseconds >>= (timestamp' ~=)
-        tnum <- access tickNumber'
-        aid <- gets areaId
-        lift $ logDebug $ printf "Handle tick %d of area '%s'" tnum aid
-        handleActions
-        tickNumber' += 1
-        --TODO: broadcast not on every tick
-        broadcastCmd' "tick" =<< tickClientData
-
-handleActions :: State' ()
-handleActions = do
-    now <- access timestamp'
-    let foldActive :: (Ord a, Active b) => M.Map a b -> M.Map a b
-        foldActive = M.foldWithKey handleActive M.empty
-        handleActive ident act res =
-            case applyActions now act of
-                Nothing -> res
-                Just act' -> M.insert ident act' res
-    users' %= foldActive
-    return ()
-    --TODO: update other active objects
 
 handleEnter :: State ->
                (String, (UserId, UserName), Connection) ->
@@ -103,8 +32,9 @@ handleEnter state ("enter", userInfo, conn) = do
         startPos = S.startAreaPos
         user = U.User{U.userId=uid,
                       U.name=userName,
-                      U.pos=Pos (fst startPos) (snd startPos),
+                      U.pos= uncurry Pos startPos,
                       U.speed=S.areaUserSpeed,
+                      U.durability=S.initUserDurability,
                       U.actions=[]}
         us = M.insert uid user $ users state
         uids = M.insert conn uid $ userIds state
@@ -115,6 +45,7 @@ handleEnter state ("enter", userInfo, conn) = do
     broadcastCmd state' "entered" $ U.initClientInfo user
     return state'
 
+
 handleEcho :: State -> (String, String, Connection) -> Process State
 handleEcho state ("echo", txt, conn) = do
     sendCmd conn "echo-reply" $ areaId state ++ " echo: " ++ txt
@@ -124,17 +55,25 @@ handleEcho state ("echo", txt, conn) = do
 handleMoveTo :: State -> (String, Pos, Connection) -> Process State
 handleMoveTo state ("move_to", toPos, conn) = do
     now <- liftIO milliseconds
-    let us = users state
-        uid = userByConn conn state
-        user = us M.! uid
-        actions = action:U.actions user
+    let user = userByConn conn state
+        dt = distance (U.pos user) toPos / (fromIntegral (U.speed user) / 1000)
         action = MoveDistance{startTs=now,
-                              endTs=now + 14000, --TODO: get real duration
+                              endTs=now + round dt,
                               from=U.pos user,
                               to=toPos}
-        us' = M.insert uid user{U.actions=actions} $ us
-    return state{users=us'}
+        replace MoveDistance{} = True
+        replace _ = False
+    --TODO: catch key error inside error handler
+    return $ replaceUserAction user replace action state
 
+
+handleIgnite :: State -> (String, Float, Connection) -> Process State
+handleIgnite state ("ignite", dmgSpeed, conn) = do
+    now <- liftIO milliseconds
+    let user = userByConn conn state
+        action = Burning{previousTs=now,
+                         damageSpeed=dmgSpeed}
+    return $ addUserAction user action state
 
 
 areaProcess :: AreaId -> Process ()
@@ -158,37 +97,38 @@ loop state = handle >>= loop
         handlers = [prepare (flip handleTick),
                     prepare handleEnter,
                     prepare handleMoveTo,
+                    prepare handleIgnite,
                     prepare handleEcho]
         handle = receiveWait handlers `catches` logException state
 
 
-sendCmd :: ToJSON a => Connection -> String -> a -> Process ()
-sendCmd conn cmd = C.sendCmd conn ("area." ++ cmd)
+uidByConn :: Connection -> State -> UserId
+uidByConn conn state = userIds state M.! conn
+
+userByConn :: Connection -> State -> U.User
+userByConn conn state = users state M.! uidByConn conn state
+
+--TODO: use UserId instead U.User
+updateUserActions :: ([Action] -> [Action]) -> U.User -> State -> State
+updateUserActions f user state =
+    let actions = f $ U.actions user
+        us = M.insert (U.userId user) user{U.actions=actions} (users state)
+    in state{users=us}
 
 
-broadcastCmd :: ToJSON a => State -> String -> a -> Process ()
-broadcastCmd state cmd =
-    C.broadcastCmd (M.elems (connections state)) ("area." ++ cmd)
+addUserAction :: U.User -> Action -> State -> State
+addUserAction user action = updateUserActions (action:) user
 
+cancelUserAction :: U.User -> (Action -> Bool) -> State -> State
+cancelUserAction user f = updateUserActions (filter (not . f)) user
 
-broadcastCmd' :: ToJSON a => String -> a -> State' ()
-broadcastCmd' cmd body = do
-    state <- get
-    lift $ broadcastCmd state cmd body
-
-
-tickClientData :: State' [Value]
-tickClientData = do
-    us <- gets users
-    return $ map U.tickClientInfo $ M.elems us
-
-
-userByConn :: Connection -> State -> UserId
-userByConn conn state = userIds state M.! conn
+replaceUserAction :: U.User -> (Action -> Bool) -> Action -> State -> State
+replaceUserAction user f action = addUserAction user action --TODO: use updated user
+                                . cancelUserAction user f
 
 
 makeSelfPid :: Process AreaPid
-makeSelfPid = getSelfPid >>= return . AreaPid
+makeSelfPid = liftM AreaPid getSelfPid
 
 
 forward :: Serializable a => a -> ForwardData -> Process ()
@@ -203,6 +143,10 @@ parseClientCmd "echo" body = do
 parseClientCmd "move_to" body = do
     let Success toPos = fromJSON body :: Result Pos
     forward toPos
+parseClientCmd "ignite" body = do
+    let Success dmgSpeed = fromJSON body :: Result Float
+    forward dmgSpeed
+
 
 --external interface
 
