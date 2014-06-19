@@ -7,27 +7,30 @@ import GHC.Generics (Generic)
 import Data.Aeson (ToJSON)
 
 import Area.Types (Pos(Pos), Ts)
+import Area.Event (Events)
 
 
 class Active a where
 
-    apply :: a -> Action -> Ts -> (Maybe a, Maybe Action)
+    apply :: a -> Action -> Ts -> (a, Maybe Action, Events)
 
     getActions :: a -> [Action]
 
     setActions :: [Action] -> a -> a
 
-    applyActions :: Ts -> a -> Maybe a
+    applyActions :: Ts -> a -> (a, Events)
     applyActions ts active =
         let actions = getActions active
-            (res, actions') = foldr handleActions (Just active, []) actions
-        in fmap (setActions actions') res
+            res = foldr handleActions (active, [], []) actions
+            (active', actions', events) = res
+        in (setActions actions' active', events)
         where
-            handleActions _ (Nothing, _) = (Nothing, [])
-            handleActions action (Just act, actions) =
-                case apply act action ts of
-                    (res, Nothing) -> (res, actions)
-                    (res, Just action') -> (res, action':actions)
+            handleActions action (act, actions, events) =
+                let (act', maybeAction, newEvents) = apply act action ts
+                    events' = newEvents ++ events
+                in case maybeAction of
+                    Nothing -> (act', actions, events')
+                    Just action'-> (act', action':actions, events')
 
 
 data Action = MoveDistance{startTs :: Ts,

@@ -8,19 +8,21 @@ import Types (UserId)
 import Area.Types (UserName, Pos)
 import Area.Action (Active(..), Action(MoveDistance, Burning),
                     moveDistance, burning)
+import Area.Event (Event(DeleteUser))
 
 
 instance Active User where
 
     apply user action@MoveDistance{} ts =
         let (pos', action') = moveDistance action ts
-        in (Just user{pos=pos'}, action')
+        in (user{pos=pos'}, action', [])
     apply user@User{durability=d} action@Burning{} ts =
         let (damage, action') = burning action ts
             durability' = d - damage
+            user' = user{durability=durability'}
         in if durability' <= 0
-           then (Nothing, action')
-           else (Just user{durability=durability'}, action')
+           then (user, action', [DeleteUser $ userId user])
+           else (user', action', [])
 
 
     getActions = actions

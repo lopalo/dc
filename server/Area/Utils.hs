@@ -2,7 +2,7 @@
 module Area.Utils (distance, sendCmd, broadcastCmd, broadcastCmd') where
 
 import Control.Monad.State (get, lift)
-import qualified Data.Map as M
+import qualified Data.Map.Strict as M
 
 import Data.Aeson(ToJSON)
 import Control.Distributed.Process hiding (forward)

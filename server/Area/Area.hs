@@ -2,7 +2,7 @@
 module Area.Area (areaProcess, AreaPid(AreaPid), enter, clientCmd) where
 
 import Control.Monad (liftM)
-import qualified Data.Map as M
+import qualified Data.Map.Strict as M
 
 import Data.Aeson(Value, Result(Success), fromJSON)
 import Control.Distributed.Process hiding (forward)
@@ -64,7 +64,6 @@ handleMoveTo state ("move_to", toPos, conn) = do
                               to=toPos}
         replace MoveDistance{} = True
         replace _ = False
-    --TODO: catch key error inside error handler
     return $ replaceUserAction uid replace action state
 
 
@@ -85,7 +84,9 @@ areaProcess aid = do
                       timestamp=now,
                       connections=M.empty,
                       users=M.empty,
-                      userIds=M.empty}
+                      userIds=M.empty,
+                      events=[],
+                      eventsForBroadcast=[]}
     scheduleTick S.areaTickMilliseconds
     loop state
     return ()
@@ -100,7 +101,8 @@ loop state = handle >>= loop
                     prepare handleMoveTo,
                     prepare handleIgnite,
                     prepare handleEcho]
-        handle = receiveWait handlers `catches` logException state
+        evalState = receiveWait handlers >>= evaluate
+        handle = evalState `catches` logException state
 
 
 uidByConn :: Connection -> State -> UserId
