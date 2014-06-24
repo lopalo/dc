@@ -12,6 +12,8 @@ Executable dc
     Build-Depends:
         SHA == 1.6.4,
         aeson == 0.7.0.6,
+        base == 4.6.0.1,
+        time == 1.4.0.1,
         bytestring == 0.10.0.2,
         data-lens == 2.10.5,
         binary == 0.6.4.0,
