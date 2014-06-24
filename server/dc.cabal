@@ -1,0 +1,46 @@
+Name: DC
+Version: 0.0.1
+Cabal-Version: >= 1.8
+License: BSD3
+Author: Vlad Lopalo
+Synopsis: DC
+Build-Type: Simple
+
+
+Executable dc
+    Main-Is: Main.hs
+    Build-Depends:
+        SHA == 1.6.4,
+        aeson == 0.7.0.6,
+        bytestring == 0.10.0.2,
+        data-lens == 2.10.5,
+        binary == 0.6.4.0,
+        MissingH == 1.2.1.0,
+        network == 2.4.2.3,
+        io-streams == 1.1.4.3,
+        distributed-process == 0.4.2,
+        distributed-static == 0.2.1.1,
+        network-transport == 0.3.0.1,
+        network-transport-tcp == 0.3.1,
+        utf8-string == 0.3.7,
+        websockets == 0.8.2.2
+        --containers == 0.5.5.1
+        --distributed-process-global == 0.1.0.0
+    Hs-Source-Dirs: src
+    --TODO: move settings to config file
+    Other-Modules:
+        Settings,
+        Connection,
+        Controller,
+        Types,
+        Utils,
+        Area.Area,
+        Area.Action,
+        Area.Event,
+        Area.State,
+        Area.Tick,
+        Area.Types,
+        Area.User,
+        Area.Utils
+
+

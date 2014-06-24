@@ -23,6 +23,7 @@ type UserIds = M.Map Connection UserId
 data State = State {areaId :: AreaId,
                     tickNumber :: Int,
                     timestamp :: Ts,
+                    --TODO: move connections, userIds and users to separate type
                     connections :: !Connections,
                     userIds :: !UserIds,
                     users :: !Users,

@@ -73,7 +73,6 @@ sendCmd conn cmd body =
 
 broadcastCmd :: ToJSON a => [Connection] -> String -> a -> Process ()
 broadcastCmd connections cmd body =
-    --TODO: do it in separate process
     mapM_ (\conn -> sendCmd conn cmd body) connections
 
 setUser :: Connection -> UserPid -> Process ()
