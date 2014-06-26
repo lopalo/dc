@@ -5,6 +5,7 @@ License: BSD3
 Author: Vlad Lopalo
 Synopsis: DC
 Build-Type: Simple
+Tested-With: GHC == 7.6.3
 
 
 Executable dc
@@ -14,7 +15,9 @@ Executable dc
         aeson == 0.7.0.6,
         base == 4.6.0.1,
         time == 1.4.0.1,
+        mtl == 2.1.2,
         bytestring == 0.10.0.2,
+        ghc-prim == 0.3.0.0,
         data-lens == 2.10.5,
         binary == 0.6.4.0,
         MissingH == 1.2.1.0,
@@ -25,8 +28,8 @@ Executable dc
         network-transport == 0.3.0.1,
         network-transport-tcp == 0.3.1,
         utf8-string == 0.3.7,
-        websockets == 0.8.2.2
-        --containers == 0.5.5.1
+        websockets == 0.8.2.2,
+        containers == 0.5.5.1
         --distributed-process-global == 0.1.0.0
     Hs-Source-Dirs: src
     --TODO: move settings to config file
