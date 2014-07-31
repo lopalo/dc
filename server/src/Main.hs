@@ -29,7 +29,6 @@ main = do
     runServer "127.0.0.1" 10501 $ acceptConnection node inputHandler
 
 
---TODO: create cabal file
 
 
 

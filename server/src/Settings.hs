@@ -4,13 +4,13 @@ debug :: Bool
 debug = True
 
 areas :: [String]
-areas = ["start_area"]
+areas = ["alpha", "beta"]
 
 startArea :: String
-startArea = "start_area"
+startArea = "alpha"
 
 areaUserSpeed :: Int
-areaUserSpeed = 30 --units per second
+areaUserSpeed = 6 --units per second
 
 initUserDurability :: Int
 initUserDurability = 100
@@ -22,5 +22,5 @@ areaTickMilliseconds :: Int
 areaTickMilliseconds = 100
 
 areaBroadcastEveryTick :: Int
-areaBroadcastEveryTick = 40
+areaBroadcastEveryTick = 10
 

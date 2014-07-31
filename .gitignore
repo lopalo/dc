@@ -1,5 +1,8 @@
 *.hi
 *.o
+*.pyc
+*logs
+*/__pycache__
 .cabal-sandbox
 .hsenv
 cabal.sandbox.config
