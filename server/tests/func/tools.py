@@ -10,7 +10,7 @@ from websocket import create_connection
 SERVER_DIR = "../../src"
 SERVER_NAME = "Main.hs"
 SERVER_OUTPUT_DIR = "logs"
-TIMEOUT = 4.5
+TIMEOUT = 1.5
 URL = "ws://127.0.0.1:10501"
 
 
@@ -39,6 +39,9 @@ class Client(object):
 
     def close(self):
         self._conn.close()
+
+    def settimeout(self, timeout):
+        return self._conn.settimeout(timeout)
 
 
 class FuncTestCase(unittest.TestCase):

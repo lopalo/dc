@@ -1,10 +1,13 @@
 
 module Area.Area (areaProcess, AreaPid(AreaPid), enter, clientCmd) where
 
+import Prelude hiding ((.))
 import Control.Monad (liftM)
+import Control.Category ((.))
 import qualified Data.Map.Strict as M
 
 import Data.Aeson(Value, Result(Success), fromJSON)
+import Data.Lens.Common ((^%=))
 import Control.Distributed.Process hiding (forward)
 import Control.Distributed.Process.Serializable (Serializable)
 
@@ -36,10 +39,7 @@ handleEnter state ("enter", userInfo, conn) = do
                       U.speed=S.areaUserSpeed,
                       U.durability=S.initUserDurability,
                       U.actions=[]}
-        us = M.insert uid user $ users state
-        uids = M.insert conn uid $ userIds state
-        cs = M.insert uid conn $ connections  state
-        state' = state{users=us, connections=cs, userIds=uids}
+        state' = (users' ^%= addUser uid conn user) state
     selfPid <- makeSelfPid
     setArea conn selfPid
     broadcastCmd state' "entered" $ U.initClientInfo user
@@ -82,11 +82,10 @@ areaProcess aid = do
     let state = State{areaId=aid,
                       tickNumber=0,
                       timestamp=now,
-                      connections=M.empty,
-                      users=M.empty,
-                      userIds=M.empty,
+                      users=us,
                       events=[],
                       eventsForBroadcast=[]}
+        us = Users{connections=M.empty, usersData=M.empty, userIds=M.empty}
     scheduleTick S.areaTickMilliseconds
     loop state
     return ()
@@ -106,19 +105,14 @@ loop state = handle >>= loop
 
 
 uidByConn :: Connection -> State -> UserId
-uidByConn conn state = userIds state M.! conn
+uidByConn conn state = (userIds . users) state M.! conn
 
 userByConn :: Connection -> State -> U.User
-userByConn conn state = users state M.! uidByConn conn state
+userByConn conn state = (usersData . users) state M.! uidByConn conn state
 
 updateUserActions :: ([Action] -> [Action]) -> UserId -> State -> State
-updateUserActions f uid state =
-    let actions = f $ U.actions user
-        us = users state
-        user = us M.! uid
-        us' = M.insert uid user{U.actions=actions} us
-    in state{users=us'}
-
+updateUserActions f uid = usersData' . users' ^%= M.adjust update uid
+    where update user = user{U.actions=f $ U.actions user}
 
 addUserAction :: UserId -> Action -> State -> State
 addUserAction uid action = updateUserActions (action:) uid
@@ -128,7 +122,7 @@ cancelUserAction uid f = updateUserActions (filter (not . f)) uid
 
 replaceUserAction :: UserId -> (Action -> Bool) -> Action -> State -> State
 replaceUserAction uid f action = addUserAction uid action
-                                . cancelUserAction uid f
+                               . cancelUserAction uid f
 
 
 makeSelfPid :: Process AreaPid

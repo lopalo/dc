@@ -1,5 +1,6 @@
 import unittest
 from tools import FuncTestCase, ANY
+from websocket import WebSocketTimeoutException
 
 
 class TestBasicInteraction(FuncTestCase):
@@ -69,6 +70,7 @@ class TestBasicInteraction(FuncTestCase):
                              'durability': 60,
                              'id': u'user_id:zozo',
                              'pos': [14, 20]}]}]
+        self.assertEqual(exp, c1.recv())
         self.assertEqual(exp, c2.recv())
         exp = ['area.tick',
                {'events': [],
@@ -80,6 +82,7 @@ class TestBasicInteraction(FuncTestCase):
                              'durability': 20,
                              'id': u'user_id:zozo',
                              'pos': [14, 20]}]}]
+        self.assertEqual(exp, c1.recv())
         self.assertEqual(exp, c2.recv())
         exp = ['area.tick',
                {'events': [{'ident': 'user_id:zozo', 'tag': 'DeleteUser'}],
@@ -88,6 +91,8 @@ class TestBasicInteraction(FuncTestCase):
                              'id': u'user_id:dede',
                              'pos': [10, 10]}]}]
         self.assertEqual(exp, c2.recv())
+        with self.assertRaises(WebSocketTimeoutException):
+            c1.recv()
 
 
 if __name__ == '__main__':

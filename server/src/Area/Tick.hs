@@ -6,6 +6,7 @@ import GHC.Generics (Generic)
 import Data.Binary (Binary)
 import Data.Typeable (Typeable)
 import Control.Monad (when, foldM)
+import Control.Category ((>>>))
 import Control.Monad.State.Strict (execStateT, gets, lift)
 import Control.Concurrent (threadDelay)
 import qualified Data.Map.Strict as M
@@ -71,7 +72,7 @@ handleActions = do
             let (act', newEvents) = applyActions now act
                 res' = M.insert ident act' res
             in (res', newEvents ++ evs)
-    handleActive users'
+    handleActive $ users' >>> usersData'
     --TODO: update other active objects
     return ()
 
@@ -89,20 +90,15 @@ handleEvents = do
 
 
 handleEvent :: Event -> State' Bool
-handleEvent (DeleteUser userId) = do
-    users' %= M.delete userId
-    conns <- access connections'
-    connections' %= M.delete userId
-    userIds' %= M.delete (conns M.! userId)
+handleEvent (DeleteUser uid) = users' %= deleteUser uid >> return True
     --TODO remove areaId from user's connection or disconnect him
-    return True
 
 
 tickData :: State' Value
 tickData = do
     evs <- access eventsForBroadcast'
     eventsForBroadcast' ~= []
-    us <- gets users
+    us <- gets $ usersData . users
     let res = object ["objects" .= usersInfo,
                       "events" .= evs]
         usersInfo = map tickClientInfo $ M.elems us

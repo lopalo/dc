@@ -1,9 +1,12 @@
 
 module Area.Utils (distance, sendCmd, broadcastCmd, broadcastCmd') where
 
+import Prelude hiding ((.))
 import Control.Monad.State (get, lift)
+import Control.Category ((.))
 import qualified Data.Map.Strict as M
 
+import Data.Lens.Common ((^$))
 import Data.Aeson(ToJSON)
 import Control.Distributed.Process hiding (forward)
 
@@ -20,8 +23,8 @@ sendCmd conn cmd = C.sendCmd conn ("area." ++ cmd)
 
 
 broadcastCmd :: ToJSON a => State -> String -> a -> Process ()
-broadcastCmd state cmd =
-    C.broadcastCmd (M.elems (connections state)) ("area." ++ cmd)
+broadcastCmd state cmd = C.broadcastCmd (M.elems cs) ("area." ++ cmd)
+    where cs = connections' . users' ^$ state
 
 
 broadcastCmd' :: ToJSON a => String -> a -> State' ()
