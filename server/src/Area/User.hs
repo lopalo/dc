@@ -4,8 +4,8 @@ module Area.User (User(..), tickClientInfo, initClientInfo) where
 
 import Data.Aeson (Value, object, (.=))
 
-import Types (UserId)
-import Area.Types (UserName, Pos)
+import Types (UserId, UserName)
+import Area.Types (Pos)
 import Area.Action (Active(..), Action(MoveDistance, Burning),
                     moveDistance, burning)
 import Area.Event (Event(DeleteUser))

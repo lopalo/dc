@@ -1,12 +1,16 @@
+{-# LANGUAGE DeriveGeneric, DeriveDataTypeable, OverloadedStrings #-}
 
 module Area.Area (areaProcess, AreaPid(AreaPid), enter, clientCmd) where
 
+import GHC.Generics (Generic)
+import Data.Binary (Binary)
+import Data.Typeable (Typeable)
 import Prelude hiding ((.))
 import Control.Monad (liftM)
 import Control.Category ((.))
 import qualified Data.Map.Strict as M
 
-import Data.Aeson(Value, Result(Success), fromJSON)
+import Data.Aeson(Value, Result(Success), fromJSON, object, (.=))
 import Data.Lens.Common ((^%=))
 import Control.Distributed.Process hiding (forward)
 import Control.Distributed.Process.Serializable (Serializable)
@@ -14,8 +18,9 @@ import Control.Distributed.Process.Serializable (Serializable)
 import Connection (Connection, setArea)
 import Utils (milliseconds, logException, evaluate)
 import qualified Settings as S
-import Types (UserId, AreaId, AreaPid(AreaPid))
-import Area.Types (UserName, Pos(..))
+import Types (UserId, UserName, AreaId, AreaPid(AreaPid))
+import User (AreaUserInfo)
+import Area.Types (Pos(..))
 import qualified Area.User as U
 import Area.Action (Action(..))
 import Area.Utils (distance, sendCmd, broadcastCmd)
@@ -24,36 +29,55 @@ import Area.Tick (handleTick, scheduleTick)
 
 
 
-type ForwardData = (ProcessId, Connection, String)
+data Echo = Echo !String deriving (Generic, Typeable)
+instance Binary Echo
+
+data Enter = Enter !AreaUserInfo deriving (Generic, Typeable)
+instance Binary Enter
+
+data EnterArea = EnterArea !AreaId deriving (Generic, Typeable)
+instance Binary EnterArea
+
+data MoveTo = MoveTo !Pos deriving (Generic, Typeable)
+instance Binary MoveTo
+
+data Ignite = Ignite !Float deriving (Generic, Typeable)
+instance Binary Ignite
 
 
-handleEnter :: State ->
-               (String, (UserId, UserName), Connection) ->
-               Process State
-handleEnter state ("enter", userInfo, conn) = do
+handleEnter :: State -> (Enter, Connection) -> Process State
+handleEnter state (Enter userInfo, conn) = do
     let (uid, userName) = userInfo
         startPos = S.startAreaPos
         user = U.User{U.userId=uid,
                       U.name=userName,
-                      U.pos= uncurry Pos startPos,
+                      U.pos=uncurry Pos startPos,
                       U.speed=S.areaUserSpeed,
                       U.durability=S.initUserDurability,
                       U.actions=[]}
         state' = (users' ^%= addUser uid conn user) state
     selfPid <- makeSelfPid
     setArea conn selfPid
-    broadcastCmd state' "entered" $ U.initClientInfo user
+    sendCmd conn "init" $ initData state'
+    broadcastCmd state "entered" $ U.initClientInfo user -- broadcast for all, except a new user
     return state'
 
 
-handleEcho :: State -> (String, String, Connection) -> Process State
-handleEcho state ("echo", txt, conn) = do
+handleEcho :: State -> (Echo, Connection) -> Process State
+handleEcho state (Echo txt, conn) = do
     sendCmd conn "echo-reply" $ areaId state ++ " echo: " ++ txt
     return state
 
 
-handleMoveTo :: State -> (String, Pos, Connection) -> Process State
-handleMoveTo state ("move_to", toPos, conn) = do
+handleEnterArea :: State -> (EnterArea, Connection) -> Process State
+handleEnterArea state (EnterArea aid, conn) = do
+    let U.User{U.userId=uid, U.name=name} = conn `userByConn` state
+    enter aid (uid, name) conn
+    return $ (users' ^%= deleteUser uid) state
+
+
+handleMoveTo :: State -> (MoveTo, Connection) -> Process State
+handleMoveTo state (MoveTo toPos, conn) = do
     now <- liftIO milliseconds
     let uid = uidByConn conn state
         user = userByConn conn state
@@ -67,8 +91,8 @@ handleMoveTo state ("move_to", toPos, conn) = do
     return $ replaceUserAction uid replace action state
 
 
-handleIgnite :: State -> (String, Float, Connection) -> Process State
-handleIgnite state ("ignite", dmgSpeed, conn) = do
+handleIgnite :: State -> (Ignite, Connection) -> Process State
+handleIgnite state (Ignite dmgSpeed, conn) = do
     now <- liftIO milliseconds
     let uid = uidByConn conn state
         action = Burning{previousTs=now,
@@ -95,7 +119,9 @@ loop :: State -> Process State
 loop state = handle >>= loop
     where
         prepare h = match (h state)
+        --NOTE: handlers don't work correctly if they have the same type
         handlers = [prepare (flip handleTick),
+                    prepare handleEnterArea,
                     prepare handleEnter,
                     prepare handleMoveTo,
                     prepare handleIgnite,
@@ -125,38 +151,49 @@ replaceUserAction uid f action = addUserAction uid action
                                . cancelUserAction uid f
 
 
+initData :: State -> Value
+initData state =
+    let res = object ["areaId" .= areaId state,
+                      "objects" .= usersInfo]
+        usersInfo = map U.initClientInfo $ M.elems $ usersData $ users state
+    in res
+
+
 makeSelfPid :: Process AreaPid
 makeSelfPid = liftM AreaPid getSelfPid
 
 
-forward :: Serializable a => a -> ForwardData -> Process ()
-forward parsedBody (areaPid, conn, cmd) = do
-    evaluate parsedBody
-    send areaPid (cmd, parsedBody, conn)
+forward :: Serializable a => a -> (ProcessId, Connection) -> Process ()
+forward parsed (areaPid, conn) = do
+    evaluate parsed
+    send areaPid (parsed, conn)
 
-parseClientCmd :: String -> Value -> ForwardData -> Process ()
+parseClientCmd :: String -> Value -> (ProcessId, Connection) -> Process ()
 parseClientCmd "echo" body = do
     let Success txt = fromJSON body :: Result String
-    forward txt
+    forward (Echo txt)
+parseClientCmd "enter_area" body = do
+    let Success aid = fromJSON body :: Result AreaId
+    forward (EnterArea aid)
 parseClientCmd "move_to" body = do
     let Success toPos = fromJSON body :: Result Pos
-    forward toPos
+    forward (MoveTo toPos)
 parseClientCmd "ignite" body = do
     let Success dmgSpeed = fromJSON body :: Result Float
-    forward dmgSpeed
+    forward (Ignite dmgSpeed)
 
 
 --external interface
 
-enter :: AreaId -> UserId -> Connection -> String -> Process ()
-enter aid uid conn userName = do
+enter :: AreaId -> AreaUserInfo -> Connection -> Process ()
+enter aid userInfo conn = do
     Just areaPid <- whereis aid
-    send areaPid ("enter", (uid, userName), conn)
+    send areaPid (Enter userInfo , conn)
 
 
 clientCmd :: AreaPid -> String -> Value -> Connection -> Process ()
 clientCmd (AreaPid pid) cmd body conn =
-    parseClientCmd cmd body (pid, conn, cmd)
+    parseClientCmd cmd body (pid, conn)
 
 
 

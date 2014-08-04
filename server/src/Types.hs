@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveGeneric, DeriveDataTypeable #-}
 
 module Types (UserId(UserId), UserPid(UserPid),
-              AreaId, AreaPid(AreaPid)) where
+              AreaId, AreaPid(AreaPid), UserName) where
 
 import GHC.Generics (Generic)
 import Data.Binary (Binary)
@@ -17,8 +17,9 @@ delIdPrefix :: String -> String -> String
 delIdPrefix = delPrefix ":"
 
 
-newtype UserId = UserId String deriving (Eq, Ord, Generic, Typeable)
+type UserName = String
 
+newtype UserId = UserId String deriving (Eq, Ord, Generic, Typeable)
 instance Binary UserId
 
 instance Show UserId where
@@ -37,14 +38,11 @@ instance FromJSON UserId where
 
 
 newtype UserPid = UserPid ProcessId  deriving (Generic, Typeable)
-
 instance Binary UserPid
 
 
 type AreaId = String
 
 newtype AreaPid = AreaPid ProcessId  deriving (Generic, Typeable)
-
 instance Binary AreaPid
-
 

@@ -98,10 +98,10 @@ tickData :: State' Value
 tickData = do
     evs <- access eventsForBroadcast'
     eventsForBroadcast' ~= []
-    us <- gets $ usersData . users
+    usd <- gets $ usersData . users
     let res = object ["objects" .= usersInfo,
                       "events" .= evs]
-        usersInfo = map tickClientInfo $ M.elems us
+        usersInfo = map tickClientInfo $ M.elems usd
     return res
 
 

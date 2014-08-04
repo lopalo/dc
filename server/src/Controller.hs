@@ -17,17 +17,19 @@ type Command = (String, Value)
 delPathPrefix :: String -> String -> String
 delPathPrefix = delPrefix "."
 
+--TODO: implement request-response
 commandHandler :: String -> Value -> Connection -> Maybe UserPid
                   -> Maybe AreaPid -> Process ()
---NOTE: strict evaluation of parsed data is required to catch a parse error !!!
+--NOTE: strict evaluation of parsed data is required to catch a parse error!!!
 commandHandler "echo" body conn _ _ = do
     let Success txt = fromJSON body :: Result String
     seq txt $ sendCmd conn "echo-reply" $ "Echo: " ++ txt
 commandHandler "login" body conn _ _ = do
     let Success name = fromJSON body :: Result String
         userId = UserId name
+        areaUserInfo = (userId, name)
     evaluate userId
-    A.enter S.startArea userId conn name
+    A.enter S.startArea areaUserInfo conn
 commandHandler path body conn _ (Just areaPid)
     | "area." `startswith` path = do
         A.clientCmd areaPid ("area" `delPathPrefix` path) body conn

@@ -10,12 +10,13 @@ class TestBasicInteraction(FuncTestCase):
         c1.send("echo", "foo")
         self.assertEqual(['echo-reply', 'Echo: foo'], c1.recv())
         c1.send("login", "zozo")
-        exp = ["area.entered",
-               {"tag": "User",
-                "actions": [],
-                "pos": [10,10],
-                "name": "zozo",
-                "id": "user_id:zozo"}]
+        exp = ['area.init',
+               {'areaId': 'alpha',
+                'objects': [{'actions': [],
+                             'id': 'user_id:zozo',
+                             'name': 'zozo',
+                             'pos': [10, 10],
+                             'tag': 'User'}]}]
         self.assertEqual(exp, c1.recv())
         c1.send("area.echo", "bar")
         self.assertEqual(['area.echo-reply', 'alpha echo: bar'], c1.recv())
@@ -48,27 +49,39 @@ class TestBasicInteraction(FuncTestCase):
         self.assertEqual(exp, c1.recv())
         c2 = self.client()
         c2.send("login", "dede")
-        exp = ["area.entered",
-               {"tag": "User",
-                "actions": [],
-                "pos": [10,10],
-                "name": "dede",
-                "id": "user_id:dede"}]
-        self.assertEqual(exp, c1.recv())
-        self.assertEqual(exp, c2.recv())
+        exp1 = ["area.entered",
+                {"tag": "User",
+                 "actions": [],
+                 "pos": [10, 10],
+                 "name": "dede",
+                 "id": "user_id:dede"}]
+        exp2 =  ['area.init',
+                 {'areaId': 'alpha',
+                  'objects': [{'actions': [],
+                               'id': 'user_id:dede',
+                               'name': 'dede',
+                               'pos': [10, 10],
+                               'tag': 'User'},
+                              {'actions': [],
+                               'id': 'user_id:zozo',
+                               'name': 'zozo',
+                               'pos': [14, 20],
+                               'tag': 'User'}]}]
+        self.assertEqual(exp1, c1.recv())
+        self.assertEqual(exp2, c2.recv())
         c1.send("area.ignite", 40)
         exp_actions = [{'damageSpeed': 40,
                         'previousTs': ANY,
-                        'tag': u'Burning'}]
+                        'tag': 'Burning'}]
         exp = ['area.tick',
                {'events': [],
                 'objects': [{'actions': [],
                              'durability': 100,
-                             'id': u'user_id:dede',
+                             'id': 'user_id:dede',
                              'pos': [10, 10]},
                             {'actions': exp_actions,
                              'durability': 60,
-                             'id': u'user_id:zozo',
+                             'id': 'user_id:zozo',
                              'pos': [14, 20]}]}]
         self.assertEqual(exp, c1.recv())
         self.assertEqual(exp, c2.recv())
@@ -76,11 +89,11 @@ class TestBasicInteraction(FuncTestCase):
                {'events': [],
                 'objects': [{'actions': [],
                              'durability': 100,
-                             'id': u'user_id:dede',
+                             'id': 'user_id:dede',
                              'pos': [10, 10]},
                             {'actions': exp_actions,
                              'durability': 20,
-                             'id': u'user_id:zozo',
+                             'id': 'user_id:zozo',
                              'pos': [14, 20]}]}]
         self.assertEqual(exp, c1.recv())
         self.assertEqual(exp, c2.recv())
@@ -88,7 +101,7 @@ class TestBasicInteraction(FuncTestCase):
                {'events': [{'ident': 'user_id:zozo', 'tag': 'DeleteUser'}],
                 'objects': [{'actions': [],
                              'durability': 100,
-                             'id': u'user_id:dede',
+                             'id': 'user_id:dede',
                              'pos': [10, 10]}]}]
         self.assertEqual(exp, c2.recv())
         with self.assertRaises(WebSocketTimeoutException):
