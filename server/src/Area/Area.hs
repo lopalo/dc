@@ -11,6 +11,7 @@ import Control.Category ((.))
 import qualified Data.Map.Strict as M
 
 import Data.Aeson(Value, Result(Success), fromJSON, object, (.=))
+import Data.String.Utils (startswith)
 import Data.Lens.Common ((^%=))
 import Control.Distributed.Process hiding (forward)
 import Control.Distributed.Process.Serializable (Serializable)
@@ -18,12 +19,12 @@ import Control.Distributed.Process.Serializable (Serializable)
 import Connection (Connection, setArea)
 import Utils (milliseconds, logException, evaluate)
 import qualified Settings as S
-import Types (UserId, UserName, AreaId, AreaPid(AreaPid))
+import Types (UserId, AreaId, AreaPid(AreaPid))
 import User (AreaUserInfo)
 import Area.Types (Pos(..))
 import qualified Area.User as U
 import Area.Action (Action(..))
-import Area.Utils (distance, sendCmd, broadcastCmd)
+import Area.Utils (distance, sendCmd)
 import Area.State
 import Area.Tick (handleTick, scheduleTick)
 
@@ -34,6 +35,9 @@ instance Binary Echo
 
 data Enter = Enter !AreaUserInfo deriving (Generic, Typeable)
 instance Binary Enter
+
+data GetObjectsInfo = GetObjectsInfo ![String] deriving (Generic, Typeable)
+instance Binary GetObjectsInfo
 
 data EnterArea = EnterArea !AreaId deriving (Generic, Typeable)
 instance Binary EnterArea
@@ -58,8 +62,9 @@ handleEnter state (Enter userInfo, conn) = do
         state' = (users' ^%= addUser uid conn user) state
     selfPid <- makeSelfPid
     setArea conn selfPid
-    sendCmd conn "init" $ initData state'
-    broadcastCmd state "entered" $ U.initClientInfo user -- broadcast for all, except a new user
+    now <- liftIO milliseconds
+    sendCmd conn "init" $ object ["areaId" .= areaId state',
+                                  "timestamp" .= now]
     return state'
 
 
@@ -74,6 +79,22 @@ handleEnterArea state (EnterArea aid, conn) = do
     let U.User{U.userId=uid, U.name=name} = conn `userByConn` state
     enter aid (uid, name) conn
     return $ (users' ^%= deleteUser uid) state
+
+
+handleObjectsInfo :: State -> (GetObjectsInfo, Connection) -> Process State
+handleObjectsInfo state (GetObjectsInfo ids, conn) = do
+    let objects = foldl getObj [] ids
+        us = usersData $ users state
+        getObj :: [Value] -> String -> [Value]
+        getObj res ident
+            | "user_id:" `startswith` ident =
+                let ident' = read ident :: UserId
+                in case ident' `M.lookup` us of
+                    Nothing -> res
+                    Just user -> U.initClientInfo user:res
+    sendCmd conn "objects_info" objects
+    return state
+
 
 
 handleMoveTo :: State -> (MoveTo, Connection) -> Process State
@@ -123,6 +144,7 @@ loop state = handle >>= loop
         handlers = [prepare (flip handleTick),
                     prepare handleEnterArea,
                     prepare handleEnter,
+                    prepare handleObjectsInfo,
                     prepare handleMoveTo,
                     prepare handleIgnite,
                     prepare handleEcho]
@@ -150,15 +172,6 @@ replaceUserAction :: UserId -> (Action -> Bool) -> Action -> State -> State
 replaceUserAction uid f action = addUserAction uid action
                                . cancelUserAction uid f
 
-
-initData :: State -> Value
-initData state =
-    let res = object ["areaId" .= areaId state,
-                      "objects" .= usersInfo]
-        usersInfo = map U.initClientInfo $ M.elems $ usersData $ users state
-    in res
-
-
 makeSelfPid :: Process AreaPid
 makeSelfPid = liftM AreaPid getSelfPid
 
@@ -175,6 +188,9 @@ parseClientCmd "echo" body = do
 parseClientCmd "enter_area" body = do
     let Success aid = fromJSON body :: Result AreaId
     forward (EnterArea aid)
+parseClientCmd "get_objects_info" body = do
+    let Success ids = fromJSON body :: Result [String]
+    forward (GetObjectsInfo ids)
 parseClientCmd "move_to" body = do
     let Success toPos = fromJSON body :: Result Pos
     forward (MoveTo toPos)

@@ -51,7 +51,6 @@ initClientInfo user =
     object ["id" .= userId user,
             "tag" .= ("User" :: String),
             "name" .= name user,
-            "pos" .= pos user,
-            "actions" .= actions user]
+            "pos" .= pos user]
 
 

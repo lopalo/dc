@@ -18,7 +18,6 @@ import Control.Distributed.Process
 import Data.Aeson(Value, object, (.=))
 
 import Utils (milliseconds, logDebug)
-import Types (UserId(UserId))
 import qualified Settings as S
 import Area.User (tickClientInfo)
 import Area.Utils (broadcastCmd')
@@ -96,11 +95,13 @@ handleEvent (DeleteUser uid) = users' %= deleteUser uid >> return True
 
 tickData :: State' Value
 tickData = do
+    ts <- access timestamp'
     evs <- access eventsForBroadcast'
     eventsForBroadcast' ~= []
     usd <- gets $ usersData . users
     let res = object ["objects" .= usersInfo,
-                      "events" .= evs]
+                      "events" .= evs,
+                      "timestamp" .= ts]
         usersInfo = map tickClientInfo $ M.elems usd
     return res
 
