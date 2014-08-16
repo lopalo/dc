@@ -10,16 +10,16 @@ import Control.Monad (liftM)
 import Control.Category ((.))
 import qualified Data.Map.Strict as M
 
-import Data.Aeson(Value, Result(Success), fromJSON, object, (.=))
+import Data.Aeson(ToJSON, Value, Result(Success), fromJSON, object, (.=))
 import Data.String.Utils (startswith)
 import Data.Lens.Common ((^%=))
 import Control.Distributed.Process hiding (forward)
 import Control.Distributed.Process.Serializable (Serializable)
 
-import Connection (Connection, setArea)
+import Connection (Connection, setArea, sendResponse)
 import Utils (milliseconds, logException, evaluate)
 import qualified Settings as S
-import Types (UserId, AreaId, AreaPid(AreaPid))
+import Types (UserId, AreaId, AreaPid(AreaPid), RequestNumber)
 import User (AreaUserInfo)
 import Area.Types (Pos(..))
 import qualified Area.User as U
@@ -28,6 +28,10 @@ import Area.Utils (distance, sendCmd)
 import Area.State
 import Area.Tick (handleTick, scheduleTick)
 
+
+type ForwardData = (ProcessId, Connection, RequestNumber)
+
+type Response a = (a, State)
 
 
 data Echo = Echo !String deriving (Generic, Typeable)
@@ -68,10 +72,10 @@ handleEnter state (Enter userInfo, conn) = do
     return state'
 
 
-handleEcho :: State -> (Echo, Connection) -> Process State
-handleEcho state (Echo txt, conn) = do
-    sendCmd conn "echo-reply" $ areaId state ++ " echo: " ++ txt
-    return state
+handleEcho :: State -> (Echo, Connection) -> Process (Response String)
+handleEcho state (Echo txt, _) = do
+    let resp = areaId state ++ " echo: " ++ txt
+    return (resp, state)
 
 
 handleEnterArea :: State -> (EnterArea, Connection) -> Process State
@@ -81,8 +85,9 @@ handleEnterArea state (EnterArea aid, conn) = do
     return $ (users' ^%= deleteUser uid) state
 
 
-handleObjectsInfo :: State -> (GetObjectsInfo, Connection) -> Process State
-handleObjectsInfo state (GetObjectsInfo ids, conn) = do
+handleObjectsInfo :: State -> (GetObjectsInfo, Connection)
+                     -> Process (Response [Value])
+handleObjectsInfo state (GetObjectsInfo ids, _) = do
     let objects = foldl getObj [] ids
         us = usersData $ users state
         getObj :: [Value] -> String -> [Value]
@@ -92,8 +97,7 @@ handleObjectsInfo state (GetObjectsInfo ids, conn) = do
                 in case ident' `M.lookup` us of
                     Nothing -> res
                     Just user -> U.initClientInfo user:res
-    sendCmd conn "objects_info" objects
-    return state
+    return (objects, state)
 
 
 
@@ -123,10 +127,8 @@ handleIgnite state (Ignite dmgSpeed, conn) = do
 
 areaProcess :: AreaId -> Process ()
 areaProcess aid = do
-    now <- liftIO milliseconds
     let state = State{areaId=aid,
                       tickNumber=0,
-                      timestamp=now,
                       users=us,
                       events=[],
                       eventsForBroadcast=[]}
@@ -141,13 +143,13 @@ loop state = handle >>= loop
     where
         prepare h = match (h state)
         --NOTE: handlers don't work correctly if they have the same type
-        handlers = [prepare (flip handleTick),
+        handlers = [prepare handleTick,
                     prepare handleEnterArea,
                     prepare handleEnter,
-                    prepare handleObjectsInfo,
+                    prepare (request handleObjectsInfo),
                     prepare handleMoveTo,
                     prepare handleIgnite,
-                    prepare handleEcho]
+                    prepare (request handleEcho)]
         evalState = receiveWait handlers >>= evaluate
         handle = evalState `catches` logException state
 
@@ -175,13 +177,22 @@ replaceUserAction uid f action = addUserAction uid action
 makeSelfPid :: Process AreaPid
 makeSelfPid = liftM AreaPid getSelfPid
 
+request :: (Serializable a, ToJSON b) =>
+           (State -> (a, Connection) -> Process (Response b)) ->
+           State -> ((a, Connection), RequestNumber) -> Process State
+request h state ((a, conn), req) = do
+    (resp, state') <- h state (a, conn)
+    sendResponse conn req resp
+    return state'
 
-forward :: Serializable a => a -> (ProcessId, Connection) -> Process ()
-forward parsed (areaPid, conn) = do
+forward :: Serializable a => a -> ForwardData -> Process ()
+forward parsed (areaPid, conn, req) = do
     evaluate parsed
-    send areaPid (parsed, conn)
+    case req of
+        0 -> send areaPid (parsed, conn)
+        _ -> send areaPid ((parsed, conn), req)
 
-parseClientCmd :: String -> Value -> (ProcessId, Connection) -> Process ()
+parseClientCmd :: String -> Value -> ForwardData -> Process ()
 parseClientCmd "echo" body = do
     let Success txt = fromJSON body :: Result String
     forward (Echo txt)
@@ -207,9 +218,10 @@ enter aid userInfo conn = do
     send areaPid (Enter userInfo , conn)
 
 
-clientCmd :: AreaPid -> String -> Value -> Connection -> Process ()
-clientCmd (AreaPid pid) cmd body conn =
-    parseClientCmd cmd body (pid, conn)
+clientCmd :: AreaPid -> String -> Value -> RequestNumber ->
+             Connection -> Process ()
+clientCmd (AreaPid pid) cmd body req conn =
+    parseClientCmd cmd body (pid, conn, req)
 
 
 

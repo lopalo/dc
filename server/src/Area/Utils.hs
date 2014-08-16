@@ -1,8 +1,7 @@
 
-module Area.Utils (distance, sendCmd, broadcastCmd, broadcastCmd') where
+module Area.Utils (distance, sendCmd, broadcastCmd) where
 
 import Prelude hiding ((.))
-import Control.Monad.State (get, lift)
 import Control.Category ((.))
 import qualified Data.Map.Strict as M
 
@@ -25,10 +24,4 @@ sendCmd conn cmd = C.sendCmd conn ("area." ++ cmd)
 broadcastCmd :: ToJSON a => State -> String -> a -> Process ()
 broadcastCmd state cmd = C.broadcastCmd (M.elems cs) ("area." ++ cmd)
     where cs = connections' . users' ^$ state
-
-
-broadcastCmd' :: ToJSON a => String -> a -> State' ()
-broadcastCmd' cmd body = do
-    state <- get
-    lift $ broadcastCmd state cmd body
 

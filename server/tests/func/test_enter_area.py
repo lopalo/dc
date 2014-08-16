@@ -42,8 +42,7 @@ class TestEnterArea(FuncTestCase):
                  "timestamp": ANY,
                  "events":[]}]
         self.assertEqual(exp1, c1.recv())
-        c1.send("area.echo", "foo")
-        self.assertEqual("beta echo: foo", c1.recv()[1])
+        self.assertEqual("beta echo: foo", c1.req("area.echo", "foo"))
 
 
         c1.send("area.enter_area", "alpha")

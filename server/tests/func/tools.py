@@ -24,10 +24,17 @@ ANY = _Any()
 class Client(object):
 
     def __init__(self):
+        self._request_counter = 1
         self._conn = create_connection(URL, TIMEOUT)
 
     def send(self, cmd, body):
-        self._conn.send(json.dumps([cmd, body]))
+        self._conn.send(json.dumps([cmd, body, 0]))
+
+    def req(self, cmd, body):
+        count = self._request_counter
+        self._conn.send(json.dumps([cmd, body, count]))
+        self._request_counter += 1
+        return self.recv('response:' + str(count))[1]
 
     def recv(self, exp_cmd=None):
         res = (cmd, body) = json.loads(self._conn.recv())

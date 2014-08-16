@@ -1,16 +1,14 @@
 
 module Area.State where
 
-import Control.Monad.State.Strict (StateT)
+import qualified Control.Monad.State.Strict as S
 import qualified Data.Map.Strict as M
 
 import Data.Lens.Common (lens, Lens, (^%=))
-import Control.Distributed.Process
 
 import Connection (Connection)
 import Types (UserId, AreaId)
 import qualified Area.User as U
-import Area.Types (Ts)
 import Area.Event (Events)
 
 
@@ -25,18 +23,14 @@ type UserIds = M.Map Connection UserId
 
 data State = State {areaId :: AreaId,
                     tickNumber :: Int,
-                    timestamp :: Ts,
                     users :: !Users,
                     events :: !Events,
                     eventsForBroadcast :: !Events} --TODO: add settings
 
-type State' a = StateT State Process a
+type State' a = S.State State a
 
 tickNumber' :: Lens State Int
 tickNumber' = lens tickNumber (\v s -> s{tickNumber=v})
-
-timestamp' :: Lens State Ts
-timestamp' = lens timestamp (\v s -> s{timestamp=v})
 
 users' :: Lens State Users
 users' = lens users (\v s -> s{users=v})

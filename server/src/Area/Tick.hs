@@ -5,9 +5,9 @@ module Area.Tick (handleTick, scheduleTick) where
 import GHC.Generics (Generic)
 import Data.Binary (Binary)
 import Data.Typeable (Typeable)
-import Control.Monad (when, foldM)
+import Control.Monad (when, foldM, liftM)
 import Control.Category ((>>>))
-import Control.Monad.State.Strict (execStateT, gets, lift)
+import Control.Monad.State.Strict (runState, gets, lift)
 import Control.Concurrent (threadDelay)
 import qualified Data.Map.Strict as M
 import Text.Printf (printf)
@@ -20,7 +20,8 @@ import Data.Aeson(Value, object, (.=))
 import Utils (milliseconds, logDebug)
 import qualified Settings as S
 import Area.User (tickClientInfo)
-import Area.Utils (broadcastCmd')
+import Area.Types (Ts)
+import Area.Utils (broadcastCmd)
 import Area.Action (Active(applyActions))
 import Area.State
 import Area.Event (Event(DeleteUser))
@@ -38,27 +39,33 @@ scheduleTick ms = do
         send selfPid TimeTick
 
 
---TODO: maybe use State instead of StateT to make the function is pure
-handleTick :: TimeTick -> State -> Process State
-handleTick TimeTick = execStateT handleTick' where
-    handleTick' :: State' ()
-    handleTick' = do
-        lift $ scheduleTick S.areaTickMilliseconds
-        liftIO milliseconds >>= (timestamp' ~=)
-        tnum <- access tickNumber'
-        let broadcast = tnum `rem` S.areaBroadcastEveryTick == 0
-        handleActions
-        handleEvents
-        when broadcast $ do
-            broadcastCmd' "tick" =<< tickData
-            aid <- gets areaId
-            lift $ logDebug $ printf "Broadcast tick %d of area '%s'" tnum aid
-        tickNumber' += 1
-        return ()
+handleTick :: State -> TimeTick -> Process State
+handleTick state TimeTick = do
+    scheduleTick S.areaTickMilliseconds
+    now <- liftIO milliseconds
+    let tnum = tickNumber state
+        (broadcastData, state') = runState (calculateTick now) state
+        aid = areaId state'
+    case broadcastData of
+        Just bd -> do
+            broadcastCmd state "tick" bd
+            logDebug $ printf "Broadcast tick %d of area '%s'" tnum aid
+        Nothing -> return ()
+    return state'
 
-handleActions :: State' ()
-handleActions = do
-    now <- access timestamp'
+calculateTick :: Ts -> State' (Maybe Value)
+calculateTick ts = do
+    handleActions ts
+    handleEvents
+    tnum <- access tickNumber'
+    tickNumber' += 1
+    let broadcast = tnum `rem` S.areaBroadcastEveryTick == 0
+    if broadcast
+        then liftM Just (tickData ts)
+        else return Nothing
+
+handleActions :: Ts -> State' ()
+handleActions ts = do
     let handleActive :: (Ord a, Active b) => Lens State (M.Map a b) -> State' ()
         handleActive lens = do
             as <- access lens
@@ -68,7 +75,7 @@ handleActions = do
             events' ~= evs'
             return ()
         handle ident act (res, evs) =
-            let (act', newEvents) = applyActions now act
+            let (act', newEvents) = applyActions ts act
                 res' = M.insert ident act' res
             in (res', newEvents ++ evs)
     handleActive $ users' >>> usersData'
@@ -93,9 +100,8 @@ handleEvent (DeleteUser uid) = users' %= deleteUser uid >> return True
     --TODO remove areaId from user's connection or disconnect him
 
 
-tickData :: State' Value
-tickData = do
-    ts <- access timestamp'
+tickData :: Ts -> State' Value
+tickData ts = do
     evs <- access eventsForBroadcast'
     eventsForBroadcast' ~= []
     usd <- gets $ usersData . users

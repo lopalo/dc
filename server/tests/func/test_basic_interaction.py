@@ -7,13 +7,11 @@ class TestBasicInteraction(FuncTestCase):
 
     def runTest(self):
         c1 = self.client()
-        c1.send("echo", "foo")
-        self.assertEqual(['echo-reply', 'Echo: foo'], c1.recv())
+        self.assertEqual('Echo: foo', c1.req("echo", "foo"))
         c1.send("login", "zozo")
         exp = ['area.init', {'areaId': 'alpha', 'timestamp': ANY}]
         self.assertEqual(exp, c1.recv())
-        c1.send("area.echo", "bar")
-        self.assertEqual(['area.echo-reply', 'alpha echo: bar'], c1.recv())
+        self.assertEqual('alpha echo: bar', c1.req("area.echo", "bar"))
         exp = ["area.tick",
                {"objects": [{"actions": [],
                              "durability": 100,
@@ -50,17 +48,18 @@ class TestBasicInteraction(FuncTestCase):
                 {'areaId': 'alpha',
                 'timestamp': ANY}]
         self.assertEqual(exp, c2.recv())
-        c1.send("area.get_objects_info", ['user_id:zozo', 'user_id:dede'])
-        exp = ['area.objects_info',
-               [{'id': 'user_id:dede',
-                 'name': 'dede',
-                 'pos': [10, 10],
-                 'tag': 'User'},
-                {'id': 'user_id:zozo',
-                 'name': 'zozo',
-                 'pos': [14, 20],
-                 'tag': 'User'}]]
-        self.assertEqual(exp, c1.recv())
+        exp = [{'id': 'user_id:dede',
+                'name': 'dede',
+                'durability': 100,
+                'pos': [10, 10],
+                'tag': 'User'},
+               {'id': 'user_id:zozo',
+                'name': 'zozo',
+                'durability': 100,
+                'pos': [14, 20],
+                'tag': 'User'}]
+        self.assertEqual(exp, c1.req("area.get_objects_info",
+                                     ['user_id:zozo', 'user_id:dede']))
         c1.send("area.ignite", 40)
         exp_actions = [{'damageSpeed': 40,
                         'previousTs': ANY,
@@ -100,13 +99,13 @@ class TestBasicInteraction(FuncTestCase):
                              'pos': [10, 10]}]}]
         self.assertEqual(exp, c2.recv())
         c2.send("area.get_objects_info", ['user_id:zozo', 'user_id:dede'])
-        exp = ['area.objects_info',
-               [{'id': 'user_id:dede',
-                 'name': 'dede',
-                 'pos': [10, 10],
-                 'tag': 'User'}]]
-        self.assertEqual(exp, c2.recv())
-
+        exp = [{'id': 'user_id:dede',
+                'name': 'dede',
+                'durability': 100,
+                'pos': [10, 10],
+                'tag': 'User'}]
+        self.assertEqual(exp, c2.req("area.get_objects_info",
+                                     ['user_id:zozo', 'user_id:dede']))
         with self.assertRaises(WebSocketTimeoutException):
             c1.recv()
 

@@ -1,7 +1,6 @@
 {-# LANGUAGE DeriveGeneric, DeriveDataTypeable #-}
 
-module Types (UserId(UserId), UserPid(UserPid),
-              AreaId, AreaPid(AreaPid), UserName) where
+module Types where
 
 import GHC.Generics (Generic)
 import Data.Binary (Binary)
@@ -16,6 +15,8 @@ import Utils (delPrefix)
 delIdPrefix :: String -> String -> String
 delIdPrefix = delPrefix ":"
 
+
+type RequestNumber = Int
 
 type UserName = String
 

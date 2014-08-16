@@ -1,8 +1,8 @@
 {-# LANGUAGE DeriveGeneric, DeriveDataTypeable #-}
 
 module Connection (acceptConnection, InputHandler, Connection,
-                   sendCmd, broadcastCmd, setUser, setArea,
-                   close) where
+                   sendCmd, sendResponse, broadcastCmd,
+                   setUser, setArea, close) where
 
 import GHC.Generics (Generic)
 import Data.Binary (Binary)
@@ -17,7 +17,7 @@ import Control.Distributed.Process
 import qualified Control.Distributed.Process.Node as Node
 import qualified Network.WebSockets as WS
 
-import Types (UserPid, AreaPid)
+import Types (RequestNumber, UserPid, AreaPid)
 import Utils (logDebug)
 
 
@@ -70,6 +70,9 @@ logInput bytes = logDebug $ "Input: " ++ toString bytes
 sendCmd :: ToJSON a => Connection -> String -> a -> Process ()
 sendCmd conn cmd body =
     send (output conn) ("send", encode (cmd, body))
+
+sendResponse :: ToJSON a => Connection -> RequestNumber -> a -> Process ()
+sendResponse conn req = sendCmd conn $ "response:" ++ (show req)
 
 broadcastCmd :: ToJSON a => [Connection] -> String -> a -> Process ()
 broadcastCmd connections cmd body =
