@@ -1,26 +1,28 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Settings where
 
-debug :: Bool
-debug = True
+import Control.Applicative ((<$>), (<*>))
+import Control.Monad (mzero)
 
-areas :: [String]
-areas = ["alpha", "beta"]
+import Data.Aeson (FromJSON(parseJSON), Value(Object), (.:))
 
-startArea :: String
-startArea = "alpha"
 
-areaUserSpeed :: Int
-areaUserSpeed = 6 --units per second
+data Settings = Settings {areas :: [String],
+                          startArea :: String,
+                          areaUserSpeed :: Int,
+                          initUserDurability :: Int,
+                          startAreaPos :: (Int, Int),
+                          areaTickMilliseconds :: Int,
+                          areaBroadcastEveryTick :: Int}
 
-initUserDurability :: Int
-initUserDurability = 100
-
-startAreaPos :: (Int, Int)
-startAreaPos = (10, 10)
-
-areaTickMilliseconds :: Int
-areaTickMilliseconds = 100
-
-areaBroadcastEveryTick :: Int
-areaBroadcastEveryTick = 10
-
+instance FromJSON Settings where
+    parseJSON (Object v) = Settings <$>
+                           v .: "areas" <*>
+                           v .: "start-area" <*>
+                           v .: "area-user-speed" <*>
+                           v .: "init-user-durability" <*>
+                           v .: "start-area-pos" <*>
+                           v .: "area-tick-milliseconds" <*>
+                           v .: "area-broadcast-every-tick"
+    parseJSON _ = mzero

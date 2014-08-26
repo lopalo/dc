@@ -24,7 +24,7 @@ class World(object):
 
         Mediator.subscribe(self, 'dispatch', 'recv.area')
         Mediator.subscribe(self, 'move_to', 'world.move_to')
-        Mediator.subscribe(self, 'focus', 'world.focus')
+        Mediator.subscribe(self, 'move_focus', 'world.move_focus')
         parent.add_widget(self._widget, 0)
 
     def deactivate(self):
@@ -45,7 +45,7 @@ class World(object):
         if tag in ("User",):
             obj.rel_x, obj.rel_y = data['pos']
             set_rel_pos(self.world_pos, obj)
-            #obj.angle = data['angle']
+            obj.angle = data['angle']
         if tag == "User":
             obj.name = data['name']
 
@@ -81,6 +81,7 @@ class World(object):
             obj = objects[ident]
             obj.rel_x, obj.rel_y = value['pos']
             set_rel_pos(pos, obj)
+            obj.angle = value['angle']
         if unknown_objects:
             Mediator.publish("request",
                              "area.get_objects_info",
@@ -89,11 +90,10 @@ class World(object):
         for ident in set(objects) - idents:
             self._remove_object(ident)
 
-    def focus(self, x, y):
-        #TODO: use Vector
+    def move_focus(self, dx, dy):
         layer = self._main_layer
-        layer.x -= x - Window.width / 2
-        layer.y -= y - Window.height / 2
+        layer.x += dx
+        layer.y += dy
 
     def move_to(self, x, y):
         wx, wy = self.world_pos

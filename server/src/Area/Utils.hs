@@ -1,5 +1,5 @@
 
-module Area.Utils (distance, sendCmd, broadcastCmd) where
+module Area.Utils (distance, angle, sendCmd, broadcastCmd) where
 
 import Prelude hiding ((.))
 import Control.Category ((.))
@@ -16,6 +16,13 @@ import Area.State
 distance :: Pos -> Pos -> Float
 distance (Pos x y) (Pos x' y') =
     sqrt $ fromIntegral (x' - x) ** 2 + fromIntegral (y' - y) ** 2
+
+angle :: Pos -> Pos -> Float
+angle (Pos x y) (Pos x' y') =
+    degrees $ atan2 (fromIntegral (y' - y)) (fromIntegral (x' - x))
+
+degrees :: Float -> Float
+degrees = (/ pi) . (* 180)
 
 sendCmd :: ToJSON a => C.Connection -> String -> a -> Process ()
 sendCmd conn cmd = C.sendCmd conn ("area." ++ cmd)

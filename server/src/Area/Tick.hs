@@ -41,7 +41,7 @@ scheduleTick ms = do
 
 handleTick :: State -> TimeTick -> Process State
 handleTick state TimeTick = do
-    scheduleTick S.areaTickMilliseconds
+    scheduleTick $ (S.areaTickMilliseconds . settings) state
     now <- liftIO milliseconds
     let tnum = tickNumber state
         (broadcastData, state') = runState (calculateTick now) state
@@ -59,7 +59,8 @@ calculateTick ts = do
     handleEvents
     tnum <- access tickNumber'
     tickNumber' += 1
-    let broadcast = tnum `rem` S.areaBroadcastEveryTick == 0
+    broadcastEveryTick <- gets $ S.areaBroadcastEveryTick . settings
+    let broadcast = tnum `rem` broadcastEveryTick == 0
     if broadcast
         then liftM Just (tickData ts)
         else return Nothing

@@ -62,7 +62,8 @@ class FuncTestCase(unittest.TestCase):
         self._clients = []
         fname = "{}/{}.log".format(SERVER_OUTPUT_DIR, self.__class__.__name__)
         self._server_stdout = stdout = open(fname, "wb")
-        self._server_proc = subprocess.Popen(['runghc', SERVER_NAME],
+        args = ['runghc', SERVER_NAME, '../tests/func/settings.yaml']
+        self._server_proc = subprocess.Popen(args,
                                              cwd=SERVER_DIR,
                                              stdin=subprocess.PIPE,
                                              stdout=stdout,

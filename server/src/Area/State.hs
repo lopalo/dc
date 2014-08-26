@@ -1,11 +1,14 @@
 
 module Area.State where
 
+import Prelude hiding ((.))
+import Control.Category ((.))
 import qualified Control.Monad.State.Strict as S
 import qualified Data.Map.Strict as M
 
 import Data.Lens.Common (lens, Lens, (^%=))
 
+import Settings (Settings)
 import Connection (Connection)
 import Types (UserId, AreaId)
 import qualified Area.User as U
@@ -22,10 +25,11 @@ type UsersData = M.Map UserId U.User
 type UserIds = M.Map Connection UserId
 
 data State = State {areaId :: AreaId,
+                    settings :: Settings,
                     tickNumber :: Int,
                     users :: !Users,
                     events :: !Events,
-                    eventsForBroadcast :: !Events} --TODO: add settings
+                    eventsForBroadcast :: !Events}
 
 type State' a = S.State State a
 
@@ -56,6 +60,11 @@ addUser :: UserId -> Connection -> U.User -> Users -> Users
 addUser uid conn user = (usersData' ^%= M.insert uid user)
                       . (userIds' ^%= M.insert conn uid)
                       . (connections' ^%= M.insert uid conn)
+
+
+updateUser :: (U.User -> U.User) -> UserId -> State -> State
+updateUser f uid = usersData' . users' ^%= M.adjust f uid
+
 
 deleteUser :: UserId -> Users -> Users
 deleteUser uid us = fun us

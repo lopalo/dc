@@ -25,8 +25,10 @@ class UI(Widget):
     def on_touch_down(self, touch):
         if touch.button == "left":
             Mediator.publish("world.move_to", touch.x, touch.y)
-        else:
-            Mediator.publish("world.focus", touch.x, touch.y)
+
+    def on_touch_move(self, touch):
+        if touch.button == "right":
+            Mediator.publish("world.move_focus", touch.dx, touch.dy)
 
 
 class GameWidget(Widget):

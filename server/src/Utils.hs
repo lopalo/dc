@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables, CPP #-}
 
 module Utils (delPrefix, milliseconds, logInfo, logError,
               logException, logDebug, evaluate) where
@@ -10,7 +10,7 @@ import Data.String.Utils (split, join)
 
 import Control.Distributed.Process
 
-import qualified Settings as S
+import Debug (debug)
 
 
 delPrefix :: String -> String -> String -> String
@@ -29,7 +29,7 @@ logError :: String -> Process ()
 logError = say . ("|ERROR| " ++)
 
 logDebug :: String -> Process ()
-logDebug str = when S.debug $ say ("|DEBUG| " ++ str)
+logDebug str = when debug $ say ("|DEBUG| " ++ str)
 
 logException :: forall a. a -> [Handler a]
 logException x = [Handler (\(ex :: Ex.PatternMatchFail) -> logEx ex),

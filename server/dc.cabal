@@ -29,10 +29,10 @@ Executable dc
         network-transport-tcp == 0.3.1,
         utf8-string == 0.3.7,
         websockets == 0.8.2.2,
-        containers == 0.5.5.1
+        containers == 0.5.5.1,
+        yaml == 0.8.9
         --distributed-process-global == 0.1.0.0
     Hs-Source-Dirs: src
-    --TODO: move settings to config file
     Other-Modules:
         Settings,
         Connection,

@@ -1,8 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Area.User (User(..), tickClientInfo, initClientInfo) where
+module Area.User where
 
 import Data.Aeson (Value, object, (.=))
+import Data.Lens.Common (lens, Lens)
 
 import Types (UserId, UserName)
 import Area.Types (Pos)
@@ -33,15 +34,20 @@ instance Active User where
 data User = User {userId :: UserId,
                   name :: UserName,
                   pos :: Pos,
+                  angle :: Float, --degrees
                   speed :: Int, --units per second
                   durability :: Int,
                   actions :: [Action]}
+
+actions' :: Lens User [Action]
+actions' = lens actions (\v user -> user{actions=v})
 
 
 tickClientInfo :: User -> Value
 tickClientInfo user =
     object ["id" .= userId user,
             "pos" .= pos user,
+            "angle" .= angle user,
             "durability" .= durability user,
             "actions" .= actions user]
 
@@ -52,6 +58,7 @@ initClientInfo user =
             "tag" .= ("User" :: String),
             "name" .= name user,
             "durability" .= durability user,
+            "angle" .= angle user,
             "pos" .= pos user]
 
 

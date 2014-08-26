@@ -24,7 +24,7 @@ import User (AreaUserInfo)
 import Area.Types (Pos(..))
 import qualified Area.User as U
 import Area.Action (Action(..))
-import Area.Utils (distance, sendCmd)
+import Area.Utils (distance, angle, sendCmd)
 import Area.State
 import Area.Tick (handleTick, scheduleTick)
 
@@ -56,12 +56,13 @@ instance Binary Ignite
 handleEnter :: State -> (Enter, Connection) -> Process State
 handleEnter state (Enter userInfo, conn) = do
     let (uid, userName) = userInfo
-        startPos = S.startAreaPos
+        startPos = (S.startAreaPos . settings) state
         user = U.User{U.userId=uid,
                       U.name=userName,
                       U.pos=uncurry Pos startPos,
-                      U.speed=S.areaUserSpeed,
-                      U.durability=S.initUserDurability,
+                      U.angle=0,
+                      U.speed=(S.areaUserSpeed . settings) state,
+                      U.durability=(S.initUserDurability . settings) state,
                       U.actions=[]}
         state' = (users' ^%= addUser uid conn user) state
     selfPid <- makeSelfPid
@@ -113,7 +114,9 @@ handleMoveTo state (MoveTo toPos, conn) = do
                               to=toPos}
         replace MoveDistance{} = True
         replace _ = False
-    return $ replaceUserAction uid replace action state
+        updActions = replaceUserAction uid replace action
+        updUser = updateUser (\u -> u{U.angle=angle (U.pos u) toPos}) uid
+    return $ updActions $ updUser state
 
 
 handleIgnite :: State -> (Ignite, Connection) -> Process State
@@ -125,15 +128,16 @@ handleIgnite state (Ignite dmgSpeed, conn) = do
     return $ addUserAction uid action state
 
 
-areaProcess :: AreaId -> Process ()
-areaProcess aid = do
+areaProcess :: S.Settings -> AreaId -> Process ()
+areaProcess settings aid = do
     let state = State{areaId=aid,
+                      settings=settings,
                       tickNumber=0,
                       users=us,
                       events=[],
                       eventsForBroadcast=[]}
         us = Users{connections=M.empty, usersData=M.empty, userIds=M.empty}
-    scheduleTick S.areaTickMilliseconds
+    scheduleTick $ S.areaTickMilliseconds settings
     loop state
     return ()
 
@@ -161,7 +165,7 @@ userByConn :: Connection -> State -> U.User
 userByConn conn state = (usersData . users) state M.! uidByConn conn state
 
 updateUserActions :: ([Action] -> [Action]) -> UserId -> State -> State
-updateUserActions f uid = usersData' . users' ^%= M.adjust update uid
+updateUserActions f = updateUser update
     where update user = user{U.actions=f $ U.actions user}
 
 addUserAction :: UserId -> Action -> State -> State

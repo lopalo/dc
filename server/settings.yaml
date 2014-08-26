@@ -1,0 +1,7 @@
+areas: [alpha, beta]
+start-area: alpha
+area-user-speed: 60 #units per second
+init-user-durability: 100
+start-area-pos: [10, 10]
+area-tick-milliseconds: 100
+area-broadcast-every-tick: 10
