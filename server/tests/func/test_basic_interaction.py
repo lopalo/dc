@@ -15,12 +15,14 @@ class TestBasicInteraction(FuncTestCase):
         exp = ["area.tick",
                {"objects": [{"actions": [],
                              "durability": 100,
+                             "angle": 0.0,
                              "pos": [10, 10],
                              "id": "user_id:zozo"}],
                 "events":[],
                 "timestamp": ANY}]
         self.assertEqual(exp, c1.recv())
-        c1.send("area.move_to", [14, 20])
+        c1.send("area.move_to", [-1000, -1000])
+        c1.send("area.move_to", [14, 20]) #cancel the previous action
         exp_actions = [{'endTs': ANY,
                         'from': [10, 10],
                         'startTs': ANY,
@@ -31,6 +33,7 @@ class TestBasicInteraction(FuncTestCase):
                 'timestamp': ANY,
                 'objects': [{'actions': exp_actions,
                              'durability': 100,
+                             'angle': 68.19859,
                              'id': 'user_id:zozo',
                              'pos': [12, 16]}]}]
         self.assertEqual(exp, c1.recv())
@@ -39,6 +42,7 @@ class TestBasicInteraction(FuncTestCase):
                 'timestamp': ANY,
                 'objects': [{'actions': [],
                              'durability': 100,
+                             'angle': 68.19859,
                              'id': 'user_id:zozo',
                              'pos': [14, 20]}]}]
         self.assertEqual(exp, c1.recv())
@@ -50,11 +54,13 @@ class TestBasicInteraction(FuncTestCase):
         self.assertEqual(exp, c2.recv())
         exp = [{'id': 'user_id:dede',
                 'name': 'dede',
+                'angle': 0,
                 'durability': 100,
                 'pos': [10, 10],
                 'tag': 'User'},
                {'id': 'user_id:zozo',
                 'name': 'zozo',
+                'angle': 68.19859,
                 'durability': 100,
                 'pos': [14, 20],
                 'tag': 'User'}]
@@ -70,9 +76,11 @@ class TestBasicInteraction(FuncTestCase):
                 'objects': [{'actions': [],
                              'durability': 100,
                              'id': 'user_id:dede',
+                             'angle': 0,
                              'pos': [10, 10]},
                             {'actions': exp_actions,
                              'durability': 60,
+                             'angle': 68.19859,
                              'id': 'user_id:zozo',
                              'pos': [14, 20]}]}]
         self.assertEqual(exp, c1.recv())
@@ -82,10 +90,12 @@ class TestBasicInteraction(FuncTestCase):
                 'timestamp': ANY,
                 'objects': [{'actions': [],
                              'durability': 100,
+                             'angle': 0,
                              'id': 'user_id:dede',
                              'pos': [10, 10]},
                             {'actions': exp_actions,
                              'durability': 20,
+                             'angle': 68.19859,
                              'id': 'user_id:zozo',
                              'pos': [14, 20]}]}]
         self.assertEqual(exp, c1.recv())
@@ -95,12 +105,14 @@ class TestBasicInteraction(FuncTestCase):
                 'timestamp': ANY,
                 'objects': [{'actions': [],
                              'durability': 100,
+                             'angle': 0,
                              'id': 'user_id:dede',
                              'pos': [10, 10]}]}]
         self.assertEqual(exp, c2.recv())
         c2.send("area.get_objects_info", ['user_id:zozo', 'user_id:dede'])
         exp = [{'id': 'user_id:dede',
                 'name': 'dede',
+                'angle': 0,
                 'durability': 100,
                 'pos': [10, 10],
                 'tag': 'User'}]

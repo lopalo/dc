@@ -21,6 +21,20 @@ class _Any(object):
 
 ANY = _Any()
 
+class SubDict(dict):
+
+    def __eq__(self, other):
+        if not isinstance(other, dict):
+            return False
+        for k, v in self.items():
+            if k not in other:
+                return False
+            if v != other[k]:
+                return False
+        return True
+
+subdict = SubDict
+
 class Client(object):
 
     def __init__(self):
