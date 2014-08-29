@@ -19,6 +19,7 @@ delPrefix delimiter prefix str =
         h:rest | h == prefix-> delimiter `join` rest
 
 milliseconds :: IO Int
+--TODO: use CLOCK_MONOTONIC
 milliseconds = liftM (floor . (* 1000)) getPOSIXTime
 
 

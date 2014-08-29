@@ -1,6 +1,10 @@
 #:kivy 1.7.2
 #:import W kivy.core.window.Window
 
+<WorldObject>:
+    center_x: self.world_x + self.rel_x
+    center_y: self.world_y + self.rel_y
+
 <UnitImage>:
     canvas.before:
         PushMatrix
@@ -17,7 +21,7 @@
     canvas.after:
         PopMatrix
 
-<Unit>:
+<Unit@Active>:
     width: 50
     height: 25
     UnitImage:

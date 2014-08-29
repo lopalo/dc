@@ -1,10 +1,12 @@
+from random import randint
+
 from kivy.clock import Clock
 from kivy.logger import Logger as log
 from network import Connection
 from mediator import Mediator
 
-UPDATE_PERIOD = 1. / 40.
-FAKE_PING = 0 # milliseconds
+CHECK_PERIOD = 1. / 200. # seconds
+INPUT_DELAY = 400 # milliseconds
 
 
 class Controller(object):
@@ -15,11 +17,7 @@ class Controller(object):
 
     def _send(self, cmd, body, request_number=0):
         #request_number == 0 means no request
-        if FAKE_PING:
-            cb = lambda dt: self._conn.send(cmd, body, request_number)
-            Clock.schedule_once(cb, FAKE_PING / 1000. / 2)
-        else:
-            self._conn.send(cmd, body, request_number)
+        self._conn.send(cmd, body, request_number)
         log.debug('Message sent: %s, %s', cmd, body)
 
     def send(self, cmd, body):
@@ -33,19 +31,32 @@ class Controller(object):
         Mediator.subscribe(obj, method_name, msg, once=True)
 
     def activate(self):
-        Clock.schedule_interval(self.check_inbox, UPDATE_PERIOD)
+        if not INPUT_DELAY:
+            Clock.schedule_interval(self.check_inbox, CHECK_PERIOD)
+        else:
+            Clock.schedule_once(self.delayed_check_inbox, CHECK_PERIOD)
         Mediator.subscribe(self, "connect")
         Mediator.subscribe(self, "send")
         Mediator.subscribe(self, "request")
 
     def deactivate(self):
-        Clock.unschedule(self.check_inbox)
+        if not INPUT_DELAY:
+            Clock.unschedule(self.check_inbox)
+        else:
+            Clock.unschedule(self.delayed_check_inbox)
         Mediator.unsubscribe_object(self)
 
     def connect(self, address, username):
         self._conn = Connection(address)
         self._conn.connect(wait=True)
         Mediator.publish("connected", username)
+
+    def delayed_check_inbox(self, dt):
+        self.check_inbox(None)
+        period = CHECK_PERIOD
+        if randint(0, 3) == 0:
+            period += INPUT_DELAY / 1000.
+        Clock.schedule_once(self.delayed_check_inbox, period)
 
     def check_inbox(self, dt):
         conn = self._conn
@@ -60,11 +71,7 @@ class Controller(object):
                 args = "recv." + prefix, cmd, body
             else:
                 args = "recv." + cmd, body
-            forward = lambda dt: Mediator.publish(*args)
-            if FAKE_PING:
-                Clock.schedule_once(forward, FAKE_PING / 1000. / 2)
-            else:
-                forward(None)
+            Mediator.publish(*args)
             data = conn.receive()
 
 
