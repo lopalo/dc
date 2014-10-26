@@ -70,7 +70,7 @@ if __name__ == '__main__':
             start_args = json.load(f)
             address, username = start_args['address'], start_args['username']
     #cleanup
-    start_args = dict(address='ws://127.0.0.1:10501', username="anonymous")
+    #start_args = dict(address='ws://127.0.0.1:10501', username="anonymous")
     if start_args is not None:
         f = lambda dt: Mediator.publish("connect", **start_args)
         Clock.schedule_once(f, 0)

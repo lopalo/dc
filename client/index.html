@@ -1,0 +1,36 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>DC</title>
+    <link rel="stylesheet" href="css/libs/bootstrap.min.css">
+    <link rel="stylesheet" href="css/main.css">
+    <script src="js/libs/jquery-2.1.1.min.js"></script>
+    <script src="js/libs/bootstrap.min.js"></script>
+    <script src="js/main/main.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h2 class="text-center"><span class="label label-default">DC</span></h2>
+        <div id="connect-form" class="form-horizontal col-xs-4 col-xs-offset-4">
+            <div class="form-group">
+                <label for="connect-address">Address</label>
+                <input id="connect-address" type="text" class="form-control"
+                                                value="ws://127.0.0.1:10501">
+            </div>
+            <div class="form-group">
+                <label for="connect-name">Name</label>
+                <input id="connect-name" type="text" class="form-control"
+                                                        value="anonymous">
+            </div>
+            <div class="form-group">
+                <button type="button" id="connect" class="btn btn-default">
+                    Connect
+                </button>
+            </div>
+        </div>
+        <div id="viewport">
+            <div id="world"></div>
+        </div>
+    </div>
+</body>
