@@ -70,6 +70,7 @@ handleEnter state (Enter userInfo, conn) = do
     now <- liftIO milliseconds
     sendCmd conn "init" $ object ["areaId" .= areaId state',
                                   "timestamp" .= now]
+    --TODO: monitor a connection process to remove a user
     return state'
 
 

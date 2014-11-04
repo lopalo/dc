@@ -109,7 +109,6 @@ class TestBasicInteraction(FuncTestCase):
                              'id': 'user_id:dede',
                              'pos': [10, 10]}]}]
         self.assertEqual(exp, c2.recv())
-        c2.send("area.get_objects_info", ['user_id:zozo', 'user_id:dede'])
         exp = [{'id': 'user_id:dede',
                 'name': 'dede',
                 'angle': 0,

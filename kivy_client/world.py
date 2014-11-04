@@ -163,10 +163,6 @@ class Active(WorldObject):
         raise NotImplementedError()
 
 
-class UnitImage(Widget):
-    angle = NumericProperty(0)
-
-
 class Unit(Active):
     name = StringProperty()
     angle = NumericProperty(0)

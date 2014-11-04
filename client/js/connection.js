@@ -34,7 +34,7 @@ _.extend(Connection.prototype, {
         var timeoutId;
         function _onTimeout () {
             self._ws = null;
-            onTimeout();
+            onTimeout(self);
         }
         timeoutId = setTimeout(_onTimeout, timeout);
         this._ws = ws = new WebSocket(address);
@@ -42,7 +42,7 @@ _.extend(Connection.prototype, {
             clearTimeout(timeoutId);
             self._checkInputId = setTimeout(self._checkInput, CHECK_PERIOD);
             self.connected = true;
-            onOpen();
+            onOpen(self);
         }
         ws.onmessage = function (event) {
             self._inputQueue.push(JSON.parse(event.data));
@@ -63,7 +63,7 @@ _.extend(Connection.prototype, {
         var cmd;
         var body;
         var parts;
-        if (_.random(0, 3) == 0) {
+        if (_.random(0, 3) === 0) {
             period += INPUT_DELAY;
         }
         this._checkInputId = setTimeout(this._checkInput, period);
@@ -74,8 +74,7 @@ _.extend(Connection.prototype, {
             if (_.contains(cmd, '.')) {
                 parts = cmd.split('.');
                 this.trigger(parts[0], {cmd: parts[1], body: body});
-            }
-            else {
+            } else {
                 this.trigger(cmd, body)
             }
         }
