@@ -29,10 +29,12 @@ function World(viewportEl, connection, userName) {
     this.objectLayer.$el.appendTo(viewportEl);
     this.objectModels = {};
     this.documentFragment = null;
+    this.listenTo(this.backgroundLayer, "click", this.backgroundClick);
     _.bindAll(this, "addObject", "removeObject");
 }
-_.extend(World.prototype, Backbone.Events);
+World.prototype = Object.create(Backbone.Events);
 _.extend(World.prototype, {
+    constructor: World,
     listenToConnection: function () {
         this.listenTo(this.connection, "area", this.dispatch);
     },
@@ -63,20 +65,20 @@ _.extend(World.prototype, {
     doHandleTick: function (data) {
         var removeObject = this.removeObject;
         var objectModels = this.objectModels;
-        //TODO: use sets
+        //TODO: use sets to improve time complexity
         var unknownIdents = [];
         var idents = [];
         if (this.area.get("id") === null) { return; }
         //TODO: process delay
         _.each(data.objects, function (value) {
             idents.push(value.id);
-            if (!(_.has(objectModels, value.id))) {
+            if (!_.has(objectModels, value.id)) {
                 unknownIdents.push(value.id);
             } else {
                 objectModels[value.id].set(value);
             }
         });
-        if (!(_.isEmpty(unknownIdents))) {
+        if (!_.isEmpty(unknownIdents)) {
             this.connection.request(
                 "area.get_objects_info",
                 unknownIdents,
@@ -110,11 +112,15 @@ _.extend(World.prototype, {
         view.render().appendTo(this.documentFragment);
     },
     removeObject: function (ident) {
-        this.objectModels[ident].destroy();
+        this.objectModels[ident].trigger("destroy-view");
         delete this.objectModels[ident];
+    },
+    backgroundClick: function (pos) {
+        this.connection.send("area.move_to", pos);
     }
 });
 
+//TODO: create separate modules: world-models.js, world-views.js
 
 Layer = Backbone.View.extend({
     className: "layer"
@@ -123,7 +129,9 @@ Layer = Backbone.View.extend({
 
 
 var Background = Layer.extend({
+    id: "background",
     tagName: "img",
+    events: {click: "click"},
     initialize: function (options) {
         Layer.prototype.initialize.call(this, options);
         this.area = options.area;
@@ -135,6 +143,10 @@ var Background = Layer.extend({
         var bg = this.area.get("background");
         this.$el.attr("src", "img/" + bg);
         this.$el.width(camera.get("width")).height(camera.get("height"));
+    },
+    click: function (e) {
+        var height = this.model.get("height");
+        this.trigger("click", [e.offsetX, height - e.offsetY]);
     }
 });
 
@@ -190,20 +202,19 @@ Unit = WorldObject.extend({
 
 
 UnitView = Backbone.View.extend({
-    //TODO: fix positioning
-    //TODO: fix cropping when overflowed
+    containerSize: 140, //pixels
     className: "world-object text-center",
     initialize: function () {
+        this.img = null;
         this.listenTo(this.model, "change", this.update);
+        this.listenTo(this.model, "destroy-view", this.remove);
     },
     render: function () {
         var el = this.$el;
         var model = this.model;
-        $("<div></div>")
-            .html(model.get("name"))
-            .addClass("unit-title")
-            .appendTo(el);
-        $("<img>", {src: "img/ship.png"})
+        el.css({width: this.containerSize, height: this.containerSize});
+        $("<div></div>").html(model.get("name")).appendTo(el);
+        this.img = $("<img>", {src: "img/ship.png"})
             .css({
                 width: model.get("width"),
                 height: model.get("height")
@@ -215,9 +226,11 @@ UnitView = Backbone.View.extend({
     update: function () {
         var model = this.model;
         var pos = model.get("pos");
+        var angle = -model.get("angle") - 90;
         this.$el.css({
-            left: pos[0],
-            top: pos[1]
+            left: pos[0] - this.containerSize / 2,
+            bottom: pos[1] - this.containerSize / 2,
         });
+        this.img.css({"-webkit-transform": "rotate(" + angle + "deg)"});
     }
 });

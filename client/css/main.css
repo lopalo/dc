@@ -1,7 +1,7 @@
 
 .container {
     height: 100vh;
-    color: white;
+    color: grey;
 }
 
 .alert {
@@ -9,7 +9,9 @@
 }
 
 .layer {
-    position: absolute;
+    height: 0%;
+    width: 0%;
+    position: relative;
 }
 
 .world-object {
@@ -29,8 +31,3 @@
     overflow: hidden;
 }
 
-#world {
-    width: 2000px;
-    height: 2000px;
-    background-color: orange;
-}

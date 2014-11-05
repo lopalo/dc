@@ -11,8 +11,9 @@ function Connection() {
     this.connected = false;
     _.bindAll(this, "_checkInput");
 }
-_.extend(Connection.prototype, Backbone.Events);
+Connection.prototype = Object.create(Backbone.Events);
 _.extend(Connection.prototype, {
+    constructor: Connection,
     _send: function (cmd, body, requestNumber) {
         //requestNumber = 0 means no request
         this._ws.send(JSON.stringify([cmd, body, requestNumber]));

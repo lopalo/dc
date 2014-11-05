@@ -4,12 +4,13 @@ var onOpen;
 var onTimeout;
 var _connection; //use only for debugging
 
+//TODO: use require.js
 
 $(function () {
     var connection = new Connection();
     _connection = connection;
     $("#connect").one("click", _.partial(connect, connection));
-    $("#connect").trigger("click"); //cleanup
+    //$("#connect").trigger("click"); //cleanup
 });
 
 
@@ -29,6 +30,7 @@ function onOpen(connection) {
     connection.send("login", userName);
     //TODO: connection.once("area.init", "remove the connect form")
     //TODO: show error if a user is already connected
+    //TODO: process disconnection
 }
 
 
