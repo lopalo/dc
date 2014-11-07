@@ -10,6 +10,8 @@
     <script src="js/libs/underscore-min.js"></script>
     <script src="js/libs/backbone-min.js"></script>
     <script src="js/connection.js"></script>
+    <script src="js/world-models.js"></script>
+    <script src="js/world-views.js"></script>
     <script src="js/world.js"></script>
     <script src="js/main.js"></script>
 </head>
@@ -36,7 +38,12 @@
         </div>
         <div id="game">
             <div id="ui"></div>
-            <div id="viewport"></div>
+            <div id="viewport">
+                <div id="viewport-top-border" class="viewport-border"></div>
+                <div id="viewport-bottom-border" class="viewport-border"></div>
+                <div id="viewport-left-border" class="viewport-border"></div>
+                <div id="viewport-right-border" class="viewport-border"></div>
+            </div>
         </div>
     </div>
 </body>

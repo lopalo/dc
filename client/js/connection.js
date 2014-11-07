@@ -1,6 +1,7 @@
 
 var CHECK_PERIOD = 5; //milliseconds
 var INPUT_DELAY = 400; //milliseconds
+var FREEZE_FACTOR = 2000; //a less value means more frequently
 
 
 function Connection() {
@@ -64,7 +65,7 @@ _.extend(Connection.prototype, {
         var cmd;
         var body;
         var parts;
-        if (_.random(0, 3) === 0) {
+        if (_.random(0, FREEZE_FACTOR) === 0) {
             period += INPUT_DELAY;
         }
         this._checkInputId = setTimeout(this._checkInput, period);

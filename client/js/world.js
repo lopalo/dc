@@ -1,40 +1,63 @@
 
-
-var Layer;
-var Area;
-var Camera;
-var Background;
-var ViewPort;
-var WorldObject;
-var Unit;
-var UnitView;
-
-
 function World(viewportEl, connection, userName) {
-    var camera;
-    var area;
+    //TODO: pass a controler object
+    this.viewportEl = viewportEl;
     this.connection = connection;
     this.areaId = null;
     this.uid = userName;
-    this.area = area = new Area();
-    this.camera = camera = new Camera();
-    this.viewport = new ViewPort({el: viewportEl, model: camera});
-    this.backgroundLayer = new Background({
-        paralaxIndex: 0,
-        model: camera,
-        area: area
-    });
-    this.objectLayer = new Layer({paralaxIndex: 1, model: camera});
-    this.backgroundLayer.$el.appendTo(viewportEl);
-    this.objectLayer.$el.appendTo(viewportEl);
+    this.area = new Area();
+    this.camera = new Camera();
+    this.viewport = new ViewPort({el: viewportEl, model: this.camera});
+    this.backgroundLayer = null;
+    this.objectLayer = null;
     this.objectModels = {};
+    this.viewportBorders = {};
     this.documentFragment = null;
-    this.listenTo(this.backgroundLayer, "click", this.backgroundClick);
-    _.bindAll(this, "addObject", "removeObject");
+    this.setupLayers();
+    this.setupBorders();
 }
 World.prototype = Object.create(Backbone.Events);
 _.extend(World.prototype, {
     constructor: World,
+    setupLayers: function () {
+        this.backgroundLayer = new Background({
+            paralaxIndex: 0,
+            model: this.camera,
+            area: this.area
+        });
+        this.objectLayer = new Layer({paralaxIndex: 1, model: this.camera});
+        this.backgroundLayer.$el.appendTo(this.viewportEl);
+        this.objectLayer.$el.appendTo(this.viewportEl);
+        this.listenTo(this.backgroundLayer, "click", this.backgroundClick);
+    },
+    setupBorders: function () {
+        var borders = this.viewportBorders;
+        var viewportEl = this.viewportEl;
+        var camera = this.camera;
+        //TODO: do it in a cycle
+        //TODO: add corners
+        borders.top = new ViewPortBorder({
+            el: viewportEl.find("#viewport-top-border"),
+            model: camera,
+            direction: [0, 1]
+        });
+        borders.bottom = new ViewPortBorder({
+            el: viewportEl.find("#viewport-bottom-border"),
+            model: camera,
+            direction: [0, -1]
+        });
+        borders.left = new ViewPortBorder({
+            el: viewportEl.find("#viewport-left-border"),
+            model: camera,
+            direction: [-1, 0]
+        });
+        borders.right = new ViewPortBorder({
+            el: viewportEl.find("#viewport-right-border"),
+            model: camera,
+            direction: [1, 0]
+        });
+
+    },
     listenToConnection: function () {
         this.listenTo(this.connection, "area", this.dispatch);
     },
@@ -48,12 +71,11 @@ _.extend(World.prototype, {
     },
     objectsInfo: function (objects) {
         var objectModels = this.objectModels;
-        var addObject = this.addObject;
         this.createDocumentFragment();
         _.each(objects, function (data) {
             if (_.has(objectModels, data.id)) { return; }
-            addObject(data);
-        });
+            this.addObject(data);
+        }, this);
         this.applyDocumentFragment(this.objectLayer);
     },
     handleTick: function (data) {
@@ -63,11 +85,11 @@ _.extend(World.prototype, {
         this.doHandleTick(data);
     },
     doHandleTick: function (data) {
-        var removeObject = this.removeObject;
         var objectModels = this.objectModels;
         //TODO: use sets to improve time complexity
-        var unknownIdents = [];
         var idents = [];
+        var unknownIdents = [];
+        var excessIdents = [];
         if (this.area.get("id") === null) { return; }
         //TODO: process delay
         _.each(data.objects, function (value) {
@@ -86,7 +108,8 @@ _.extend(World.prototype, {
                 this
             );
         }
-        _.each(_.difference(_.keys(objectModels), idents), removeObject);
+        excessIdents = _.difference(_.keys(objectModels), idents);
+        _.each(excessIdents, this.removeObject, this);
     },
     createDocumentFragment: function () {
         if (this.documentFragment !== null) { return; }
@@ -116,121 +139,11 @@ _.extend(World.prototype, {
         delete this.objectModels[ident];
     },
     backgroundClick: function (pos) {
+        //TODO: a controller object
+        pos[0] += this.camera.get("x");
+        pos[1] += this.camera.get("y");
         this.connection.send("area.move_to", pos);
     }
 });
 
-//TODO: create separate modules: world-models.js, world-views.js
 
-Layer = Backbone.View.extend({
-    className: "layer"
-    //TODO: culling
-});
-
-
-var Background = Layer.extend({
-    id: "background",
-    tagName: "img",
-    events: {click: "click"},
-    initialize: function (options) {
-        Layer.prototype.initialize.call(this, options);
-        this.area = options.area;
-        this.listenTo(this.model, "change:width change:height", this.render);
-        this.listenTo(this.area, "change:background", this.render);
-    },
-    render: function () {
-        var camera = this.model;
-        var bg = this.area.get("background");
-        this.$el.attr("src", "img/" + bg);
-        this.$el.width(camera.get("width")).height(camera.get("height"));
-    },
-    click: function (e) {
-        var height = this.model.get("height");
-        this.trigger("click", [e.offsetX, height - e.offsetY]);
-    }
-});
-
-Area = Backbone.Model.extend({
-    defaults: {
-        id: null,
-        background: null
-    }
-});
-
-Camera = Backbone.Model.extend({
-    defaults: {
-        x: 0,
-        y: 0,
-        height: 0,
-        width: 0
-    }
-});
-
-
-ViewPort = Backbone.View.extend({
-    initialize: function () {
-        _.bindAll(this, "updateCamera");
-        $(window).on("resize", this.updateCamera);
-        this.updateCamera();
-    },
-    updateCamera: function () {
-        this.model.set("width", this.$el.width());
-        this.model.set("height", this.$el.height());
-    },
-    remove: function () {
-        Backbone.View.prototype.remove.call(this);
-        $(window).off("resize", this.updateCamera);
-    }
-});
-
-
-WorldObject = Backbone.Model.extend({
-    defaults: {
-        pos: [0, 0],
-        height: 100,
-        width: 50,
-        angle: 0
-    },
-});
-
-
-Unit = WorldObject.extend({
-    defaults: _.extend({
-        name: "unit"
-    }, WorldObject.prototype.defaults)
-});
-
-
-UnitView = Backbone.View.extend({
-    containerSize: 140, //pixels
-    className: "world-object text-center",
-    initialize: function () {
-        this.img = null;
-        this.listenTo(this.model, "change", this.update);
-        this.listenTo(this.model, "destroy-view", this.remove);
-    },
-    render: function () {
-        var el = this.$el;
-        var model = this.model;
-        el.css({width: this.containerSize, height: this.containerSize});
-        $("<div></div>").html(model.get("name")).appendTo(el);
-        this.img = $("<img>", {src: "img/ship.png"})
-            .css({
-                width: model.get("width"),
-                height: model.get("height")
-            })
-            .appendTo(el);
-        this.update();
-        return el;
-    },
-    update: function () {
-        var model = this.model;
-        var pos = model.get("pos");
-        var angle = -model.get("angle") - 90;
-        this.$el.css({
-            left: pos[0] - this.containerSize / 2,
-            bottom: pos[1] - this.containerSize / 2,
-        });
-        this.img.css({"-webkit-transform": "rotate(" + angle + "deg)"});
-    }
-});
