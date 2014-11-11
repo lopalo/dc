@@ -35,7 +35,6 @@ body {
 
 .world-object {
     position: absolute;
-    -webkit-transition: left .2s linear, bottom .2s linear; /* TODO: delete */
 }
 
 

@@ -15,6 +15,7 @@ Layer = Backbone.View.extend({
         var el = this.$el;
         var camera = this.model;
         var idx = this.paralaxIndex;
+        //TODO: use vectors
         var dx = (camera.get("x") - camera.previous("x")) * idx;
         var dy = (camera.get("y") - camera.previous("y")) * idx;
         el.css({
@@ -97,6 +98,7 @@ ViewPortBorder = Backbone.View.extend({
 
 
 UnitView = Backbone.View.extend({
+    //TODO: fix centering of an image
     containerSize: 140, //pixels
     className: "world-object text-center",
     initialize: function () {
@@ -122,6 +124,7 @@ UnitView = Backbone.View.extend({
         var model = this.model;
         var pos = model.get("pos");
         var angle = -model.get("angle") - 90;
+        //TODO: use vectors
         this.$el.css({
             left: pos[0] - this.containerSize / 2,
             bottom: pos[1] - this.containerSize / 2,

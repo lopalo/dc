@@ -1,7 +1,7 @@
 
 var CHECK_PERIOD = 5; //milliseconds
 var INPUT_DELAY = 400; //milliseconds
-var FREEZE_FACTOR = 2000; //a less value means more frequently
+var FREEZE_FACTOR = 100; //a less value means more frequently
 
 
 function Connection() {
