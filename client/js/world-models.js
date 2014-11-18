@@ -46,10 +46,6 @@ Unit = WorldObject.extend({
     }, WorldObject.prototype.defaults),
     applyActions: function (timestamp) {
         _.each(this.get("actions"), function(action) {
-            var startTs = action.startTs;
-            var endTs = action.endTs;
-            if (startTs !== undefined && timestamp < startTs) { return; }
-            if (endTs !== undefined && timestamp > endTs) { return; }
             switch (action.tag) {
                 case "MoveDistance":
                     this._applyMoveDistance(timestamp, action);
@@ -60,6 +56,10 @@ Unit = WorldObject.extend({
         }, this);
     },
     _applyMoveDistance: function (timestamp, a) {
+        if (timestamp >= a.endTs) {
+            this.set("pos", a.to);
+            return;
+        }
         var f = (timestamp - a.startTs) / (a.endTs - a.startTs);
         var fromPos = Victor.fromArray(a.from);
         var toPos = Victor.fromArray(a.to);

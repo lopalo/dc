@@ -75,8 +75,9 @@ _.extend(World.prototype, {
         var handler = "handle" + cmd.charAt(0).toUpperCase() + cmd.slice(1);
         this[handler](data.body);
     },
+
     handleInit: function (data) {
-        this.serverTimeDiff = this.getTime() - data.timestamp;
+        this.setServerTime(data.timestamp);
         this.area.set({id: data.areaId, background: data.areaId + ".jpg"});
     },
     objectsInfo: function (objects) {
@@ -91,6 +92,10 @@ _.extend(World.prototype, {
     handleTick: function (data) {
         //TODO: skip it if an area ident is wrong
         if (this.area.get("id") === null) { return; }
+        if (data.timestamp > this.getServerTime()) {
+            this.setServerTime(data.timestamp);
+            console.log("Server time is updated");
+        }
         var objectModels = this.objectModels;
         //TODO: use sets to improve time complexity
         var idents = [];
@@ -119,6 +124,9 @@ _.extend(World.prototype, {
     },
     getTime: function () {
         return performance.now();
+    },
+    setServerTime: function (serverTimestamp) {
+        this.serverTimeDiff = this.getTime() - serverTimestamp
     },
     getServerTime: function () {
         return this.getTime() - this.serverTimeDiff;
