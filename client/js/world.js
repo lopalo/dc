@@ -3,7 +3,6 @@ function World(viewportEl, connection, ui, userName) {
     this.viewportEl = viewportEl;
     this.connection = connection;
     this.ui = ui;
-    this.areaId = null;
     this.uid = userName;
     this.serverTimeDiff = 0;
     this.animationId = null;
@@ -46,22 +45,22 @@ _.extend(World.prototype, {
         borders.top = new ViewPortBorder({
             el: viewportEl.find("#viewport-top-border"),
             model: camera,
-            direction: [0, 1]
+            direction: new Victor(0, 1)
         });
         borders.bottom = new ViewPortBorder({
             el: viewportEl.find("#viewport-bottom-border"),
             model: camera,
-            direction: [0, -1]
+            direction: new Victor(0, -1)
         });
         borders.left = new ViewPortBorder({
             el: viewportEl.find("#viewport-left-border"),
             model: camera,
-            direction: [-1, 0]
+            direction: new Victor(-1, 0)
         });
         borders.right = new ViewPortBorder({
             el: viewportEl.find("#viewport-right-border"),
             model: camera,
-            direction: [1, 0]
+            direction: new Victor(1, 0)
         });
 
     },
@@ -69,10 +68,7 @@ _.extend(World.prototype, {
         this.listenTo(this.connection, "area", this.dispatch);
     },
     dispatch: function (data) {
-        var cmd = data.cmd;
-        //TODO: use $.camelCase
-        //TODO: use command names with a hyphen
-        var handler = "handle" + cmd.charAt(0).toUpperCase() + cmd.slice(1);
+        var handler = $.camelCase("handle-" + data.cmd);
         this[handler](data.body);
     },
 
@@ -84,14 +80,13 @@ _.extend(World.prototype, {
         var objectModels = this.objectModels;
         this.createDocumentFragment();
         _.each(objects, function (data) {
-            if (_.has(objectModels, data.id)) { return; }
+            if (_.has(objectModels, data.id)) return;
             this.addObject(data);
         }, this);
         this.applyDocumentFragment(this.objectLayer);
     },
     handleTick: function (data) {
-        //TODO: skip it if an area ident is wrong
-        if (this.area.get("id") === null) { return; }
+        if (this.area.get("id") !== data.areaId) return;
         if (data.timestamp > this.getServerTime()) {
             this.setServerTime(data.timestamp);
             console.log("Server time is updated");
@@ -101,7 +96,7 @@ _.extend(World.prototype, {
         var idents = [];
         var unknownIdents = [];
         var excessIdents = [];
-        if (this.area.get("id") === null) { return; }
+        if (this.area.get("id") === null) return;
         _.each(data.objects, function (value) {
             idents.push(value.id);
             if (!_.has(objectModels, value.id)) {
@@ -112,7 +107,7 @@ _.extend(World.prototype, {
         }, this);
         if (!_.isEmpty(unknownIdents)) {
             this.connection.request(
-                "area.get_objects_info",
+                "area.get-objects-info",
                 unknownIdents,
                 this.objectsInfo,
                 this
@@ -126,17 +121,17 @@ _.extend(World.prototype, {
         return performance.now();
     },
     setServerTime: function (serverTimestamp) {
-        this.serverTimeDiff = this.getTime() - serverTimestamp
+        this.serverTimeDiff = this.getTime() - serverTimestamp;
     },
     getServerTime: function () {
         return this.getTime() - this.serverTimeDiff;
     },
     createDocumentFragment: function () {
-        if (this.documentFragment !== null) { return; }
+        if (this.documentFragment !== null) return;
         this.documentFragment = $(document.createDocumentFragment());
     },
     applyDocumentFragment: function (layer) {
-        if (this.documentFragment === null) { return; }
+        if (this.documentFragment === null) return;
         this.documentFragment.appendTo(layer.$el);
         this.documentFragment = null;
     },
@@ -159,10 +154,8 @@ _.extend(World.prototype, {
         delete this.objectModels[ident];
     },
     backgroundClick: function (pos) {
-        //TODO: use vectors
-        pos[0] += this.camera.get("x");
-        pos[1] += this.camera.get("y");
-        this.connection.send("area.move_to", pos);
+        pos.add(Victor.fromObject(this.camera.attributes));
+        this.connection.send("area.move-to", pos.toArray());
     },
     listenToUI: function () {
         this.listenTo(this.ui, "focus-to-myself", this.showMyself);

@@ -6,6 +6,9 @@ var ViewPortBorder;
 var UnitView;
 
 Layer = Backbone.View.extend({
+    attributes: {
+        draggable: false
+    },
     className: "layer",
     initialize: function (options) {
         this.paralaxIndex = options.paralaxIndex;
@@ -15,12 +18,12 @@ Layer = Backbone.View.extend({
         var el = this.$el;
         var camera = this.model;
         var idx = this.paralaxIndex;
-        //TODO: use vectors
-        var dx = (camera.get("x") - camera.previous("x")) * idx;
-        var dy = (camera.get("y") - camera.previous("y")) * idx;
+        var d = Victor.fromObject(camera.attributes)
+                .subtract(Victor.fromObject(camera.previousAttributes()))
+                .multiply(new Victor(idx, idx));
         el.css({
-            left: parseInt(el.css("left"), 10) - dx,
-            bottom: parseInt(el.css("bottom"), 10) - dy
+            left: parseInt(el.css("left"), 10) - d.x,
+            bottom: parseInt(el.css("bottom"), 10) - d.y
         });
     }
     //TODO: culling
@@ -45,7 +48,7 @@ var Background = Layer.extend({
     },
     click: function (e) {
         var height = this.model.get("height");
-        this.trigger("click", [e.offsetX, height - e.offsetY]);
+        this.trigger("click", new Victor(e.offsetX, height - e.offsetY));
     }
 });
 
@@ -88,7 +91,7 @@ ViewPortBorder = Backbone.View.extend({
         this.periodId = null;
     },
     updateCamera: function () {
-        this.model.moveTo(this.direction);
+        this.model.moveTo(this.direction.clone());
     },
     remove: function () {
         Backbone.View.prototype.remove.call(this);
@@ -112,6 +115,7 @@ UnitView = Backbone.View.extend({
         el.css({width: this.containerSize, height: this.containerSize});
         $("<div></div>").html(model.get("name")).appendTo(el);
         this.img = $("<img>", {src: "img/ship.png"})
+            .attr("draggable", false)
             .css({
                 width: model.get("width"),
                 height: model.get("height")
@@ -122,13 +126,11 @@ UnitView = Backbone.View.extend({
     },
     update: function () {
         var model = this.model;
-        var pos = model.get("pos");
+        var shift = this.containerSize / 2;
+        var pos = Victor.fromArray(model.get("pos"))
+                  .subtract(new Victor(shift, shift));
         var angle = -model.get("angle") - 90;
-        //TODO: use vectors
-        this.$el.css({
-            left: pos[0] - this.containerSize / 2,
-            bottom: pos[1] - this.containerSize / 2,
-        });
+        this.$el.css({left: pos.x, bottom: pos.y});
         this.img.css({"-webkit-transform": "rotate(" + angle + "deg)"});
     }
 });

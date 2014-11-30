@@ -20,30 +20,35 @@ Camera = Backbone.Model.extend({
         width: 0
     },
     moveTo: function (direction) {
-        //TODO: use vectors
-        this.set({
-            x: this.get("x") + direction[0] * CAMERA_SPEED,
-            y: this.get("y") + direction[1] * CAMERA_SPEED
-        });
+        var s = CAMERA_SPEED;
+        var v = direction
+               .multiply(new Victor(s, s))
+               .add(Victor.fromObject(this.attributes));
+        this.set(v.toObject());
     }
 });
 
 
 WorldObject = Backbone.Model.extend({
-    defaults: {
-        pos: [0, 0],
-        height: 80,
-        width: 40,
-        angle: 0
+    defaults: function () {
+        return {
+            pos: [0, 0],
+            height: 80,
+            width: 40,
+            angle: 0
+        };
     },
 });
 
 
 Unit = WorldObject.extend({
-    defaults: _.extend({
-        name: "unit",
-        actions: [],
-    }, WorldObject.prototype.defaults),
+    defaults: function () {
+        var defaults = {
+            name: "unit",
+            actions: [],
+        };
+        return _.extend(defaults, WorldObject.prototype.defaults.call(this));
+    },
     applyActions: function (timestamp) {
         _.each(this.get("actions"), function(action) {
             switch (action.tag) {
@@ -63,10 +68,11 @@ Unit = WorldObject.extend({
         var f = (timestamp - a.startTs) / (a.endTs - a.startTs);
         var fromPos = Victor.fromArray(a.from);
         var toPos = Victor.fromArray(a.to);
-        var pos = toPos.subtract(fromPos)
-                       .multiply(Victor(f, f))
-                       .add(fromPos);
-        //TODO: round a pos to integer (.unfloat())
+        var pos = toPos
+                  .subtract(fromPos)
+                  .multiply(new Victor(f, f))
+                  .add(fromPos)
+                  .unfloat();
         this.set("pos", pos.toArray());
     }
 });

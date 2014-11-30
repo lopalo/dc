@@ -103,10 +103,12 @@ handleEvent (DeleteUser uid) = users' %= deleteUser uid >> return True
 
 tickData :: Ts -> State' Value
 tickData ts = do
+    aid <- gets areaId
     evs <- access eventsForBroadcast'
     eventsForBroadcast' ~= []
     usd <- gets $ usersData . users
-    let res = object ["objects" .= usersInfo,
+    let res = object ["areaId" .= aid,
+                      "objects" .= usersInfo,
                       "events" .= evs,
                       "timestamp" .= ts]
         usersInfo = map tickClientInfo $ M.elems usd

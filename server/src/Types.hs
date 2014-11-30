@@ -24,10 +24,10 @@ newtype UserId = UserId String deriving (Eq, Ord, Generic, Typeable)
 instance Binary UserId
 
 instance Show UserId where
-    show (UserId str) = "user_id:" ++ str
+    show (UserId str) = "user-id:" ++ str
 
 instance Read UserId where
-    readsPrec _ str = [(UserId ("user_id" `delIdPrefix` str), "")]
+    readsPrec _ str = [(UserId ("user-id" `delIdPrefix` str), "")]
 
 instance ToJSON UserId where
     toJSON = toJSON . show

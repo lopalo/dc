@@ -17,12 +17,13 @@ class TestBasicInteraction(FuncTestCase):
                              "durability": 100,
                              "angle": 0.0,
                              "pos": [10, 10],
-                             "id": "user_id:zozo"}],
+                             "id": "user-id:zozo"}],
                 "events":[],
+                "areaId": "alpha",
                 "timestamp": ANY}]
         self.assertEqual(exp, c1.recv())
-        c1.send("area.move_to", [-1000, -1000])
-        c1.send("area.move_to", [14, 20]) #cancel the previous action
+        c1.send("area.move-to", [-1000, -1000])
+        c1.send("area.move-to", [14, 20]) #cancel the previous action
         exp_actions = [{'endTs': ANY,
                         'from': [10, 10],
                         'startTs': ANY,
@@ -30,20 +31,22 @@ class TestBasicInteraction(FuncTestCase):
                         'to': [14, 20]}]
         exp = ['area.tick',
                {'events': [],
+                "areaId": "alpha",
                 'timestamp': ANY,
                 'objects': [{'actions': exp_actions,
                              'durability': 100,
                              'angle': 68.19859,
-                             'id': 'user_id:zozo',
+                             'id': 'user-id:zozo',
                              'pos': [12, 16]}]}]
         self.assertEqual(exp, c1.recv())
         exp = ['area.tick',
                {'events': [],
+                "areaId": "alpha",
                 'timestamp': ANY,
                 'objects': [{'actions': [],
                              'durability': 100,
                              'angle': 68.19859,
-                             'id': 'user_id:zozo',
+                             'id': 'user-id:zozo',
                              'pos': [14, 20]}]}]
         self.assertEqual(exp, c1.recv())
         c2 = self.client()
@@ -52,71 +55,74 @@ class TestBasicInteraction(FuncTestCase):
                 {'areaId': 'alpha',
                 'timestamp': ANY}]
         self.assertEqual(exp, c2.recv())
-        exp = [{'id': 'user_id:dede',
+        exp = [{'id': 'user-id:dede',
                 'name': 'dede',
                 'angle': 0,
                 'durability': 100,
                 'pos': [10, 10],
                 'tag': 'User'},
-               {'id': 'user_id:zozo',
+               {'id': 'user-id:zozo',
                 'name': 'zozo',
                 'angle': 68.19859,
                 'durability': 100,
                 'pos': [14, 20],
                 'tag': 'User'}]
-        self.assertEqual(exp, c1.req("area.get_objects_info",
-                                     ['user_id:zozo', 'user_id:dede']))
+        self.assertEqual(exp, c1.req("area.get-objects-info",
+                                     ['user-id:zozo', 'user-id:dede']))
         c1.send("area.ignite", 40)
         exp_actions = [{'damageSpeed': 40,
                         'previousTs': ANY,
                         'tag': 'Burning'}]
         exp = ['area.tick',
                {'events': [],
+                "areaId": "alpha",
                 'timestamp': ANY,
                 'objects': [{'actions': [],
                              'durability': 100,
-                             'id': 'user_id:dede',
+                             'id': 'user-id:dede',
                              'angle': 0,
                              'pos': [10, 10]},
                             {'actions': exp_actions,
                              'durability': 60,
                              'angle': 68.19859,
-                             'id': 'user_id:zozo',
+                             'id': 'user-id:zozo',
                              'pos': [14, 20]}]}]
         self.assertEqual(exp, c1.recv())
         self.assertEqual(exp, c2.recv())
         exp = ['area.tick',
                {'events': [],
+                "areaId": "alpha",
                 'timestamp': ANY,
                 'objects': [{'actions': [],
                              'durability': 100,
                              'angle': 0,
-                             'id': 'user_id:dede',
+                             'id': 'user-id:dede',
                              'pos': [10, 10]},
                             {'actions': exp_actions,
                              'durability': 20,
                              'angle': 68.19859,
-                             'id': 'user_id:zozo',
+                             'id': 'user-id:zozo',
                              'pos': [14, 20]}]}]
         self.assertEqual(exp, c1.recv())
         self.assertEqual(exp, c2.recv())
         exp = ['area.tick',
-               {'events': [{'ident': 'user_id:zozo', 'tag': 'DeleteUser'}],
+               {'events': [{'ident': 'user-id:zozo', 'tag': 'DeleteUser'}],
+                "areaId": "alpha",
                 'timestamp': ANY,
                 'objects': [{'actions': [],
                              'durability': 100,
                              'angle': 0,
-                             'id': 'user_id:dede',
+                             'id': 'user-id:dede',
                              'pos': [10, 10]}]}]
         self.assertEqual(exp, c2.recv())
-        exp = [{'id': 'user_id:dede',
+        exp = [{'id': 'user-id:dede',
                 'name': 'dede',
                 'angle': 0,
                 'durability': 100,
                 'pos': [10, 10],
                 'tag': 'User'}]
-        self.assertEqual(exp, c2.req("area.get_objects_info",
-                                     ['user_id:zozo', 'user_id:dede']))
+        self.assertEqual(exp, c2.req("area.get-objects-info",
+                                     ['user-id:zozo', 'user-id:dede']))
         with self.assertRaises(WebSocketTimeoutException):
             c1.recv()
 

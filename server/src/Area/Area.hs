@@ -94,7 +94,7 @@ handleObjectsInfo state (GetObjectsInfo ids, _) = do
         us = usersData $ users state
         getObj :: [Value] -> String -> [Value]
         getObj res ident
-            | "user_id:" `startswith` ident =
+            | "user-id:" `startswith` ident =
                 let ident' = read ident :: UserId
                 in case ident' `M.lookup` us of
                     Nothing -> res
@@ -201,13 +201,13 @@ parseClientCmd :: String -> Value -> ForwardData -> Process ()
 parseClientCmd "echo" body = do
     let Success txt = fromJSON body :: Result String
     forward (Echo txt)
-parseClientCmd "enter_area" body = do
+parseClientCmd "enter-area" body = do
     let Success aid = fromJSON body :: Result AreaId
     forward (EnterArea aid)
-parseClientCmd "get_objects_info" body = do
+parseClientCmd "get-objects-info" body = do
     let Success ids = fromJSON body :: Result [String]
     forward (GetObjectsInfo ids)
-parseClientCmd "move_to" body = do
+parseClientCmd "move-to" body = do
     let Success toPos = fromJSON body :: Result Pos
     forward (MoveTo toPos)
 parseClientCmd "ignite" body = do
