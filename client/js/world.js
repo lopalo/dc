@@ -1,3 +1,4 @@
+var FPS = 30;
 
 function World(viewportEl, connection, ui, userName) {
     this.viewportEl = viewportEl;
@@ -5,6 +6,7 @@ function World(viewportEl, connection, ui, userName) {
     this.ui = ui;
     this.uid = userName;
     this.serverTimeDiff = 0;
+    this.animationLoopId = null;
     this.animationId = null;
     this.area = new Area();
     this.camera = new Camera();
@@ -14,12 +16,12 @@ function World(viewportEl, connection, ui, userName) {
     this.objectModels = {};
     this.viewportBorders = {};
     this.documentFragment = null;
-    _.bindAll(this, "animationStep");
+    _.bindAll(this, "animationLoopStep", "animationCallback");
     this.setupLayers();
     this.setupBorders();
     this.listenToConnection();
     this.listenToUI();
-    this.requestAnimationFrame();
+    this.requestAnimation();
 }
 World.prototype = Object.create(Backbone.Events);
 _.extend(World.prototype, {
@@ -163,17 +165,22 @@ _.extend(World.prototype, {
     showMyself: function () {
         //TODO
     },
-    requestAnimationFrame: function () {
-        this.animationId = requestAnimationFrame(this.animationStep);
+    requestAnimation: function () {
+        this.animationLoopId = setTimeout(this.animationLoopStep, 1000 / FPS);
     },
-    cancelAnimationFrame: function () {
+    animationLoopStep: function () {
+        this.animationId = requestAnimationFrame(this.animationCallback);
+    },
+    animationCallback: function () {
+        this.requestAnimation();
+        this.animationStep();
+    },
+    stopAnimationLoop: function () {
+        clearTimeout(this.animationLoopId);
         cancelAnimationFrame(this.animationId);
     },
     animationStep: function () {
-        //TODO: fix performance degradation (maybe change CSS in a native DOM)
-        //TODO: decrease frame rate
         var timestamp = this.getServerTime();
-        this.requestAnimationFrame(this.animationStep);
         _.each(_.values(this.objectModels), function (model) {
             if (model.applyActions !== undefined) {
                 model.applyActions(timestamp);

@@ -101,8 +101,8 @@ ViewPortBorder = Backbone.View.extend({
 
 
 UnitView = Backbone.View.extend({
-    //TODO: fix centering of an image
-    containerSize: 140, //pixels
+    width: 140, //pixels
+    labelHeight: 20, //pixels
     className: "world-object text-center",
     initialize: function () {
         this.img = null;
@@ -112,13 +112,14 @@ UnitView = Backbone.View.extend({
     render: function () {
         var el = this.$el;
         var model = this.model;
-        el.css({width: this.containerSize, height: this.containerSize});
+        var height = model.get("height");
+        el.css({width: this.width, height: this.labelHeight + height});
         $("<div></div>").html(model.get("name")).appendTo(el);
         this.img = $("<img>", {src: "img/ship.png"})
             .attr("draggable", false)
             .css({
                 width: model.get("width"),
-                height: model.get("height")
+                height: height
             })
             .appendTo(el);
         this.update();
@@ -126,9 +127,10 @@ UnitView = Backbone.View.extend({
     },
     update: function () {
         var model = this.model;
-        var shift = this.containerSize / 2;
+        var xShift = this.width / 2;
+        var yShift = model.get("height") / 2;
         var pos = Victor.fromArray(model.get("pos"))
-                  .subtract(new Victor(shift, shift));
+                  .subtract(new Victor(xShift, yShift));
         var angle = -model.get("angle") - 90;
         this.$el.css({left: pos.x, bottom: pos.y});
         this.img.css({"-webkit-transform": "rotate(" + angle + "deg)"});
