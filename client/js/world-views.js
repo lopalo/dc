@@ -1,6 +1,7 @@
 
 var Layer;
 var Background;
+var Midground;
 var ViewPort;
 var UnitView;
 
@@ -10,28 +11,30 @@ Layer = Backbone.View.extend({
     },
     className: "layer",
     initialize: function (options) {
-        this.paralaxIndex = options.paralaxIndex;
-        this.listenTo(this.model, "change:pos", this.updatePos);
+        this.parallaxIndex = options.parallaxIndex;
+        this.listenTo(this.model, "change:pos", this.move);
     },
-    updatePos: function () {
-        var el = this.$el;
+    move: function () {
         var camera = this.model;
-        var idx = this.paralaxIndex;
+        var idx = this.parallaxIndex;
         var d = Victor.fromArray(camera.get("pos"))
                 .subtract(Victor.fromArray(camera.previous("pos")))
                 .multiply(new Victor(idx, idx));
+        this.updatePos(d);
+    },
+    updatePos: function (delta) {
+        var el = this.$el;
         el.css({
-            left: parseInt(el.css("left"), 10) - d.x,
-            bottom: parseInt(el.css("bottom"), 10) - d.y
+            left: parseInt(el.css("left"), 10) - delta.x,
+            bottom: parseInt(el.css("bottom"), 10) - delta.y
         });
     }
-    //TODO: culling
 });
 
 
 var Background = Layer.extend({
     id: "background",
-    tagName: "img",
+    className: "layer background",
     events: {
         click: "click",
         mousedown: "mouseDown",
@@ -41,15 +44,12 @@ var Background = Layer.extend({
         Layer.prototype.initialize.call(this, options);
         this.area = options.area;
         this.ui = options.ui;
-        this.listenTo(this.model, "change:width change:height", this.render);
         this.listenTo(this.area, "change:background", this.render);
         this.mousePos = null;
     },
     render: function () {
-        var camera = this.model;
         var bg = this.area.get("background");
-        this.$el.attr("src", "img/" + bg);
-        this.$el.width(camera.get("width")).height(camera.get("height"));
+        this.$el.css({"background-image": "url(img/" + bg + ")"});
     },
     click: function (e) {
         if (this.ui.get("controlMode") !== "move") return;
@@ -77,6 +77,20 @@ var Background = Layer.extend({
 });
 
 
+var Midground = Layer.extend({
+    className: "layer midground",
+    updatePos: function (delta) {
+        delta.invertX();
+        var el = this.$el;
+        var pos = el.css("background-position").split(" ");
+        pos = _.map(pos, function (i) {return parseInt(i, 10); });
+        pos = Victor.fromArray(pos).add(delta);
+        pos = pos.x + "px " + pos.y + "px";
+        el.css("background-position", pos);
+    }
+});
+
+
 
 ViewPort = Backbone.View.extend({
     initialize: function () {
@@ -96,6 +110,7 @@ ViewPort = Backbone.View.extend({
 
 
 UnitView = Backbone.View.extend({
+    //TODO: culling in the object layer
     width: 140, //pixels
     labelHeight: 20, //pixels
     className: "world-object text-center",

@@ -26,13 +26,18 @@ _.extend(World.prototype, {
     constructor: World,
     setupLayers: function () {
         this.backgroundLayer = new Background({
-            paralaxIndex: 0,
+            parallaxIndex: 0,
             model: this.camera,
             area: this.area,
             ui: this.ui
         });
-        this.objectLayer = new Layer({paralaxIndex: 1, model: this.camera});
+        this.midgroundLayer = new Midground({
+            parallaxIndex: .3,
+            model: this.camera,
+        });
+        this.objectLayer = new Layer({parallaxIndex: 1, model: this.camera});
         this.backgroundLayer.$el.appendTo(this.viewportEl);
+        this.midgroundLayer.$el.appendTo(this.viewportEl);
         this.objectLayer.$el.appendTo(this.viewportEl);
         this.listenTo(this.backgroundLayer, "move-to", this.moveTo);
     },
