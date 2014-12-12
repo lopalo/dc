@@ -22,11 +22,13 @@ function connect(connection) {
 
 function onOpen(connection) {
     var userName = $("#connect-name").val();
+    var userId = "user-id:" + userName;
+    var gameEl = $("#game");
     var ui;
     $("#connect-form").remove();
-    $("#game").show();
-    ui = _.extend({}, Backbone.Events);
-    new World($("#viewport"), connection, ui, userName);
+    gameEl.show();
+    ui = setupUI(gameEl.find("#ui"));
+    new World(gameEl.find("#viewport"), connection, ui, userId);
     connection.send("login", userName);
     //TODO: connection.once("area.init", "remove the connect form")
     //TODO: show error if a user is already connected

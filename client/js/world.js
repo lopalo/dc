@@ -1,10 +1,10 @@
 var FPS = 30;
 
-function World(viewportEl, connection, ui, userName) {
+function World(viewportEl, connection, ui, userId) {
     this.viewportEl = viewportEl;
     this.connection = connection;
     this.ui = ui;
-    this.uid = userName;
+    this.uid = userId;
     this.serverTimeDiff = 0;
     this.animationLoopId = null;
     this.animationId = null;
@@ -14,11 +14,9 @@ function World(viewportEl, connection, ui, userName) {
     this.backgroundLayer = null;
     this.objectLayer = null;
     this.objectModels = {};
-    this.viewportBorders = {};
     this.documentFragment = null;
     _.bindAll(this, "animationLoopStep", "animationCallback");
     this.setupLayers();
-    this.setupBorders();
     this.listenToConnection();
     this.listenToUI();
     this.requestAnimation();
@@ -30,41 +28,13 @@ _.extend(World.prototype, {
         this.backgroundLayer = new Background({
             paralaxIndex: 0,
             model: this.camera,
-            area: this.area
+            area: this.area,
+            ui: this.ui
         });
         this.objectLayer = new Layer({paralaxIndex: 1, model: this.camera});
         this.backgroundLayer.$el.appendTo(this.viewportEl);
         this.objectLayer.$el.appendTo(this.viewportEl);
-        this.listenTo(this.backgroundLayer, "click", this.backgroundClick);
-    },
-    setupBorders: function () {
-        var borders = this.viewportBorders;
-        var viewportEl = this.viewportEl;
-        var camera = this.camera;
-        //TODO: move it to the UI component
-        //TODO: do it in a cycle
-        //TODO: add corners to add more directions for moving;
-        borders.top = new ViewPortBorder({
-            el: viewportEl.find("#viewport-top-border"),
-            model: camera,
-            direction: new Victor(0, 1)
-        });
-        borders.bottom = new ViewPortBorder({
-            el: viewportEl.find("#viewport-bottom-border"),
-            model: camera,
-            direction: new Victor(0, -1)
-        });
-        borders.left = new ViewPortBorder({
-            el: viewportEl.find("#viewport-left-border"),
-            model: camera,
-            direction: new Victor(-1, 0)
-        });
-        borders.right = new ViewPortBorder({
-            el: viewportEl.find("#viewport-right-border"),
-            model: camera,
-            direction: new Victor(1, 0)
-        });
-
+        this.listenTo(this.backgroundLayer, "move-to", this.moveTo);
     },
     listenToConnection: function () {
         this.listenTo(this.connection, "area", this.dispatch);
@@ -155,15 +125,15 @@ _.extend(World.prototype, {
         this.objectModels[ident].trigger("destroy-view");
         delete this.objectModels[ident];
     },
-    backgroundClick: function (pos) {
-        pos.add(Victor.fromObject(this.camera.attributes));
+    moveTo: function (pos) {
         this.connection.send("area.move-to", pos.toArray());
     },
     listenToUI: function () {
         this.listenTo(this.ui, "focus-to-myself", this.showMyself);
     },
     showMyself: function () {
-        //TODO
+        var selfPos = this.objectModels[this.uid].get("pos");
+        this.camera.focusTo(Victor.fromArray(selfPos));
     },
     requestAnimation: function () {
         this.animationLoopId = setTimeout(this.animationLoopStep, 1000 / FPS);

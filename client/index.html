@@ -11,6 +11,7 @@
     <script src="js/libs/backbone-min.js"></script>
     <script src="js/libs/victor.min.js"></script>
     <script src="js/connection.js"></script>
+    <script src="js/ui.js"></script>
     <script src="js/world-models.js"></script>
     <script src="js/world-views.js"></script>
     <script src="js/world.js"></script>
@@ -38,12 +39,13 @@
             </div>
         </div>
         <div id="game">
-            <div id="ui"></div>
-            <div id="viewport">
-                <div id="viewport-top-border" class="viewport-border"></div>
-                <div id="viewport-bottom-border" class="viewport-border"></div>
-                <div id="viewport-left-border" class="viewport-border"></div>
-                <div id="viewport-right-border" class="viewport-border"></div>
+            <div id="viewport"></div>
+            <div id="ui">
+                <button id="focus-to-myself" class="btn btn-default ui">+</button>
+                <select id="control-mode" class="form-control ui">
+                    <option value="view">view</option>
+                    <option value="move">move</option>
+                </select>
             </div>
         </div>
     </div>

@@ -3,7 +3,6 @@ var Area;
 var Camera;
 var WorldObject;
 var Unit;
-var CAMERA_SPEED = 10; //px per second
 
 Area = Backbone.Model.extend({
     defaults: {
@@ -14,17 +13,18 @@ Area = Backbone.Model.extend({
 
 Camera = Backbone.Model.extend({
     defaults: {
-        x: 0,
-        y: 0,
+        pos: [0, 0],
         height: 0,
         width: 0
     },
-    moveTo: function (direction) {
-        var s = CAMERA_SPEED;
-        var v = direction
-               .multiply(new Victor(s, s))
-               .add(Victor.fromObject(this.attributes));
-        this.set(v.toObject());
+    focusTo: function (pos) {
+        var shift = new Victor(this.get("width"), this.get("height"))
+                        .divide(new Victor(2, 2));
+        this.set("pos", pos.subtract(shift).toArray());
+    },
+    move: function (delta) {
+        var pos = delta.add(Victor.fromArray(this.get("pos")));
+        this.set("pos", pos.toArray());
     }
 });
 

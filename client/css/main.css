@@ -18,9 +18,33 @@ body {
     border-color: #b1b1b1;
     margin-bottom: 10%;
     width: 100%;
-    height: 60%;
+    height: 80%;
     display: none;
     overflow: hidden;
+    position: relative;
+}
+
+.ui {
+    position: absolute;
+}
+
+#focus-to-myself {
+    top: 3%;
+    left: 1%;
+}
+
+#control-mode {
+    width: 7%;
+    top: 3%;
+    right: 1%;
+}
+
+
+#viewport {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    position: relative;
 }
 
 
@@ -38,37 +62,3 @@ body {
 }
 
 
-#viewport {
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    position: relative;
-}
-
-.viewport-border {
-    z-index: 3;
-    position: absolute;
-}
-
-#viewport-top-border {
-    height: 6%;
-    width: 100%;
-}
-
-#viewport-bottom-border {
-    height: 6%;
-    width: 100%;
-    bottom: 0%;
-}
-
-
-#viewport-left-border {
-    width: 3%;
-    height: 100%;
-}
-
-#viewport-right-border {
-    width: 3%;
-    height: 100%;
-    right: 0%
-}
