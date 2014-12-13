@@ -1,8 +1,10 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Controller (inputHandler) where
 
 
 import Control.Distributed.Process
-import Data.Aeson (Value, Result(Success), fromJSON, decode)
+import Data.Aeson (Value, Result(Success), fromJSON, decode, object, (.=))
 import Data.String.Utils (startswith)
 
 import Connection (Connection, sendCmd, sendResponse, InputHandler)
@@ -30,6 +32,10 @@ commandHandler settings "login" body 0 conn _ _ = do
         userId = UserId name
         areaUserInfo = (userId, name)
     evaluate userId
+    --TODO: send it from the user's component (user.init) and then do enter to an area
+    sendCmd conn "init" $ object ["userId" .= userId,
+                                  "name" .= name,
+                                  "areas" .= S.areas settings]
     A.enter (S.startArea settings) areaUserInfo conn
 commandHandler settings path body req conn _ (Just areaPid)
     | "area." `startswith` path =

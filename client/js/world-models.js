@@ -1,15 +1,7 @@
 
-var Area;
 var Camera;
 var WorldObject;
 var Unit;
-
-Area = Backbone.Model.extend({
-    defaults: {
-        id: null,
-        background: null
-    }
-});
 
 Camera = Backbone.Model.extend({
     defaults: {

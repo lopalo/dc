@@ -2,6 +2,7 @@
 var connect;
 var onOpen;
 var onTimeout;
+var initGame;
 var _connection; //use only for debugging
 
 //TODO: use require.js
@@ -20,17 +21,14 @@ function connect(connection) {
     connection.connect(address, 2000, onOpen, onTimeout);
 }
 
+
 function onOpen(connection) {
     var userName = $("#connect-name").val();
-    var userId = "user-id:" + userName;
-    var gameEl = $("#game");
-    var ui;
-    $("#connect-form").remove();
-    gameEl.show();
-    ui = setupUI(gameEl.find("#ui"));
-    new World(gameEl.find("#viewport"), connection, ui, userId);
     connection.send("login", userName);
-    //TODO: connection.once("area.init", "remove the connect form")
+    connection.once("init", function (userData) {
+        $("#connect-form").remove();
+        initGame(connection, userData);
+    });
     //TODO: show error if a user is already connected
     //TODO: process disconnection
 }
@@ -43,5 +41,14 @@ function onTimeout(connection) {
     $("#connect").one("click", _.partial(connect, connection));
 }
 
+function initGame(connection, userData) {
+    var gameEl = $("#game");
+    var user = new User(userData);
+    var area = new Area();
+    var ui = new UI();
+    gameEl.show();
+    new World(gameEl.find("#viewport"), connection, user, area, ui);
+    setupUI(gameEl.find("#ui"), ui, user, area);
+}
 
 

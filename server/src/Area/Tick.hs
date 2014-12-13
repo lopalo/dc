@@ -49,6 +49,7 @@ handleTick state TimeTick = do
     case broadcastData of
         Just bd -> do
             broadcastCmd state "tick" bd
+            --TODO: use area-log-every-tick
             logDebug $ printf "Broadcast tick %d of area '%s'" tnum aid
         Nothing -> return ()
     return state'

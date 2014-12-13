@@ -9,6 +9,10 @@ class TestBasicInteraction(FuncTestCase):
         c1 = self.client()
         self.assertEqual('Echo: foo', c1.req("echo", "foo"))
         c1.send("login", "zozo")
+        exp = ['init', {'userId': "user-id:zozo",
+                        'name': "zozo",
+                        'areas': ["alpha", "beta"]}]
+        self.assertEqual(exp, c1.recv())
         exp = ['area.init', {'areaId': 'alpha', 'timestamp': ANY}]
         self.assertEqual(exp, c1.recv())
         self.assertEqual('alpha echo: bar', c1.req("area.echo", "bar"))
@@ -54,7 +58,7 @@ class TestBasicInteraction(FuncTestCase):
         exp =  ['area.init',
                 {'areaId': 'alpha',
                 'timestamp': ANY}]
-        self.assertEqual(exp, c2.recv())
+        self.assertEqual(exp, c2.recv("area.init"))
         exp = [{'id': 'user-id:dede',
                 'name': 'dede',
                 'angle': 0,
@@ -83,7 +87,7 @@ class TestBasicInteraction(FuncTestCase):
                              'angle': 0,
                              'pos': [10, 10]},
                             {'actions': exp_actions,
-                             'durability': 60,
+                             'durability': 62,
                              'angle': 68.19859,
                              'id': 'user-id:zozo',
                              'pos': [14, 20]}]}]
@@ -99,7 +103,7 @@ class TestBasicInteraction(FuncTestCase):
                              'id': 'user-id:dede',
                              'pos': [10, 10]},
                             {'actions': exp_actions,
-                             'durability': 20,
+                             'durability': 22,
                              'angle': 68.19859,
                              'id': 'user-id:zozo',
                              'pos': [14, 20]}]}]

@@ -1,12 +1,17 @@
 var UI;
 var FocusMyselfButton;
 var SelectControlMode;
+var SelectArea;
 
-function setupUI(uiEl) {
-    var ui = new UI();
+function setupUI(uiEl, ui, user, area) {
     new FocusMyselfButton({el: uiEl.find("#focus-to-myself"), model: ui});
     new SelectControlMode({el: uiEl.find("#control-mode"), model: ui});
-    return ui;
+    new SelectArea({
+        el: uiEl.find("#select-area"),
+        model: ui,
+        area: area,
+        user: user
+    });
 }
 
 UI = Backbone.Model.extend({
@@ -57,4 +62,30 @@ SelectControlMode = Backbone.View.extend({
         $(document).off("keydown", this.keyDown);
     }
 
+});
+
+
+SelectArea = Backbone.View.extend({
+    events: {
+        change: "changeArea",
+    },
+    template: _.template("<option value='<%= v %>'><%= v %></option>"),
+    initialize: function (options) {
+        this.area = options.area;
+        this.user = options.user;
+        this.listenTo(this.area, "change:areaId", this.render);
+        this.listenTo(this.user, "change:areas", this.render);
+        this.render();
+    },
+    render: function () {
+        var el = this.$el;
+        el.empty();
+        _.each(this.user.get("areas"), function (areaId) {
+            el.append(this.template({v: areaId}));
+        }, this);
+        this.$el.val(this.area.get("areaId"));
+    },
+    changeArea: function () {
+        this.model.trigger("enter-area", this.$el.val());
+    },
 });

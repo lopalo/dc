@@ -7,10 +7,12 @@ class TestEnterArea(FuncTestCase):
     def runTest(self):
         c1 = self.client()
         c1.send("login", "zozo")
-        self.assertEqual(['area.init', sd(areaId='alpha')], c1.recv())
+        self.assertEqual(['area.init', sd(areaId='alpha')],
+                                        c1.recv('area.init'))
         c2 = self.client()
         c2.send("login", "dede")
-        self.assertEqual(['area.init', sd(areaId='alpha')], c2.recv())
+        self.assertEqual(['area.init', sd(areaId='alpha')],
+                                        c2.recv('area.init'))
 
 
         c1.send("area.enter-area", "beta")

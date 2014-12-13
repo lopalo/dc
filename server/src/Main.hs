@@ -30,6 +30,7 @@ main = do
     case res of
         Left err -> print err
         Right settings -> do
+            --TODO: get host and port from settings
             Right transport <- (createTransport
                                 "127.0.0.1"
                                 "10500"

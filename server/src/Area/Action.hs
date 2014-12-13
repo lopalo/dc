@@ -47,20 +47,21 @@ instance ToJSON Action
 burning :: Action -> Ts -> (Int, Maybe Action)
 burning action@Burning{previousTs=pts, damageSpeed=speed} ts =
     let damage = round $ speed * fromIntegral (ts - pts) / 1000
-    in if damage > 1
-       then(damage, Just action{previousTs=ts})
-       else (0, Just action)
+    in
+        if damage > 1
+           then(damage, Just action{previousTs=ts})
+           else (0, Just action)
 
 moveDistance :: Action -> Ts -> (Pos, Maybe Action)
 moveDistance action ts =
     if ts >= endTs action
-    then (to action, Nothing)
-    else let t = getT action ts
-             Pos fx fy = from action
-             Pos tx ty = to action
-             x' = fx + round (fromIntegral (tx - fx) * t)
-             y' = fy + round (fromIntegral (ty - fy) * t)
-         in (Pos x' y', Just action)
+        then (to action, Nothing)
+        else let t = getT action ts
+                 Pos fx fy = from action
+                 Pos tx ty = to action
+                 x' = fx + round (fromIntegral (tx - fx) * t)
+                 y' = fy + round (fromIntegral (ty - fy) * t)
+             in (Pos x' y', Just action)
 
 getT :: Action -> Ts -> Float
 getT action ts =

@@ -21,9 +21,10 @@ instance Active User where
         let (damage, action') = burning action ts
             durability' = d - damage
             user' = user{durability=durability'}
-        in if durability' <= 0
-           then (user, action', [DeleteUser $ userId user])
-           else (user', action', [])
+        in
+            if durability' <= 0
+               then (user, action', [DeleteUser $ userId user])
+               else (user', action', [])
 
 
     getActions = actions

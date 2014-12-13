@@ -1,14 +1,14 @@
 var FPS = 30;
 
-function World(viewportEl, connection, ui, userId) {
+function World(viewportEl, connection, user, area, ui) {
     this.viewportEl = viewportEl;
     this.connection = connection;
+    this.user = user;
+    this.area = area;
     this.ui = ui;
-    this.uid = userId;
     this.serverTimeDiff = 0;
     this.animationLoopId = null;
     this.animationId = null;
-    this.area = new Area();
     this.camera = new Camera();
     this.viewport = new ViewPort({el: viewportEl, model: this.camera});
     this.backgroundLayer = null;
@@ -48,10 +48,10 @@ _.extend(World.prototype, {
         var handler = $.camelCase("handle-" + data.cmd);
         this[handler](data.body);
     },
-
     handleInit: function (data) {
         this.setServerTime(data.timestamp);
-        this.area.set({id: data.areaId, background: data.areaId + ".jpg"});
+        _.each(_.keys(this.objectModels), this.removeObject, this);
+        this.area.set({areaId: data.areaId, background: data.areaId + ".jpg"});
     },
     objectsInfo: function (objects) {
         var objectModels = this.objectModels;
@@ -63,7 +63,7 @@ _.extend(World.prototype, {
         this.applyDocumentFragment(this.objectLayer);
     },
     handleTick: function (data) {
-        if (this.area.get("id") !== data.areaId) return;
+        if (this.area.get("areaId") !== data.areaId) return;
         if (data.timestamp > this.getServerTime()) {
             this.setServerTime(data.timestamp);
             console.log("Server time is updated");
@@ -73,7 +73,7 @@ _.extend(World.prototype, {
         var idents = [];
         var unknownIdents = [];
         var excessIdents = [];
-        if (this.area.get("id") === null) return;
+        if (this.area.get("areaId") === null) return;
         _.each(data.objects, function (value) {
             idents.push(value.id);
             if (!_.has(objectModels, value.id)) {
@@ -135,10 +135,15 @@ _.extend(World.prototype, {
     },
     listenToUI: function () {
         this.listenTo(this.ui, "focus-to-myself", this.showMyself);
+        this.listenTo(this.ui, "enter-area", this.enterArea);
     },
     showMyself: function () {
-        var selfPos = this.objectModels[this.uid].get("pos");
-        this.camera.focusTo(Victor.fromArray(selfPos));
+        var self = this.objectModels[this.user.get("userId")];
+        if (self === undefined) return;
+        this.camera.focusTo(Victor.fromArray(self.get("pos")));
+    },
+    enterArea: function (areaId) {
+        this.connection.send("area.enter-area", areaId);
     },
     requestAnimation: function () {
         this.animationLoopId = setTimeout(this.animationLoopStep, 1000 / FPS);
