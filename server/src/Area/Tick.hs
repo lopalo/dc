@@ -5,9 +5,9 @@ module Area.Tick (handleTick, scheduleTick) where
 import GHC.Generics (Generic)
 import Data.Binary (Binary)
 import Data.Typeable (Typeable)
-import Control.Monad (when, foldM, liftM)
+import Control.Monad (foldM, liftM, when)
 import Control.Category ((>>>))
-import Control.Monad.State.Strict (runState, gets, lift)
+import Control.Monad.State.Strict (runState, gets)
 import Control.Concurrent (threadDelay)
 import qualified Data.Map.Strict as M
 import Text.Printf (printf)
@@ -41,17 +41,17 @@ scheduleTick ms = do
 
 handleTick :: State -> TimeTick -> Process State
 handleTick state TimeTick = do
-    scheduleTick $ (S.areaTickMilliseconds . settings) state
+    scheduleTick $ (S.tickMilliseconds . settings) state
     now <- liftIO milliseconds
     let tnum = tickNumber state
         (broadcastData, state') = runState (calculateTick now) state
         aid = areaId state'
     case broadcastData of
-        Just bd -> do
-            broadcastCmd state "tick" bd
-            --TODO: use area-log-every-tick
-            logDebug $ printf "Broadcast tick %d of area '%s'" tnum aid
+        Just bd -> broadcastCmd state "tick" bd
         Nothing -> return ()
+    let logEveryTick = (S.logEveryTick . settings) state
+    when (tnum `rem` logEveryTick == 0) $
+        logDebug $ printf "Tick %d of the area '%s'" tnum aid
     return state'
 
 calculateTick :: Ts -> State' (Maybe Value)
@@ -60,7 +60,7 @@ calculateTick ts = do
     handleEvents
     tnum <- access tickNumber'
     tickNumber' += 1
-    broadcastEveryTick <- gets $ S.areaBroadcastEveryTick . settings
+    broadcastEveryTick <- gets $ S.broadcastEveryTick . settings
     let broadcast = tnum `rem` broadcastEveryTick == 0
     if broadcast
         then liftM Just (tickData ts)
@@ -99,7 +99,7 @@ handleEvents = do
 
 handleEvent :: Event -> State' Bool
 handleEvent (DeleteUser uid) = users' %= deleteUser uid >> return True
-    --TODO remove areaId from user's connection or disconnect him
+    --TODO: respawn the user at the enter point with a little durability
 
 
 tickData :: Ts -> State' Value

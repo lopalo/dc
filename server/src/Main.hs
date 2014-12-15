@@ -12,33 +12,35 @@ import Data.Yaml (ParseException, decodeFileEither)
 import Connection (acceptConnection)
 import Controller (inputHandler)
 import Area.Area (areaProcess)
-import Settings (Settings, areas)
+import qualified Settings as S
 
 
 
-start :: Settings -> Process ()
-start settings = mapM_ startArea $ areas settings where
+start :: S.Settings -> Process ()
+start settings = mapM_ startArea $ S.areas settings where
     startArea areaId = do
-        areadPid <- spawnLocal $ areaProcess settings areaId
+        areadPid <- spawnLocal $ areaProcess (S.area settings) areaId
         register areaId areadPid
 
 
 main :: IO ()
 main = do
     [settingsPath] <- getArgs
-    res <- decodeFileEither settingsPath :: IO (Either ParseException Settings)
+    res <- (decodeFileEither settingsPath
+            :: IO (Either ParseException S.Settings))
     case res of
         Left err -> print err
         Right settings -> do
-            --TODO: get host and port from settings
+            let (nHost, nPort) = S.nodeAddress settings
             Right transport <- (createTransport
-                                "127.0.0.1"
-                                "10500"
+                                nHost
+                                nPort
                                 defaultTCPParameters)
             node <- Node.newLocalNode transport Node.initRemoteTable
             Node.runProcess node $ start settings
-            let accept = acceptConnection node $ inputHandler settings
-            runServer "127.0.0.1" 10501 accept
+            let (wsHost, wsPort) = S.wsAddress settings
+                accept = acceptConnection node $ inputHandler settings
+            runServer wsHost wsPort accept
 
 
 

@@ -11,7 +11,7 @@ SERVER_DIR = "../../src"
 SERVER_NAME = "Main.hs"
 SERVER_OUTPUT_DIR = "logs"
 TIMEOUT = 1.5
-URL = "ws://127.0.0.1:10501"
+URL = "ws://127.0.0.1:11501"
 
 
 class _Any(object):

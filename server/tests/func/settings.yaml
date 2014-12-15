@@ -1,7 +1,12 @@
 areas: [alpha, beta]
 start-area: alpha
-area-user-speed: 6 #units per second
-init-user-durability: 100
-start-area-pos: [10, 10]
-area-tick-milliseconds: 100
-area-broadcast-every-tick: 10
+node-address: [127.0.0.1, "11500"]
+ws-address: [127.0.0.1, 11501]
+user:
+  speed: 6 #units per second
+  init-durability: 100
+area:
+  enter-pos: [10, 10]
+  tick-milliseconds: 100
+  broadcast-every-tick: 10
+  log-every-tick: 10

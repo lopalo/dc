@@ -8,7 +8,7 @@ import qualified Data.Map.Strict as M
 
 import Data.Lens.Common (lens, Lens, (^%=))
 
-import Settings (Settings)
+import Settings (AreaSettings)
 import Connection (Connection)
 import Types (UserId, AreaId)
 import qualified Area.User as U
@@ -25,7 +25,7 @@ type UsersData = M.Map UserId U.User
 type UserIds = M.Map Connection UserId
 
 data State = State {areaId :: AreaId,
-                    settings :: Settings,
+                    settings :: AreaSettings,
                     tickNumber :: Int,
                     users :: !Users,
                     events :: !Events,

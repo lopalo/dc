@@ -56,13 +56,15 @@ instance Binary Ignite
 handleEnter :: State -> (Enter, Connection) -> Process State
 handleEnter state (Enter userInfo, conn) = do
     let (uid, userName) = userInfo
-        startPos = (S.startAreaPos . settings) state
+        startPos = (S.enterPos . settings) state
+        speed = 6 --TODO: get from userInfo
+        durability = 100 --TODO: get from userInfo
         user = U.User{U.userId=uid,
                       U.name=userName,
                       U.pos=uncurry Pos startPos,
                       U.angle=0,
-                      U.speed=(S.areaUserSpeed . settings) state,
-                      U.durability=(S.initUserDurability . settings) state,
+                      U.speed=speed,
+                      U.durability=durability,
                       U.actions=[]}
         state' = (users' ^%= addUser uid conn user) state
     selfPid <- makeSelfPid
@@ -129,7 +131,7 @@ handleIgnite state (Ignite dmgSpeed, conn) = do
     return $ addUserAction uid action state
 
 
-areaProcess :: S.Settings -> AreaId -> Process ()
+areaProcess :: S.AreaSettings -> AreaId -> Process ()
 areaProcess settings aid = do
     let state = State{areaId=aid,
                       settings=settings,
@@ -138,7 +140,7 @@ areaProcess settings aid = do
                       events=[],
                       eventsForBroadcast=[]}
         us = Users{connections=M.empty, usersData=M.empty, userIds=M.empty}
-    scheduleTick $ S.areaTickMilliseconds settings
+    scheduleTick $ S.tickMilliseconds settings
     loop state
     return ()
 
