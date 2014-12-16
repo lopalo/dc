@@ -1,13 +1,14 @@
 {-# LANGUAGE DeriveGeneric, DeriveDataTypeable #-}
 
 module Connection (acceptConnection, InputHandler, Connection,
-                   sendCmd, sendResponse, broadcastCmd,
-                   setUser, setArea, close) where
+                   sendCmd, sendResponse, broadcastCmd, setUser,
+                   setArea, close, monitorConnection,
+                   checkMonitorNotification) where
 
 import GHC.Generics (Generic)
 import Data.Binary (Binary)
 import Data.Typeable (Typeable)
-import Control.Monad (forever)
+import Control.Monad (forever, void)
 import Data.Maybe (fromMaybe)
 import Data.ByteString.Lazy.UTF8 (toString)
 import qualified Data.ByteString.Lazy as B
@@ -35,28 +36,31 @@ type InputHandler = B.ByteString -> Connection -> Maybe UserPid ->
 acceptConnection :: Node.LocalNode -> InputHandler -> WS.ServerApp
 acceptConnection node inputHandler pending = do
     wsConn <- WS.acceptRequest pending
-    outputPid <- Node.forkProcess node $ forever $ do
-        ("send", outputData) <- expect :: Process (String, B.ByteString)
-        logOutput outputData
-        liftIO $ WS.sendTextData wsConn outputData
+    outputPid <- Node.forkProcess node $ do
+        let outputLoop = forever $ do
+            ("send", outputData) <- expect :: Process (String, B.ByteString)
+            logOutput outputData
+            liftIO $ WS.sendTextData wsConn outputData
+        outputLoop `finally` logDebug "Connection: output closed"
     Node.runProcess node $ do
         inputPid <- getSelfPid
         let conn = Connection outputPid inputPid
             setUserPid :: ConnState -> UserPid -> Process ConnState
-            setUserPid state _ = return state --TODO: implement
+            setUserPid (_, areaPid) userPid = return (Just userPid, areaPid)
             setAreaPid :: ConnState -> AreaPid -> Process ConnState
             setAreaPid (userPid, _) areaPid = return (userPid, Just areaPid)
-            loop :: ConnState -> Process ()
-            loop state = do
+            inputLoop :: ConnState -> Process ()
+            inputLoop state = do
                 inputData <- liftIO (WS.receiveData wsConn :: IO B.ByteString)
                 logInput inputData
                 ret <- receiveTimeout 0 [match (setUserPid state),
                                          match (setAreaPid state)]
                 let state' = fromMaybe state ret
                 uncurry (inputHandler inputData conn) state'
-                loop state'
-            final = exit outputPid "closed" >> logDebug "Connection closed"
-        link outputPid >> loop (Nothing, Nothing) `finally` final
+                inputLoop state'
+            final = do exit outputPid "closed"
+                       logDebug "Connection: input closed"
+        link outputPid >> inputLoop (Nothing, Nothing) `finally` final
 
 
 logOutput :: B.ByteString -> Process ()
@@ -72,7 +76,7 @@ sendCmd conn cmd body =
     send (output conn) ("send", encode (cmd, body))
 
 sendResponse :: ToJSON a => Connection -> RequestNumber -> a -> Process ()
-sendResponse conn req = sendCmd conn $ "response:" ++ (show req)
+sendResponse conn req = sendCmd conn $ "response:" ++ show req
 
 broadcastCmd :: ToJSON a => [Connection] -> String -> a -> Process ()
 broadcastCmd connections cmd body =
@@ -87,5 +91,9 @@ setArea (Connection _ inputPid) = send inputPid
 close :: Connection -> Process ()
 close conn = exit (input conn) "close connection"
 
+monitorConnection :: Connection -> Process ()
+monitorConnection conn = void $ monitor $ output conn
 
-
+checkMonitorNotification :: Connection -> ProcessMonitorNotification -> Bool
+checkMonitorNotification conn (ProcessMonitorNotification _ pid _) =
+    output conn == pid

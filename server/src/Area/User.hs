@@ -5,7 +5,8 @@ module Area.User where
 import Data.Aeson (Value, object, (.=))
 import Data.Lens.Common (lens, Lens)
 
-import Types (UserId, UserName)
+import Types (UserId, UserName, AreaId)
+import qualified User.External as UE
 import Area.Types (Pos)
 import Area.Action (Active(..), Action(MoveDistance, Burning),
                     moveDistance, burning)
@@ -42,6 +43,16 @@ data User = User {userId :: UserId,
 
 actions' :: Lens User [Action]
 actions' = lens actions (\v user -> user{actions=v})
+
+
+userArea :: User -> AreaId -> UE.UserArea
+userArea user area =
+    UE.UserArea{UE.userId=userId user,
+                UE.name=name user,
+                UE.area=area,
+                UE.speed=speed user,
+                UE.durability=durability user}
+
 
 
 tickClientInfo :: User -> Value

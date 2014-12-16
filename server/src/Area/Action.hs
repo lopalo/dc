@@ -6,7 +6,8 @@ import GHC.Generics (Generic)
 
 import Data.Aeson (ToJSON)
 
-import Area.Types (Pos(Pos), Ts)
+import Types (Ts)
+import Area.Types (Pos(Pos))
 import Area.Event (Events)
 
 
@@ -33,10 +34,10 @@ class Active a where
                     Just action'-> (act', action':actions, events')
 
 
-data Action = MoveDistance{startTs :: Ts,
-                           endTs :: Ts,
-                           from :: Pos,
-                           to :: Pos}
+data Action = MoveDistance {startTs :: Ts,
+                            endTs :: Ts,
+                            from :: Pos,
+                            to :: Pos}
             | Burning{damageSpeed :: Float, --units per second
                       previousTs :: Ts}
             deriving (Generic)

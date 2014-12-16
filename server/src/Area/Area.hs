@@ -19,8 +19,8 @@ import Control.Distributed.Process.Serializable (Serializable)
 import Connection (Connection, setArea, sendResponse)
 import Utils (milliseconds, logException, evaluate)
 import qualified Settings as S
-import Types (UserId, AreaId, AreaPid(AreaPid), RequestNumber)
-import User (AreaUserInfo)
+import Types (UserId, UserPid(..), AreaId, AreaPid(..), RequestNumber)
+import qualified User.External as UE
 import Area.Types (Pos(..))
 import qualified Area.User as U
 import Area.Action (Action(..))
@@ -37,7 +37,7 @@ type Response a = (a, State)
 data Echo = Echo !String deriving (Generic, Typeable)
 instance Binary Echo
 
-data Enter = Enter !AreaUserInfo deriving (Generic, Typeable)
+data Enter = Enter !UE.UserArea UserPid deriving (Generic, Typeable)
 instance Binary Enter
 
 data GetObjectsInfo = GetObjectsInfo ![String] deriving (Generic, Typeable)
@@ -54,26 +54,33 @@ instance Binary Ignite
 
 
 handleEnter :: State -> (Enter, Connection) -> Process State
-handleEnter state (Enter userInfo, conn) = do
-    let (uid, userName) = userInfo
-        startPos = (S.enterPos . settings) state
-        speed = 6 --TODO: get from userInfo
-        durability = 100 --TODO: get from userInfo
+handleEnter state (Enter ua userPid, conn) = do
+    let uid = UE.userId ua
+        enterPos = (S.enterPos . settings) state
         user = U.User{U.userId=uid,
-                      U.name=userName,
-                      U.pos=uncurry Pos startPos,
+                      U.name=UE.name ua,
+                      U.pos=uncurry Pos enterPos,
                       U.angle=0,
-                      U.speed=speed,
-                      U.durability=durability,
+                      U.speed=UE.speed ua,
+                      U.durability=UE.durability ua,
                       U.actions=[]}
-        state' = (users' ^%= addUser uid conn user) state
+        state' = (users' ^%= addUser uid conn userPid user) state
     selfPid <- makeSelfPid
     setArea conn selfPid
     now <- liftIO milliseconds
     sendCmd conn "init" $ object ["areaId" .= areaId state',
                                   "timestamp" .= now]
-    --TODO: monitor a connection process to remove a user
+    UE.monitorUser userPid
     return state'
+
+
+handleMonitorNotification :: State -> ProcessMonitorNotification
+                             -> Process State
+handleMonitorNotification state (ProcessMonitorNotification ref pid _) = do
+    unmonitor ref
+    case UserPid pid `M.lookup` userPidToIds (users state) of
+        Just uid -> return $ (users' ^%= deleteUser uid) state
+        Nothing -> return state
 
 
 handleEcho :: State -> (Echo, Connection) -> Process (Response String)
@@ -84,8 +91,9 @@ handleEcho state (Echo txt, _) = do
 
 handleEnterArea :: State -> (EnterArea, Connection) -> Process State
 handleEnterArea state (EnterArea aid, conn) = do
-    let U.User{U.userId=uid, U.name=name} = conn `userByConn` state
-    enter aid (uid, name) conn
+    let user@U.User{U.userId=uid} = conn `userByConn` state
+        userPid = (userPids . users) state M.! uid
+    enter aid (U.userArea user) userPid conn
     return $ (users' ^%= deleteUser uid) state
 
 
@@ -102,7 +110,6 @@ handleObjectsInfo state (GetObjectsInfo ids, _) = do
                     Nothing -> res
                     Just user -> U.initClientInfo user:res
     return (objects, state)
-
 
 
 handleMoveTo :: State -> (MoveTo, Connection) -> Process State
@@ -132,15 +139,19 @@ handleIgnite state (Ignite dmgSpeed, conn) = do
 
 
 areaProcess :: S.AreaSettings -> AreaId -> Process ()
-areaProcess settings aid = do
+areaProcess aSettings aid = do
     let state = State{areaId=aid,
-                      settings=settings,
+                      settings=aSettings,
                       tickNumber=0,
                       users=us,
                       events=[],
                       eventsForBroadcast=[]}
-        us = Users{connections=M.empty, usersData=M.empty, userIds=M.empty}
-    scheduleTick $ S.tickMilliseconds settings
+        us = Users{connections=M.empty,
+                   usersData=M.empty,
+                   connToIds=M.empty,
+                   userPids=M.empty,
+                   userPidToIds=M.empty}
+    scheduleTick $ S.tickMilliseconds aSettings
     loop state
     return ()
 
@@ -149,20 +160,22 @@ loop :: State -> Process State
 loop state = handle >>= loop
     where
         prepare h = match (h state)
-        --NOTE: handlers don't work correctly if they have the same type
+        --NOTE: handlers are matched by a type
         handlers = [prepare handleTick,
-                    prepare handleEnterArea,
-                    prepare handleEnter,
-                    prepare (request handleObjectsInfo),
                     prepare handleMoveTo,
+                    prepare (request handleObjectsInfo),
+                    prepare handleEnter,
+                    prepare handleEnterArea,
                     prepare handleIgnite,
-                    prepare (request handleEcho)]
+                    prepare (request handleEcho),
+                    prepare handleMonitorNotification,
+                    matchUnknown (return state)]
         evalState = receiveWait handlers >>= evaluate
         handle = evalState `catches` logException state
 
 
 uidByConn :: Connection -> State -> UserId
-uidByConn conn state = (userIds . users) state M.! conn
+uidByConn conn state = (connToIds . users) state M.! conn
 
 userByConn :: Connection -> State -> U.User
 userByConn conn state = (usersData . users) state M.! uidByConn conn state
@@ -219,10 +232,12 @@ parseClientCmd "ignite" body = do
 
 --external interface
 
-enter :: AreaId -> AreaUserInfo -> Connection -> Process ()
-enter aid userInfo conn = do
+--TODO: move to Area.External.hs
+enter :: AreaId -> (AreaId -> UE.UserArea) ->
+         UserPid -> Connection -> Process ()
+enter aid userArea userPid conn = do
     Just areaPid <- whereis aid
-    send areaPid (Enter userInfo , conn)
+    send areaPid (Enter (userArea aid) userPid, conn)
 
 
 clientCmd :: AreaPid -> String -> Value -> RequestNumber ->

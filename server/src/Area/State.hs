@@ -10,19 +10,23 @@ import Data.Lens.Common (lens, Lens, (^%=))
 
 import Settings (AreaSettings)
 import Connection (Connection)
-import Types (UserId, AreaId)
+import Types (UserId, UserPid, AreaId)
 import qualified Area.User as U
 import Area.Event (Events)
 
 
 
-data Users = Users{connections :: !Connections,
-                   userIds :: !UserIds,
-                   usersData :: !UsersData}
+data Users = Users {connections :: !Connections,
+                    connToIds :: !ConnToIds,
+                    usersData :: !UsersData,
+                    userPids :: !UserPids,
+                    userPidToIds :: !UserPidToIds}
 
-type Connections = M.Map UserId Connection
 type UsersData = M.Map UserId U.User
-type UserIds = M.Map Connection UserId
+type Connections = M.Map UserId Connection
+type ConnToIds = M.Map Connection UserId
+type UserPids = M.Map UserId UserPid
+type UserPidToIds = M.Map UserPid UserId
 
 data State = State {areaId :: AreaId,
                     settings :: AreaSettings,
@@ -42,11 +46,19 @@ users' = lens users (\v s -> s{users=v})
 usersData' :: Lens Users UsersData
 usersData' = lens usersData (\v us -> us{usersData=v})
 
-userIds' :: Lens Users UserIds
-userIds' = lens userIds (\v us -> us{userIds=v})
+connToIds' :: Lens Users ConnToIds
+connToIds' = lens connToIds (\v us -> us{connToIds=v})
 
 connections' :: Lens Users Connections
 connections' = lens connections (\v us -> us{connections=v})
+
+userPids' :: Lens Users UserPids
+userPids' = lens userPids (\v us -> us{userPids=v})
+
+
+userPidToIds' :: Lens Users UserPidToIds
+userPidToIds' = lens userPidToIds (\v us -> us{userPidToIds=v})
+
 
 events' :: Lens State Events
 events' = lens events (\v s -> s{events=v})
@@ -56,10 +68,12 @@ eventsForBroadcast' = lens eventsForBroadcast (\v s -> s{eventsForBroadcast=v})
 
 
 
-addUser :: UserId -> Connection -> U.User -> Users -> Users
-addUser uid conn user = (usersData' ^%= M.insert uid user)
-                      . (userIds' ^%= M.insert conn uid)
-                      . (connections' ^%= M.insert uid conn)
+addUser :: UserId -> Connection -> UserPid -> U.User -> Users -> Users
+addUser uid conn userPid user = (usersData' ^%= M.insert uid user)
+                              . (connToIds' ^%= M.insert conn uid)
+                              . (connections' ^%= M.insert uid conn)
+                              . (userPids' ^%= M.insert uid userPid)
+                              . (userPidToIds' ^%= M.insert userPid uid)
 
 
 updateUser :: (U.User -> U.User) -> UserId -> State -> State
@@ -68,8 +82,11 @@ updateUser f uid = usersData' . users' ^%= M.adjust f uid
 
 deleteUser :: UserId -> Users -> Users
 deleteUser uid us = fun us
-    where conns = connections us
+    where conn = connections us M.! uid
+          pid = userPids us M.! uid
           fun = (usersData' ^%= M.delete uid)
               . (connections' ^%= M.delete uid)
-              . (userIds' ^%= M.delete (conns M.! uid))
+              . (connToIds' ^%= M.delete conn)
+              . (userPids' ^%= M.delete uid)
+              . (userPidToIds' ^%= M.delete pid)
 

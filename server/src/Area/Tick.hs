@@ -17,10 +17,10 @@ import Data.Lens.Strict (access, (~=), (+=), (%=))
 import Control.Distributed.Process
 import Data.Aeson(Value, object, (.=))
 
-import Utils (milliseconds, logDebug)
+import Types (Ts)
+import Utils (milliseconds, logInfo)
 import qualified Settings as S
 import Area.User (tickClientInfo)
-import Area.Types (Ts)
 import Area.Utils (broadcastCmd)
 import Area.Action (Active(applyActions))
 import Area.State
@@ -51,7 +51,7 @@ handleTick state TimeTick = do
         Nothing -> return ()
     let logEveryTick = (S.logEveryTick . settings) state
     when (tnum `rem` logEveryTick == 0) $
-        logDebug $ printf "Tick %d of the area '%s'" tnum aid
+        logInfo $ printf "Tick %d of the area '%s'" tnum aid
     return state'
 
 calculateTick :: Ts -> State' (Maybe Value)

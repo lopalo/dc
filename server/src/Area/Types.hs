@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveGeneric, DeriveDataTypeable #-}
 
-module Area.Types (Ts, Pos(Pos)) where
+module Area.Types (Pos(Pos)) where
 
 
 import GHC.Generics (Generic)
@@ -8,8 +8,6 @@ import Data.Binary (Binary)
 import Data.Typeable (Typeable)
 
 import Data.Aeson (ToJSON, toJSON, FromJSON, parseJSON)
-
-type Ts = Int -- time in milliseconds
 
 
 data Pos = Pos Int Int deriving (Generic, Typeable)

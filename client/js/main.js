@@ -25,9 +25,9 @@ function connect(connection) {
 function onOpen(connection) {
     var userName = $("#connect-name").val();
     connection.send("login", userName);
-    connection.once("init", function (userData) {
+    connection.once("init", function () {
         $("#connect-form").remove();
-        initGame(connection, userData);
+        initGame(connection);
     });
     //TODO: show error if a user is already connected
     //TODO: process disconnection
@@ -41,11 +41,12 @@ function onTimeout(connection) {
     $("#connect").one("click", _.partial(connect, connection));
 }
 
-function initGame(connection, userData) {
+function initGame(connection) {
     var gameEl = $("#game");
-    var user = new User(userData);
+    var user = new User();
     var area = new Area();
     var ui = new UI();
+    connection.once("user.init", user.set, user);
     gameEl.show();
     new World(gameEl.find("#viewport"), connection, user, area, ui);
     setupUI(gameEl.find("#ui"), ui, user, area);

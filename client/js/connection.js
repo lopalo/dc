@@ -77,9 +77,8 @@ _.extend(Connection.prototype, {
             if (_.contains(cmd, '.')) {
                 parts = cmd.split('.');
                 this.trigger(parts[0], {cmd: parts[1], body: body});
-            } else {
-                this.trigger(cmd, body)
             }
+            this.trigger(cmd, body);
         }
     }
 });

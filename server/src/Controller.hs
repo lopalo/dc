@@ -4,12 +4,13 @@ module Controller (inputHandler) where
 
 
 import Control.Distributed.Process
-import Data.Aeson (Value, Result(Success), fromJSON, decode, object, (.=))
+import Data.Aeson (Value(Null), Result(Success), fromJSON, decode)
 import Data.String.Utils (startswith)
 
 import Connection (Connection, sendCmd, sendResponse, InputHandler)
 import qualified Area.Area as A
-import Types (UserId(UserId), UserPid, AreaPid, RequestNumber)
+import User.User (userProcess)
+import Types (UserPid, AreaPid, RequestNumber)
 import Utils (delPrefix, logException, evaluate)
 import qualified Settings as S
 
@@ -24,22 +25,19 @@ commandHandler :: S.Settings -> String -> Value -> RequestNumber ->
                   Process ()
 --NOTE: strict evaluation of parsed data is required to catch a parse error!!!
 --NOTE: 0 means no request
-commandHandler settings "echo" body req conn _ _ = do
+commandHandler _ "echo" body req conn _ _ = do
     let Success txt = fromJSON body :: Result String
     seq txt $ sendResponse conn req $ "Echo: " ++ txt
 commandHandler settings "login" body 0 conn _ _ = do
     let Success name = fromJSON body :: Result String
-        userId = UserId name
-        areaUserInfo = (userId, name)
-    evaluate userId
-    --TODO: send it from the user's component (user.init) and then do enter to an area
-    sendCmd conn "init" $ object ["userId" .= userId,
-                                  "name" .= name,
-                                  "areas" .= S.areas settings]
-    A.enter (S.startArea settings) areaUserInfo conn
-commandHandler settings path body req conn _ (Just areaPid)
+    evaluate name
+    sendCmd conn "init" Null
+    spawnLocal $ userProcess name conn settings
+    return ()
+commandHandler _ path body req conn _ (Just areaPid)
     | "area." `startswith` path =
         A.clientCmd areaPid ("area" `delPathPrefix` path) body req conn
+    --FIXME: Non-exhaustive patterns on login
 
 
 

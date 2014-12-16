@@ -15,6 +15,7 @@ import Utils (delPrefix)
 delIdPrefix :: String -> String -> String
 delIdPrefix = delPrefix ":"
 
+type Ts = Int -- time in milliseconds
 
 type RequestNumber = Int
 
@@ -38,9 +39,8 @@ instance FromJSON UserId where
         return (read str)
 
 
-newtype UserPid = UserPid ProcessId  deriving (Generic, Typeable)
+newtype UserPid = UserPid ProcessId  deriving (Eq, Ord, Generic, Typeable)
 instance Binary UserPid
-
 
 type AreaId = String
 
