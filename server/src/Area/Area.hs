@@ -1,19 +1,16 @@
-{-# LANGUAGE DeriveGeneric, DeriveDataTypeable, OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings #-}
 
-module Area.Area (areaProcess, AreaPid(AreaPid), enter, clientCmd) where
+module Area.Area (areaProcess) where
 
-import GHC.Generics (Generic)
-import Data.Binary (Binary)
-import Data.Typeable (Typeable)
 import Prelude hiding ((.))
 import Control.Monad (liftM)
 import Control.Category ((.))
 import qualified Data.Map.Strict as M
 
-import Data.Aeson(ToJSON, Value, Result(Success), fromJSON, object, (.=))
+import Data.Aeson(ToJSON, Value, object, (.=))
 import Data.String.Utils (startswith)
 import Data.Lens.Common ((^%=))
-import Control.Distributed.Process hiding (forward)
+import Control.Distributed.Process
 import Control.Distributed.Process.Serializable (Serializable)
 
 import Connection (Connection, setArea, sendResponse)
@@ -21,36 +18,16 @@ import Utils (milliseconds, logException, evaluate)
 import qualified Settings as S
 import Types (UserId, UserPid(..), AreaId, AreaPid(..), RequestNumber)
 import qualified User.External as UE
-import Area.Types (Pos(..))
 import qualified Area.User as U
 import Area.Action (Action(..))
 import Area.Utils (distance, angle, sendCmd)
+import Area.Types
 import Area.State
 import Area.Tick (handleTick, scheduleTick)
+import Area.External (enter)
 
-
-type ForwardData = (ProcessId, Connection, RequestNumber)
 
 type Response a = (a, State)
-
-
-data Echo = Echo !String deriving (Generic, Typeable)
-instance Binary Echo
-
-data Enter = Enter !UE.UserArea UserPid deriving (Generic, Typeable)
-instance Binary Enter
-
-data GetObjectsInfo = GetObjectsInfo ![String] deriving (Generic, Typeable)
-instance Binary GetObjectsInfo
-
-data EnterArea = EnterArea !AreaId deriving (Generic, Typeable)
-instance Binary EnterArea
-
-data MoveTo = MoveTo !Pos deriving (Generic, Typeable)
-instance Binary MoveTo
-
-data Ignite = Ignite !Float deriving (Generic, Typeable)
-instance Binary Ignite
 
 
 handleEnter :: State -> (Enter, Connection) -> Process State
@@ -205,45 +182,8 @@ request h state ((a, conn), req) = do
     sendResponse conn req resp
     return state'
 
-forward :: Serializable a => a -> ForwardData -> Process ()
-forward parsed (areaPid, conn, req) = do
-    evaluate parsed
-    case req of
-        0 -> send areaPid (parsed, conn)
-        _ -> send areaPid ((parsed, conn), req)
-
-parseClientCmd :: String -> Value -> ForwardData -> Process ()
-parseClientCmd "echo" body = do
-    let Success txt = fromJSON body :: Result String
-    forward (Echo txt)
-parseClientCmd "enter-area" body = do
-    let Success aid = fromJSON body :: Result AreaId
-    forward (EnterArea aid)
-parseClientCmd "get-objects-info" body = do
-    let Success ids = fromJSON body :: Result [String]
-    forward (GetObjectsInfo ids)
-parseClientCmd "move-to" body = do
-    let Success toPos = fromJSON body :: Result Pos
-    forward (MoveTo toPos)
-parseClientCmd "ignite" body = do
-    let Success dmgSpeed = fromJSON body :: Result Float
-    forward (Ignite dmgSpeed)
 
 
---external interface
-
---TODO: move to Area.External.hs
-enter :: AreaId -> (AreaId -> UE.UserArea) ->
-         UserPid -> Connection -> Process ()
-enter aid userArea userPid conn = do
-    Just areaPid <- whereis aid
-    send areaPid (Enter (userArea aid) userPid, conn)
-
-
-clientCmd :: AreaPid -> String -> Value -> RequestNumber ->
-             Connection -> Process ()
-clientCmd (AreaPid pid) cmd body req conn =
-    parseClientCmd cmd body (pid, conn, req)
 
 
 

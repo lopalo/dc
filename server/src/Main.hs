@@ -1,7 +1,5 @@
 module Main where
 
-import Control.Monad (mapM_)
-
 import System.Environment (getArgs)
 import Control.Distributed.Process
 import Network.Transport.TCP (createTransport, defaultTCPParameters)
@@ -26,8 +24,8 @@ start settings = mapM_ startArea $ S.areas settings where
 main :: IO ()
 main = do
     [settingsPath] <- getArgs
-    res <- (decodeFileEither settingsPath
-            :: IO (Either ParseException S.Settings))
+    res <- decodeFileEither settingsPath
+            :: IO (Either ParseException S.Settings)
     case res of
         Left err -> print err
         Right settings -> do

@@ -11,7 +11,7 @@ import Utils (logException, logInfo, evaluate)
 import Types (Ts, UserPid(UserPid), UserId(UserId), UserName, AreaId)
 import qualified Connection as C
 import qualified Settings as S
-import qualified Area.Area as A
+import Area.External (enter)
 import qualified User.External as UE
 
 
@@ -68,7 +68,7 @@ userProcess userName conn settings = do
                       connection=Just conn,
                       disconnectTs=Nothing}
     C.setUser conn userPid
-    A.enter currentArea (userArea usr) userPid conn
+    enter currentArea (userArea usr) userPid conn
     logInfo $ "Login: " ++ userName
     void $ loop state
 

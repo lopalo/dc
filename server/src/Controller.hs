@@ -8,7 +8,7 @@ import Data.Aeson (Value(Null), Result(Success), fromJSON, decode)
 import Data.String.Utils (startswith)
 
 import Connection (Connection, sendCmd, sendResponse, InputHandler)
-import qualified Area.Area as A
+import Area.External as A
 import User.User (userProcess)
 import Types (UserPid, AreaPid, RequestNumber)
 import Utils (delPrefix, logException, evaluate)
@@ -39,8 +39,6 @@ commandHandler _ path body req conn _ (Just areaPid)
         A.clientCmd areaPid ("area" `delPathPrefix` path) body req conn
 
 
-
---external interface
 
 inputHandler :: S.Settings -> InputHandler
 inputHandler settings input conn userPid areaPid = do
