@@ -51,12 +51,13 @@ userProcess userName conn settings = do
     let uSettings = S.user settings
         uid = UserId userName
         currentArea = S.startArea settings
+    selfPid <- getSelfPid
+    --TODO: if the user exists, just update his connection and send "init"
+    register (show uid) selfPid
+    C.monitorConnection conn
     sendCmd conn "init" $ object ["userId" .= uid,
                                   "name" .= userName,
                                   "areas" .= S.areas settings]
-    selfPid <- getSelfPid
-    register (show uid) selfPid
-    C.monitorConnection conn
     let userPid = UserPid selfPid
         usr = User{userId=uid,
                    name=userName,

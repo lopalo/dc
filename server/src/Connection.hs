@@ -9,7 +9,6 @@ import GHC.Generics (Generic)
 import Data.Binary (Binary)
 import Data.Typeable (Typeable)
 import Control.Monad (forever, void)
-import Data.Maybe (fromMaybe)
 import Data.ByteString.Lazy.UTF8 (toString)
 import qualified Data.ByteString.Lazy as B
 
@@ -27,8 +26,6 @@ data Connection = Connection {output :: ProcessId, input :: ProcessId}
 instance Binary Connection
 
 
-type ConnState = (Maybe UserPid, Maybe AreaPid)
-
 type InputHandler = B.ByteString -> Connection -> Maybe UserPid ->
                     Maybe AreaPid -> Process ()
 
@@ -45,21 +42,22 @@ acceptConnection node inputHandler pending = do
     Node.runProcess node $ do
         inputPid <- getSelfPid
         let conn = Connection outputPid inputPid
-            setUserPid :: ConnState -> UserPid -> Process ConnState
+            final = do exit outputPid "closed"
+                       logDebug "Connection: input closed"
             setUserPid (_, areaPid) userPid = return (Just userPid, areaPid)
-            setAreaPid :: ConnState -> AreaPid -> Process ConnState
             setAreaPid (userPid, _) areaPid = return (userPid, Just areaPid)
-            inputLoop :: ConnState -> Process ()
+            updateState state = do
+                ret <- receiveTimeout 0 [match (setUserPid state),
+                                         match (setAreaPid state)]
+                case ret of
+                    Just state' -> updateState state'
+                    Nothing -> return state
             inputLoop state = do
                 inputData <- liftIO (WS.receiveData wsConn :: IO B.ByteString)
                 logInput inputData
-                ret <- receiveTimeout 0 [match (setUserPid state),
-                                         match (setAreaPid state)]
-                let state' = fromMaybe state ret
+                state' <- updateState state
                 uncurry (inputHandler inputData conn) state'
                 inputLoop state'
-            final = do exit outputPid "closed"
-                       logDebug "Connection: input closed"
         link outputPid >> inputLoop (Nothing, Nothing) `finally` final
 
 

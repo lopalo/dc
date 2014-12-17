@@ -37,7 +37,6 @@ commandHandler settings "login" body 0 conn _ _ = do
 commandHandler _ path body req conn _ (Just areaPid)
     | "area." `startswith` path =
         A.clientCmd areaPid ("area" `delPathPrefix` path) body req conn
-    --FIXME: Non-exhaustive patterns on login
 
 
 

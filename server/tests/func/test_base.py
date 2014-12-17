@@ -9,7 +9,8 @@ class TestBasicInteraction(FuncTestCase):
         c1 = self.client()
         self.assertEqual('Echo: foo', c1.req("echo", "foo"))
         c1.send("login", "zozo")
-        exp = ['init', {'userId': "user-id:zozo",
+        self.assertEqual(['init', None], c1.recv())
+        exp = ['user.init', {'userId': "user-id:zozo",
                         'name': "zozo",
                         'areas': ["alpha", "beta"]}]
         self.assertEqual(exp, c1.recv())
