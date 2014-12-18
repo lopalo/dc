@@ -15,8 +15,6 @@ import Utils (delPrefix)
 delIdPrefix :: String -> String -> String
 delIdPrefix = delPrefix ":"
 
-type Ts = Int -- time in milliseconds
-
 type RequestNumber = Int
 
 type UserName = String

@@ -17,8 +17,7 @@ import Data.Lens.Strict (access, (~=), (+=), (%=))
 import Control.Distributed.Process
 import Data.Aeson(Value, object, (.=))
 
-import Types (Ts)
-import Utils (milliseconds, logInfo)
+import Utils (milliseconds, logInfo, Ts)
 import qualified Settings as S
 import Area.User (tickClientInfo)
 import Area.Utils (broadcastCmd)
@@ -31,7 +30,7 @@ data TimeTick = TimeTick deriving (Generic, Typeable)
 instance Binary TimeTick
 
 
-scheduleTick :: Int -> Process ProcessId
+scheduleTick :: Ts -> Process ProcessId
 scheduleTick ms = do
     selfPid <- getSelfPid
     spawnLocal $ do
@@ -52,6 +51,7 @@ handleTick state TimeTick = do
     let logEveryTick = (S.logEveryTick . settings) state
     when (tnum `rem` logEveryTick == 0) $
         logInfo $ printf "Tick %d of the area '%s'" tnum aid
+    --TODO: sync players if syncEveryTick == 0
     return state'
 
 calculateTick :: Ts -> State' (Maybe Value)

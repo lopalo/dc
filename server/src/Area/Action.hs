@@ -6,7 +6,7 @@ import GHC.Generics (Generic)
 
 import Data.Aeson (ToJSON)
 
-import Types (Ts)
+import Utils (Ts)
 import Area.Types (Pos(Pos))
 import Area.Event (Events)
 

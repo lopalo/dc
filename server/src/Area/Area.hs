@@ -4,12 +4,12 @@ module Area.Area (areaProcess) where
 
 import Prelude hiding ((.))
 import Control.Monad (liftM)
-import Control.Category ((.))
+import Control.Category ((.), (>>>))
 import qualified Data.Map.Strict as M
 
 import Data.Aeson(ToJSON, Value, object, (.=))
 import Data.String.Utils (startswith)
-import Data.Lens.Common ((^%=))
+import Data.Lens.Common ((^$), (^%=))
 import Control.Distributed.Process
 import Control.Distributed.Process.Serializable (Serializable)
 
@@ -42,14 +42,23 @@ handleEnter state (Enter ua userPid, conn) = do
                       U.durability=UE.durability ua,
                       U.actions=[]}
         state' = (users' ^%= addUser uid conn userPid user) state
-    selfPid <- makeSelfPid
-    setArea conn selfPid
-    now <- liftIO milliseconds
-    sendCmd conn "init" $ object ["areaId" .= areaId state',
-                                  "timestamp" .= now]
     UE.monitorUser userPid
+    initConnection conn state'
+    --TODO: sync player
     return state'
 
+handleReconnection :: State -> (Reconnection, Connection) -> Process State
+handleReconnection state (Reconnection uid, conn) = do
+    let connections'' = connections' . users'
+        connToIds'' = connToIds' . users'
+        oldConn = (connections'' ^$ state) M.! uid
+        changeConnection = (connections'' ^%= M.insert uid conn) >>>
+                           (connToIds'' ^%= M.delete oldConn) >>>
+                           (connToIds'' ^%= M.insert conn uid)
+        state' = changeConnection state
+    evaluate state'
+    initConnection conn state'
+    return state'
 
 handleMonitorNotification :: State -> ProcessMonitorNotification
                              -> Process State
@@ -142,6 +151,7 @@ loop state = handle >>= loop
                     prepare handleMoveTo,
                     prepare (request handleObjectsInfo),
                     prepare handleEnter,
+                    prepare handleReconnection,
                     prepare handleEnterArea,
                     prepare handleIgnite,
                     prepare (request handleEcho),
@@ -173,6 +183,13 @@ replaceUserAction uid f action = addUserAction uid action
 
 makeSelfPid :: Process AreaPid
 makeSelfPid = liftM AreaPid getSelfPid
+
+initConnection :: Connection -> State -> Process ()
+initConnection conn state = do
+    setArea conn =<< makeSelfPid
+    now <- liftIO milliseconds
+    sendCmd conn "init" $ object ["areaId" .= areaId state,
+                                  "timestamp" .= now]
 
 request :: (Serializable a, ToJSON b) =>
            (State -> (a, Connection) -> Process (Response b)) ->

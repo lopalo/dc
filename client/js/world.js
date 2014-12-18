@@ -66,7 +66,7 @@ _.extend(World.prototype, {
         if (this.area.get("areaId") !== data.areaId) return;
         if (data.timestamp > this.getServerTime()) {
             this.setServerTime(data.timestamp);
-            console.log("Server time is updated");
+            console.log("Server time updated");
         }
         var objectModels = this.objectModels;
         //TODO: use sets to improve time complexity

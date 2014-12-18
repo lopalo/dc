@@ -10,14 +10,18 @@ import Data.Typeable (Typeable)
 import Data.Aeson (ToJSON, toJSON, FromJSON, parseJSON)
 import Control.Distributed.Process hiding (forward)
 
-import Connection (Connection, setArea, sendResponse)
-import Types (UserId, UserPid(..), AreaId, AreaPid(..), RequestNumber)
+import Connection (Connection)
+import Types (UserId, UserPid(..), AreaId, RequestNumber)
 import qualified User.External as UE
 
 
 type ForwardData = (ProcessId, Connection, RequestNumber)
 
 
+----messages----
+
+data Reconnection = Reconnection UserId deriving (Generic, Typeable)
+instance Binary Reconnection
 
 data Echo = Echo !String deriving (Generic, Typeable)
 instance Binary Echo
@@ -36,6 +40,8 @@ instance Binary MoveTo
 
 data Ignite = Ignite !Float deriving (Generic, Typeable)
 instance Binary Ignite
+
+--------
 
 
 data Pos = Pos Int Int deriving (Generic, Typeable)

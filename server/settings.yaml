@@ -5,6 +5,8 @@ ws-address: [127.0.0.1, 10501]
 user:
   speed: 60 #units per second
   init-durability: 100
+  logout-seconds: 10
+  period-milliseconds: 1000
 area:
   enter-pos: [100, 100]
   tick-milliseconds: 50

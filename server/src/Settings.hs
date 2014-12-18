@@ -7,9 +7,12 @@ import Control.Monad (mzero)
 
 import Data.Aeson (FromJSON(parseJSON), Value(Object), (.:))
 
+import Utils (Ts)
+import Types (AreaId)
 
-data Settings = Settings {areas :: [String],
-                          startArea :: String,
+
+data Settings = Settings {areas :: [AreaId],
+                          startArea :: AreaId,
                           nodeAddress :: (String, String),
                           wsAddress :: (String, Int),
                           user :: UserSettings,
@@ -30,18 +33,22 @@ instance FromJSON Settings where
 
 data UserSettings =
     USettings {speed :: Int,
-               initDurability :: Int}
+               initDurability :: Int,
+               logoutSeconds :: Int,
+               periodMilliseconds :: Ts}
 
 instance FromJSON UserSettings where
     parseJSON (Object v) = USettings <$>
                            v .: "speed" <*>
-                           v .: "init-durability"
+                           v .: "init-durability" <*>
+                           v .: "logout-seconds" <*>
+                           v .: "period-milliseconds"
     parseJSON _ = mzero
 
 
 data AreaSettings =
     ASettings {enterPos :: (Int, Int),
-               tickMilliseconds :: Int,
+               tickMilliseconds :: Ts,
                broadcastEveryTick :: Int,
                logEveryTick :: Int}
 

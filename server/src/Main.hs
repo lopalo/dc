@@ -23,6 +23,7 @@ start settings = mapM_ startArea $ S.areas settings where
 
 main :: IO ()
 main = do
+    --TODO: db process
     [settingsPath] <- getArgs
     res <- decodeFileEither settingsPath
             :: IO (Either ParseException S.Settings)
@@ -30,10 +31,10 @@ main = do
         Left err -> print err
         Right settings -> do
             let (nHost, nPort) = S.nodeAddress settings
-            Right transport <- (createTransport
-                                nHost
-                                nPort
-                                defaultTCPParameters)
+            Right transport <- createTransport
+                               nHost
+                               nPort
+                               defaultTCPParameters
             node <- Node.newLocalNode transport Node.initRemoteTable
             Node.runProcess node $ start settings
             let (wsHost, wsPort) = S.wsAddress settings

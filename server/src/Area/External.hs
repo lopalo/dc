@@ -1,14 +1,14 @@
 
-module Area.External (enter, clientCmd) where
+module Area.External (enter, clientCmd, reconnect) where
 
 import Data.Aeson(Value, Result(Success), fromJSON)
-import Control.Distributed.Process hiding (forward)
+import Control.Distributed.Process hiding (forward, reconnect)
 import Control.Distributed.Process.Serializable (Serializable)
 
 import Utils (evaluate)
 import Connection (Connection)
 import qualified User.External as UE
-import Types (UserPid(..), AreaId, AreaPid(..), RequestNumber)
+import Types (UserId, UserPid(..), AreaId, AreaPid(..), RequestNumber)
 import Area.Types
 
 
@@ -49,4 +49,10 @@ clientCmd :: AreaPid -> String -> Value -> RequestNumber ->
              Connection -> Process ()
 clientCmd (AreaPid pid) cmd body req conn =
     parseClientCmd cmd body (pid, conn, req)
+
+
+reconnect :: AreaId -> UserId -> Connection -> Process ()
+reconnect areaId userId conn= do
+    Just areaPid <- whereis areaId
+    send areaPid (Reconnection userId, conn)
 

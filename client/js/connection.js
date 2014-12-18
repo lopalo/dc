@@ -45,18 +45,19 @@ _.extend(Connection.prototype, {
             self._checkInputId = setTimeout(self._checkInput, CHECK_PERIOD);
             self.connected = true;
             onOpen(self);
-        }
+        };
         ws.onmessage = function (event) {
             self._inputQueue.push(JSON.parse(event.data));
-        }
+        };
         ws.onclose = function () {
             if (self._checkInputId !== null) {
-                clearTimeout(self._checkInputId)
+                clearTimeout(self._checkInputId);
             }
             self._ws = null;
-            self._checkInputId = null
+            self._checkInputId = null;
             self.connected = false;
-        }
+            console.log("Connection closed");
+        };
     },
     _checkInput: function () {
         var inputQueue = this._inputQueue;
@@ -67,7 +68,7 @@ _.extend(Connection.prototype, {
         var parts;
         if (_.random(0, FREEZE_FACTOR) === 0) {
             period += INPUT_DELAY;
-            console.log("Connection input is freezed");
+            console.log("Connection input freezed");
         }
         this._checkInputId = setTimeout(this._checkInput, period);
         while (!(_.isEmpty(inputQueue))) {

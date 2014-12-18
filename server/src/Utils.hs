@@ -1,7 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables, CPP #-}
 
-module Utils (delPrefix, milliseconds, logInfo, logError,
-              logException, logDebug, evaluate) where
+module Utils where
 
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import qualified Control.Exception as Ex
@@ -12,13 +11,14 @@ import Control.Distributed.Process
 
 import Debug (debug)
 
+type Ts = Int -- time in milliseconds
 
 delPrefix :: String -> String -> String -> String
 delPrefix delimiter prefix str =
     case delimiter `split` str of
         h:rest | h == prefix-> delimiter `join` rest
 
-milliseconds :: IO Int
+milliseconds :: IO Ts
 --TODO: use CLOCK_MONOTONIC
 milliseconds = liftM (floor . (* 1000)) getPOSIXTime
 

@@ -11,7 +11,7 @@ $(function () {
     var connection = new Connection();
     _connection = connection;
     $("#connect").one("click", _.partial(connect, connection));
-    $("#connect").trigger("click"); //cleanup
+    //$("#connect").trigger("click"); //cleanup
 });
 
 
