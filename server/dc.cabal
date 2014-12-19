@@ -23,15 +23,16 @@ Executable dc
         MissingH == 1.2.1.0,
         network == 2.4.2.3,
         io-streams == 1.1.4.3,
-        distributed-process == 0.4.2,
+        distributed-process == 0.5.3,
+        distributed-process-extras == 0.1.1,
         distributed-static == 0.2.1.1,
-        network-transport == 0.3.0.1,
-        network-transport-tcp == 0.3.1,
+        network-transport == 0.4.1.0,
+        network-transport-tcp == 0.4.1,
         utf8-string == 0.3.7,
         websockets == 0.8.2.2,
         containers == 0.5.5.1,
-        yaml == 0.8.9
-        --distributed-process-global == 0.1.0.0
+        yaml == 0.8.9,
+        sqlite-simple == 0.4.8.0
     Hs-Source-Dirs: src
     Other-Modules:
         Settings,
