@@ -7,6 +7,7 @@ import Data.Binary (Binary)
 import Data.Typeable (Typeable)
 import Control.Monad (void, forever, when)
 import Control.Concurrent (threadDelay)
+import Text.Printf (printf)
 
 import Data.Aeson(ToJSON, Value, object, (.=))
 import Control.Distributed.Process hiding (reconnect)
@@ -80,6 +81,13 @@ handleReconnection state (Reconnection conn) = do
     return state{connection=Just conn, disconnectTs=Nothing}
     where usr = user state
 
+handleSyncState :: State -> UE.SyncState -> Process State
+handleSyncState state (UE.SyncState ua) = do
+    let usr = user state
+        usr' = usr{area=UE.area ua, durability=UE.durability ua}
+    logDebug $ printf "User '%s' synchronized" $ show $ userId usr'
+    return state{user=usr'}
+
 userProcess :: UserName -> C.Connection -> S.Settings -> Process ()
 userProcess userName conn globalSettings = do
     let uid = UserId userName
@@ -90,6 +98,7 @@ userProcess userName conn globalSettings = do
             die ("reconnect" :: String)
         Nothing -> return ()
     getSelfPid >>= register (show uid)
+    --TODO: try to fetch from db
     let currentArea = S.startArea globalSettings
         uSettings = S.user globalSettings
         usr = User{userId=uid,
@@ -116,6 +125,7 @@ loop state = handle >>= loop
         prepare h = match (h state)
         --NOTE: handlers are matched by a type
         handlers = [prepare handlePeriod,
+                    prepare handleSyncState,
                     prepare handleMonitorNotification,
                     prepare handleReconnection,
                     matchUnknown (return state)]

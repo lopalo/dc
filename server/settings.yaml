@@ -12,3 +12,4 @@ area:
   tick-milliseconds: 50
   broadcast-every-tick: 4
   log-every-tick: 100
+  sync-every-tick: 100

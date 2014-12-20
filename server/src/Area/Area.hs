@@ -44,7 +44,7 @@ handleEnter state (Enter ua userPid, conn) = do
         state' = (users' ^%= addUser uid conn userPid user) state
     UE.monitorUser userPid
     initConnection conn state'
-    --TODO: sync player
+    UE.syncState userPid $ U.userArea user $ areaId state'
     return state'
 
 handleReconnection :: State -> (Reconnection, Connection) -> Process State
@@ -68,7 +68,7 @@ handleMonitorNotification state (ProcessMonitorNotification ref pid _) = do
         Just uid -> return $ (users' ^%= deleteUser uid) state
         Nothing -> return state
 
-
+--TODO: move client commands to the separate module
 handleEcho :: State -> (Echo, Connection) -> Process (Response String)
 handleEcho state (Echo txt, _) = do
     let resp = areaId state ++ " echo: " ++ txt

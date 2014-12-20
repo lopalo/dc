@@ -1,5 +1,5 @@
 
-module Area.Utils (distance, angle, sendCmd, broadcastCmd) where
+module Area.Utils where
 
 import Prelude hiding ((.))
 import Control.Category ((.))
@@ -10,8 +10,10 @@ import Data.Aeson(ToJSON)
 import Control.Distributed.Process hiding (forward)
 
 import qualified Connection as C
+import qualified User.External as UE
 import Area.Types (Pos(Pos))
 import Area.State
+import qualified Area.User as U
 
 distance :: Pos -> Pos -> Float
 distance (Pos x y) (Pos x' y') =
@@ -31,4 +33,16 @@ sendCmd conn cmd = C.sendCmd conn ("area." ++ cmd)
 broadcastCmd :: ToJSON a => State -> String -> a -> Process ()
 broadcastCmd state cmd = C.broadcastCmd (M.elems cs) ("area." ++ cmd)
     where cs = connections' . users' ^$ state
+
+
+syncUsers :: State -> Process ()
+syncUsers state = mapM_ sync us
+    where
+        sync usr = let pid = uPids M.! U.userId usr
+                   in UE.syncState pid $ U.userArea usr aid
+        aid = areaId state
+        uPids = userPids' . users' ^$ state
+        us = M.elems $ usersData' . users' ^$ state
+
+
 

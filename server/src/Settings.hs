@@ -50,14 +50,16 @@ data AreaSettings =
     ASettings {enterPos :: (Int, Int),
                tickMilliseconds :: Ts,
                broadcastEveryTick :: Int,
-               logEveryTick :: Int}
+               logEveryTick :: Int,
+               syncEveryTick :: Int}
 
 instance FromJSON AreaSettings where
     parseJSON (Object v) = ASettings <$>
                            v .: "enter-pos" <*>
                            v .: "tick-milliseconds" <*>
                            v .: "broadcast-every-tick" <*>
-                           v .: "log-every-tick"
+                           v .: "log-every-tick" <*>
+                           v .: "sync-every-tick"
     parseJSON _ = mzero
 
 

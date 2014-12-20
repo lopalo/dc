@@ -20,7 +20,7 @@ import Data.Aeson(Value, object, (.=))
 import Utils (milliseconds, logInfo, Ts)
 import qualified Settings as S
 import Area.User (tickClientInfo)
-import Area.Utils (broadcastCmd)
+import Area.Utils (broadcastCmd, syncUsers)
 import Area.Action (Active(applyActions))
 import Area.State
 import Area.Event (Event(DeleteUser))
@@ -49,9 +49,10 @@ handleTick state TimeTick = do
         Just bd -> broadcastCmd state "tick" bd
         Nothing -> return ()
     let logEveryTick = (S.logEveryTick . settings) state
+        syncEveryTick = (S.syncEveryTick . settings) state
     when (tnum `rem` logEveryTick == 0) $
         logInfo $ printf "Tick %d of the area '%s'" tnum aid
-    --TODO: sync players if syncEveryTick == 0
+    when (tnum `rem` syncEveryTick == 0) (syncUsers state)
     return state'
 
 calculateTick :: Ts -> State' (Maybe Value)
@@ -98,8 +99,8 @@ handleEvents = do
 
 
 handleEvent :: Event -> State' Bool
+--TODO: respawn the user at the enter point with a little durability
 handleEvent (DeleteUser uid) = users' %= deleteUser uid >> return True
-    --TODO: respawn the user at the enter point with a little durability
 
 
 tickData :: Ts -> State' Value
