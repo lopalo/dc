@@ -3,7 +3,7 @@ from tools import FuncTestCase, ANY
 from websocket import WebSocketTimeoutException
 
 
-class TestBasicInteraction(FuncTestCase):
+class TestBase(FuncTestCase):
 
     def runTest(self):
         c1 = self.client()

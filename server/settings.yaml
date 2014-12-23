@@ -2,7 +2,7 @@ areas: [alpha, beta]
 start-area: alpha
 node-address: [127.0.0.1, "10500"]
 ws-address: [127.0.0.1, 10501]
-db: app.db
+db: ../app.db
 user:
   speed: 60 #units per second
   init-durability: 100

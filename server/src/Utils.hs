@@ -8,6 +8,8 @@ import Control.Monad (liftM, when)
 import Data.String.Utils (split, join)
 
 import Control.Distributed.Process
+import Database.SQLite3 (SQLError)
+import Database.SQLite.Simple (FormatError, ResultError)
 
 import Debug (debug)
 
@@ -37,7 +39,10 @@ logException x = [Handler (\(ex :: Ex.PatternMatchFail) -> logEx ex),
                   Handler (\(ex :: Ex.ErrorCall) -> logEx ex),
                   Handler (\(ex :: Ex.IOException) -> logEx ex),
                   Handler (\(ex :: Ex.AssertionFailed) -> logEx ex),
-                  Handler (\(ex :: Ex.ArithException) -> logEx ex)]
+                  Handler (\(ex :: Ex.ArithException) -> logEx ex),
+                  Handler (\(ex :: SQLError) -> logEx ex),
+                  Handler (\(ex :: FormatError) -> logEx ex),
+                  Handler (\(ex :: ResultError) -> logEx ex)]
     where logEx :: Show b => b -> Process a
           logEx ex = logError (show ex) >> return x
 
