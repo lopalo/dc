@@ -10,20 +10,21 @@ import Data.Yaml (ParseException, decodeFileEither)
 import Connection (acceptConnection)
 import Controller (inputHandler)
 import Area.Area (areaProcess)
+import DB (dbProcess)
 import qualified Settings as S
 
 
 
 start :: S.Settings -> Process ()
-start settings = mapM_ startArea $ S.areas settings where
-    startArea areaId = do
-        areadPid <- spawnLocal $ areaProcess (S.area settings) areaId
-        register areaId areadPid
+start settings = do
+    spawnLocal (dbProcess settings)
+    mapM_ startArea $ S.areas settings
+    where
+        startArea areaId = spawnLocal $ areaProcess (S.area settings) areaId
 
 
 main :: IO ()
 main = do
-    --TODO: db process
     [settingsPath] <- getArgs
     res <- decodeFileEither settingsPath
             :: IO (Either ParseException S.Settings)

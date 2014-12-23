@@ -12,6 +12,8 @@ import Types (UserId, UserPid(..), AreaId, AreaPid(..), RequestNumber)
 import Area.Types
 
 
+type ForwardData = (ProcessId, Connection, RequestNumber)
+
 forward :: Serializable a => a -> ForwardData -> Process ()
 forward parsed (areaPid, conn, req) = do
     evaluate parsed
@@ -41,8 +43,7 @@ parseClientCmd "ignite" body = do
 enter :: AreaId -> (AreaId -> UE.UserArea) ->
          UserPid -> Connection -> Process ()
 enter aid userArea userPid conn = do
-    Just areaPid <- whereis aid
-    send areaPid (Enter (userArea aid) userPid, conn)
+    nsend aid (Enter (userArea aid) userPid, conn)
 
 
 clientCmd :: AreaPid -> String -> Value -> RequestNumber ->
@@ -53,6 +54,5 @@ clientCmd (AreaPid pid) cmd body req conn =
 
 reconnect :: AreaId -> UserId -> Connection -> Process ()
 reconnect areaId userId conn= do
-    Just areaPid <- whereis areaId
-    send areaPid (Reconnection userId, conn)
+    nsend areaId (Reconnection userId, conn)
 

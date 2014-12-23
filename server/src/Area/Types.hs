@@ -15,9 +15,6 @@ import Types (UserId, UserPid(..), AreaId, RequestNumber)
 import qualified User.External as UE
 
 
-type ForwardData = (ProcessId, Connection, RequestNumber)
-
-
 ----messages----
 
 data Reconnection = Reconnection UserId deriving (Generic, Typeable)

@@ -14,7 +14,7 @@ import Control.Distributed.Process
 import Control.Distributed.Process.Serializable (Serializable)
 
 import Connection (Connection, setArea, sendResponse)
-import Utils (milliseconds, logException, evaluate)
+import Utils (milliseconds, safeReceive, evaluate)
 import qualified Settings as S
 import Types (UserId, UserPid(..), AreaId, AreaPid(..), RequestNumber)
 import qualified User.External as UE
@@ -137,13 +137,13 @@ areaProcess aSettings aid = do
                    connToIds=M.empty,
                    userPids=M.empty,
                    userPidToIds=M.empty}
+    register aid =<< getSelfPid
     scheduleTick $ S.tickMilliseconds aSettings
     loop state
-    return ()
 
 
-loop :: State -> Process State
-loop state = handle >>= loop
+loop :: State -> Process ()
+loop state = safeReceive handlers state >>= loop
     where
         prepare h = match (h state)
         --NOTE: handlers are matched by a type
@@ -157,8 +157,6 @@ loop state = handle >>= loop
                     prepare (request handleEcho),
                     prepare handleMonitorNotification,
                     matchUnknown (return state)]
-        evalState = receiveWait handlers >>= evaluate
-        handle = evalState `catches` logException state
 
 
 uidByConn :: Connection -> State -> UserId

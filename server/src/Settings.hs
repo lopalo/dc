@@ -15,6 +15,7 @@ data Settings = Settings {areas :: [AreaId],
                           startArea :: AreaId,
                           nodeAddress :: (String, String),
                           wsAddress :: (String, Int),
+                          db :: String,
                           user :: UserSettings,
                           area :: AreaSettings}
 
@@ -24,7 +25,8 @@ instance FromJSON Settings where
              v .: "areas" <*>
              v .: "start-area" <*>
              v .: "node-address" <*>
-             v .: "ws-address"
+             v .: "ws-address" <*>
+             v .: "db"
         uSettings <- parseJSON =<< (v .: "user")
         aSettings <- parseJSON =<< (v .: "area")
         return $ s uSettings aSettings

@@ -5,26 +5,23 @@ module User.User (userProcess) where
 import GHC.Generics (Generic)
 import Data.Binary (Binary)
 import Data.Typeable (Typeable)
-import Control.Monad (void, forever, when)
+import Control.Monad (forever, when)
+import Data.Maybe (fromMaybe)
 import Control.Concurrent (threadDelay)
 import Text.Printf (printf)
 
 import Data.Aeson(ToJSON, Value, object, (.=))
 import Control.Distributed.Process hiding (reconnect)
+import Control.Distributed.Process.Extras (newTagPool)
 
-import Utils (logException, logInfo, logDebug, evaluate, milliseconds, Ts)
+import Utils (logInfo, logDebug, safeReceive, milliseconds, Ts)
 import Types (UserPid(UserPid), UserId(UserId), UserName, AreaId)
 import qualified Connection as C
 import qualified Settings as S
 import qualified Area.External as AE
 import qualified User.External as UE
-
-
-data User = User {userId :: UserId,
-                  name :: UserName,
-                  area :: AreaId,
-                  speed :: Int, --units per second
-                  durability :: Int}
+import DB (putUser, getUser)
+import User.Types
 
 
 userArea :: User -> AreaId -> UE.UserArea
@@ -34,7 +31,6 @@ userArea usr aid =
                 UE.area=aid,
                 UE.speed=speed usr,
                 UE.durability=durability usr}
-
 
 
 data State = State {user :: User,
@@ -85,6 +81,7 @@ handleSyncState :: State -> UE.SyncState -> Process State
 handleSyncState state (UE.SyncState ua) = do
     let usr = user state
         usr' = usr{area=UE.area ua, durability=UE.durability ua}
+    putUser usr'
     logDebug $ printf "User '%s' synchronized" $ show $ userId usr'
     return state{user=usr'}
 
@@ -98,29 +95,31 @@ userProcess userName conn globalSettings = do
             die ("reconnect" :: String)
         Nothing -> return ()
     getSelfPid >>= register (show uid)
-    --TODO: try to fetch from db
+    res <- getUser uid =<< newTagPool
     let currentArea = S.startArea globalSettings
         uSettings = S.user globalSettings
-        usr = User{userId=uid,
-                   name=userName,
-                   area=currentArea,
-                   speed=S.speed uSettings,
-                   durability=S.initDurability uSettings}
+        usr = fromMaybe newUser res
+        newUser = User{userId=uid,
+                       name=userName,
+                       area=currentArea,
+                       speed=S.speed uSettings,
+                       durability=S.initDurability uSettings}
         state = State{user=usr,
                       areas=S.areas globalSettings,
                       settings=uSettings,
                       connection=Just conn,
                       disconnectTs=Nothing}
+    putUser usr
     initConnection conn state
     userPid <- makeSelfPid
     AE.enter (area usr) (userArea usr) userPid conn
     logInfo $ "Login: " ++ userName
     runPeriodic $ S.periodMilliseconds uSettings
-    void $ loop state
+    loop state
 
 
-loop :: State -> Process State
-loop state = handle >>= loop
+loop :: State -> Process ()
+loop state = safeReceive handlers state >>= loop
     where
         prepare h = match (h state)
         --NOTE: handlers are matched by a type
@@ -129,8 +128,6 @@ loop state = handle >>= loop
                     prepare handleMonitorNotification,
                     prepare handleReconnection,
                     matchUnknown (return state)]
-        evalState = receiveWait handlers >>= evaluate
-        handle = evalState `catches` logException state
 
 logout :: UserName -> Process ()
 logout userName = do

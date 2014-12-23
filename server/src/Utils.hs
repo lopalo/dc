@@ -44,5 +44,7 @@ logException x = [Handler (\(ex :: Ex.PatternMatchFail) -> logEx ex),
 evaluate :: a -> Process a
 evaluate = liftIO . Ex.evaluate
 
-
+safeReceive :: [Match a] -> a -> Process a
+safeReceive handlers state = evalState `catches` logException state
+    where evalState = receiveWait handlers >>= evaluate
 
