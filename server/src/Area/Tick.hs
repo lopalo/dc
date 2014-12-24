@@ -7,7 +7,7 @@ import Data.Binary (Binary)
 import Data.Typeable (Typeable)
 import Control.Monad (foldM, liftM, when)
 import Control.Category ((>>>))
-import Control.Monad.State.Strict (runState, gets)
+import Control.Monad.State.Strict (runState, gets, modify)
 import Control.Concurrent (threadDelay)
 import qualified Data.Map.Strict as M
 import Text.Printf (printf)
@@ -23,7 +23,9 @@ import Area.User (tickClientInfo)
 import Area.Utils (broadcastCmd, syncUsers)
 import Area.Action (Active(applyActions))
 import Area.State
-import Area.Event (Event(DeleteUser))
+import Area.Event
+import Area.Types (Pos(..))
+import qualified Area.User as U
 
 
 data TimeTick = TimeTick deriving (Generic, Typeable)
@@ -99,8 +101,12 @@ handleEvents = do
 
 
 handleEvent :: Event -> State' Bool
---TODO: respawn the user at the enter point with a little durability
-handleEvent (DeleteUser uid) = users' %= deleteUser uid >> return True
+handleEvent (Disappearance uid Burst) = do
+    enterPos <- gets $ uncurry Pos . S.enterPos . settings
+    modify $ updateUser (\u -> u{U.pos=enterPos, U.durability=1}) uid
+    events' %= (Appearance uid Recovery :)
+    return True
+handleEvent _ = return True
 
 
 tickData :: Ts -> State' Value

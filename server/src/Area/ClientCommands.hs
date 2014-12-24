@@ -16,6 +16,7 @@ import Area.Action (Action(..))
 import Area.Utils (distance, angle)
 import Area.Types
 import Area.State
+import Area.Event (Event(Disappearance), DReason(Exit))
 import Area.External (enter)
 
 
@@ -31,8 +32,10 @@ handleEnterArea :: State -> (EnterArea, Connection) -> Process State
 handleEnterArea state (EnterArea aid, conn) = do
     let user@U.User{U.userId=uid} = conn `userByConn` state
         userPid = (userPids . users) state M.! uid
-    enter aid (U.userArea user) userPid conn
-    return $ (users' ^%= deleteUser uid) state
+        delUser = users' ^%= deleteUser uid
+        addEvent = events' ^%= (Disappearance uid Exit :)
+    enter aid (U.userArea user) userPid False conn
+    return $ addEvent $ delUser state
 
 
 handleObjectsInfo :: State -> (GetObjectsInfo, Connection)

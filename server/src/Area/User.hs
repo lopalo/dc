@@ -10,7 +10,7 @@ import qualified User.External as UE
 import Area.Types (Pos)
 import Area.Action (Active(..), Action(MoveDistance, Burning),
                     moveDistance, burning)
-import Area.Event (Event(DeleteUser))
+import Area.Event (Event(Disappearance), DReason(Burst))
 
 
 instance Active User where
@@ -24,7 +24,7 @@ instance Active User where
             user' = user{durability=durability'}
         in
             if durability' <= 0
-               then (user, action', [DeleteUser $ userId user])
+               then (user', Nothing, [Disappearance (userId user) Burst])
                else (user', action', [])
 
 

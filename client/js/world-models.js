@@ -48,7 +48,7 @@ Unit = WorldObject.extend({
                     this._applyMoveDistance(timestamp, action);
                     break;
                 default:
-                    throw "Unknown action " + action.tag;
+                    console.log("Unknown action " + action.tag);
             }
         }, this);
     },

@@ -112,7 +112,7 @@ userProcess userName conn globalSettings = do
     putUser usr
     initConnection conn state
     userPid <- makeSelfPid
-    AE.enter (area usr) (userArea usr) userPid conn
+    AE.enter (area usr) (userArea usr) userPid True conn
     logInfo $ "Login: " ++ userName
     runPeriodic $ S.periodMilliseconds uSettings
     loop state

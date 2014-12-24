@@ -114,10 +114,11 @@ UnitView = Backbone.View.extend({
     width: 140, //pixels
     labelHeight: 20, //pixels
     className: "world-object text-center",
-    initialize: function () {
+    initialize: function (options) {
+        this.appearanceReason = options.reason; //TODO
         this.img = null;
         this.listenTo(this.model, "change", this.update);
-        this.listenTo(this.model, "destroy-view", this.remove);
+        this.listenTo(this.model, "destroy-view", this.destroy);
     },
     render: function () {
         var el = this.$el;
@@ -144,5 +145,9 @@ UnitView = Backbone.View.extend({
         var angle = -model.get("angle") - 90;
         this.$el.css({left: pos.x, bottom: pos.y});
         this.img.css({"-webkit-transform": "rotate(" + angle + "deg)"});
+    },
+    destroy: function (reason) {
+        //TODO
+        this.remove();
     }
 });

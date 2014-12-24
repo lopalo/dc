@@ -41,9 +41,9 @@ parseClientCmd "ignite" body = do
 
 
 enter :: AreaId -> (AreaId -> UE.UserArea) ->
-         UserPid -> Connection -> Process ()
-enter aid userArea userPid conn = do
-    nsend aid (Enter (userArea aid) userPid, conn)
+         UserPid -> Bool -> Connection -> Process ()
+enter aid userArea userPid login conn =
+    nsend aid (Enter (userArea aid) userPid login, conn)
 
 
 clientCmd :: AreaPid -> String -> Value -> RequestNumber ->
@@ -53,6 +53,6 @@ clientCmd (AreaPid pid) cmd body req conn =
 
 
 reconnect :: AreaId -> UserId -> Connection -> Process ()
-reconnect areaId userId conn= do
+reconnect areaId userId conn =
     nsend areaId (Reconnection userId, conn)
 

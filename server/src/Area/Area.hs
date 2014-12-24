@@ -22,12 +22,15 @@ import Area.Utils (sendCmd)
 import Area.Types
 import Area.State
 import Area.ClientCommands
+import Area.Event (Event(Appearance, Disappearance),
+                   AReason(LogIn, Entry),
+                   DReason(LogOut))
 import Area.Tick (handleTick, scheduleTick)
 
 
 
 handleEnter :: State -> (Enter, Connection) -> Process State
-handleEnter state (Enter ua userPid, conn) = do
+handleEnter state (Enter ua userPid login, conn) = do
     let uid = UE.userId ua
         enterPos = (S.enterPos . settings) state
         user = U.User{U.userId=uid,
@@ -37,7 +40,10 @@ handleEnter state (Enter ua userPid, conn) = do
                       U.speed=UE.speed ua,
                       U.durability=UE.durability ua,
                       U.actions=[]}
-        state' = (users' ^%= addUser uid conn userPid user) state
+        addUsr = users' ^%= addUser uid conn userPid user
+        reason = if login then LogIn else Entry
+        addEvent = events' ^%= (Appearance uid reason :)
+        state' = addEvent $ addUsr state
     UE.monitorUser userPid
     initConnection conn state'
     UE.syncState userPid $ U.userArea user $ areaId state'
@@ -60,9 +66,12 @@ handleMonitorNotification :: State -> ProcessMonitorNotification
                              -> Process State
 handleMonitorNotification state (ProcessMonitorNotification ref pid _) = do
     unmonitor ref
-    case UserPid pid `M.lookup` userPidToIds (users state) of
-        Just uid -> return $ (users' ^%= deleteUser uid) state
-        Nothing -> return state
+    return $ case UserPid pid `M.lookup` userPidToIds (users state) of
+        Just uid ->
+            let delUser = users' ^%= deleteUser uid
+                addEvent = events' ^%= (Disappearance uid LogOut :)
+            in addEvent $ delUser state
+        Nothing -> state
 
 
 

@@ -14,6 +14,8 @@ function World(viewportEl, connection, user, area, ui) {
     this.backgroundLayer = null;
     this.objectLayer = null;
     this.objectModels = {};
+    this.appearanceReasons = {}; //TODO: cleanup old events
+    this.disappearanceReasons = {};
     this.documentFragment = null;
     _.bindAll(this, "animationLoopStep", "animationCallback");
     this.setupLayers();
@@ -73,8 +75,16 @@ _.extend(World.prototype, {
         var idents = [];
         var unknownIdents = [];
         var excessIdents = [];
-        if (this.area.get("areaId") === null) return;
+        _.each(data.events, function (ev) {
+            if (ev.tag === "Appearance") {
+                this.appearanceReasons[ev.ident] = ev.aReason;
+            }
+            if (ev.tag === "Disappearance") {
+                this.disappearanceReasons[ev.ident] = ev.dReason;
+            }
+        }, this);
         _.each(data.objects, function (value) {
+            if (_.has(this.disappearanceReasons, value.id)) return;
             idents.push(value.id);
             if (!_.has(objectModels, value.id)) {
                 unknownIdents.push(value.id);
@@ -92,6 +102,7 @@ _.extend(World.prototype, {
         }
         excessIdents = _.difference(_.keys(objectModels), idents);
         _.each(excessIdents, this.removeObject, this);
+        this.disappearanceReasons = [];
         this.animationStep();
     },
     getTime: function () {
@@ -113,12 +124,14 @@ _.extend(World.prototype, {
         this.documentFragment = null;
     },
     addObject: function (data) {
+        var reason = this.appearanceReasons[data.id];
         var model;
         var view;
+        delete this.appearanceReasons[data.id];
         switch (data.tag) {
             case "User":
                 model = new Unit(data);
-                view = new UnitView({model: model});
+                view = new UnitView({model: model, reason: reason});
                 break;
             default:
                 throw "Unknown type " + data.tag;
@@ -127,7 +140,8 @@ _.extend(World.prototype, {
         view.render().appendTo(this.documentFragment);
     },
     removeObject: function (ident) {
-        this.objectModels[ident].trigger("destroy-view");
+        var reason = this.disappearanceReasons[ident];
+        this.objectModels[ident].trigger("destroy-view", reason);
         delete this.objectModels[ident];
     },
     moveTo: function (pos) {

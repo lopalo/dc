@@ -8,10 +8,8 @@ import Data.Binary (Binary)
 import Data.Typeable (Typeable)
 
 import Data.Aeson (ToJSON, toJSON, FromJSON, parseJSON)
-import Control.Distributed.Process hiding (forward)
 
-import Connection (Connection)
-import Types (UserId, UserPid(..), AreaId, RequestNumber)
+import Types (UserId, UserPid(..), AreaId)
 import qualified User.External as UE
 
 
@@ -23,7 +21,7 @@ instance Binary Reconnection
 data Echo = Echo !String deriving (Generic, Typeable)
 instance Binary Echo
 
-data Enter = Enter !UE.UserArea UserPid deriving (Generic, Typeable)
+data Enter = Enter !UE.UserArea UserPid Bool deriving (Generic, Typeable)
 instance Binary Enter
 
 data GetObjectsInfo = GetObjectsInfo ![String] deriving (Generic, Typeable)
