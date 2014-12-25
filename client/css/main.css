@@ -39,6 +39,11 @@ body {
     left: 1%;
 }
 
+#ignite {
+    top: 3%;
+    left: 6%;
+}
+
 #control-mode {
     width: 7%;
     top: 3%;
@@ -94,4 +99,8 @@ body {
     position: absolute;
 }
 
+
+.fast-effect {
+    -webkit-transition: opacity .5s, -webkit-transform .5s;
+}
 

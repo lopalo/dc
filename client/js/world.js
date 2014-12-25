@@ -14,8 +14,9 @@ function World(viewportEl, connection, user, area, ui) {
     this.backgroundLayer = null;
     this.objectLayer = null;
     this.objectModels = {};
-    this.appearanceReasons = {}; //TODO: cleanup old events
+    this.appearanceReasons = {}; //FIXME: remove old events
     this.disappearanceReasons = {};
+    this.firstEnter = true;
     this.documentFragment = null;
     _.bindAll(this, "animationLoopStep", "animationCallback");
     this.setupLayers();
@@ -130,8 +131,11 @@ _.extend(World.prototype, {
         delete this.appearanceReasons[data.id];
         switch (data.tag) {
             case "User":
+                if (!reason && data.id === this.user.get("userId")) {
+                    reason = this.firstEnter ? "LogIn" : "Entry";
+                }
                 model = new Unit(data);
-                view = new UnitView({model: model, reason: reason});
+                view = new UserView({model: model, reason: reason});
                 break;
             default:
                 throw "Unknown type " + data.tag;
@@ -149,6 +153,7 @@ _.extend(World.prototype, {
     },
     listenToUI: function () {
         this.listenTo(this.ui, "focus-to-myself", this.showMyself);
+        this.listenTo(this.ui, "ignite", this.ignite);
         this.listenTo(this.ui, "enter-area", this.enterArea);
     },
     showMyself: function () {
@@ -156,7 +161,13 @@ _.extend(World.prototype, {
         if (self === undefined) return;
         this.camera.focusTo(Victor.fromArray(self.get("pos")));
     },
+    ignite: function () {
+        this.connection.send("area.ignite", 10);
+    },
     enterArea: function (areaId) {
+        this.firstEnter = false;
+        var self = this.objectModels[this.user.get("userId")];
+        self.trigger("destroy-view", "Exit");
         this.connection.send("area.enter-area", areaId);
     },
     requestAnimation: function () {

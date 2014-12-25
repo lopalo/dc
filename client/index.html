@@ -4,9 +4,11 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <title>DC</title>
     <link rel="stylesheet" href="css/libs/bootstrap.min.css">
+    <link rel="stylesheet" href="css/libs/bootstrap-select.min.css">
     <link rel="stylesheet" href="css/main.css">
     <script src="js/libs/jquery.min.js"></script>
     <script src="js/libs/bootstrap.min.js"></script>
+    <script src="js/libs/bootstrap-select.min.js"></script>
     <script src="js/libs/underscore-min.js"></script>
     <script src="js/libs/backbone-min.js"></script>
     <script src="js/libs/victor.min.js"></script>
@@ -42,10 +44,21 @@
         <div id="game">
             <div id="viewport"></div>
             <div id="ui">
-                <button id="focus-to-myself" class="btn btn-default ui">+</button>
-                <select id="control-mode" class="form-control ui">
-                    <option value="view">view</option>
-                    <option value="move">move</option>
+                <button id="focus-to-myself" class="btn btn-default ui">
+                    <span class="glyphicon glyphicon-search"></span>
+                </button>
+                <button id="ignite" class="btn btn-default ui">
+                    <span class="glyphicon glyphicon-fire"></span>
+                </button>
+                <select id="control-mode" class="ui form-control selectpicker">
+                    <option value="view">
+                        view
+                        <span class="glyphicon glyphicon-eye-open"></span>
+                    </option>
+                    <option value="move">
+                        move
+                        <span class="glyphicon glyphicon-arrow-right"></span>
+                    </option>
                 </select>
                 <select id="select-area" class="form-control ui"></select>
             </div>

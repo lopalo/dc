@@ -11,6 +11,7 @@ $(function () {
     var connection = new Connection();
     _connection = connection;
     $("#connect").one("click", _.partial(connect, connection));
+    //TODO: check query string and if it is filled, trigger the click
     //$("#connect").trigger("click"); //cleanup
 });
 

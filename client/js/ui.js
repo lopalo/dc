@@ -4,7 +4,16 @@ var SelectControlMode;
 var SelectArea;
 
 function setupUI(uiEl, ui, user, area) {
-    new FocusMyselfButton({el: uiEl.find("#focus-to-myself"), model: ui});
+    new Button({
+        el: uiEl.find("#focus-to-myself"),
+        model: ui,
+        event: "focus-to-myself"
+    });
+    new Button({
+        el: uiEl.find("#ignite"),
+        model: ui,
+        event: "ignite"
+    });
     new SelectControlMode({el: uiEl.find("#control-mode"), model: ui});
     new SelectArea({
         el: uiEl.find("#select-area"),
@@ -18,17 +27,20 @@ UI = Backbone.Model.extend({
     controlModes: ["view", "move"],
     defaults: function () {
         return {
-            controlMode: this.controlModes[0]
+            controlMode: this.controlModes[1]
         };
     }
 });
 
-FocusMyselfButton = Backbone.View.extend({
+Button = Backbone.View.extend({
     events: {
         click: "click",
     },
+    initialize: function (options) {
+        this.event = options.event;
+    },
     click: function () {
-        this.model.trigger("focus-to-myself");
+        this.model.trigger(this.event);
     },
 });
 

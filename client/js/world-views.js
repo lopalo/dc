@@ -3,7 +3,7 @@ var Layer;
 var Background;
 var Midground;
 var ViewPort;
-var UnitView;
+var UserView;
 
 Layer = Backbone.View.extend({
     attributes: {
@@ -109,13 +109,14 @@ ViewPort = Backbone.View.extend({
 });
 
 
-UnitView = Backbone.View.extend({
+UserView = Backbone.View.extend({
     //TODO: culling in the object layer
     width: 140, //pixels
     labelHeight: 20, //pixels
     className: "world-object text-center",
     initialize: function (options) {
-        this.appearanceReason = options.reason; //TODO
+        this.appearanceReason = options.reason;
+        this.updateAllowed = true;
         this.img = null;
         this.listenTo(this.model, "change", this.update);
         this.listenTo(this.model, "destroy-view", this.destroy);
@@ -134,20 +135,109 @@ UnitView = Backbone.View.extend({
             })
             .appendTo(el);
         this.update();
+        this.appearanceEffect();
         return el;
     },
+    appearanceEffect: function () {
+        var self = this;
+        var endEffect = function () {
+            img.off("webkitTransitionEnd", endEffect)
+               .removeClass("fast-effect");
+            self.updateAllowed = true;
+        };
+        var rotate = this.rotate();
+        var img = this.img;
+        var fun;
+        img.addClass("fast-effect")
+           .bind("webkitTransitionEnd", endEffect);
+        _.delay(endEffect, 600); // must be synchronized with the transition duration
+        switch (this.appearanceReason) {
+            case "LogIn":
+                this.updateAllowed = false;
+                img.css({"-webkit-transform": rotate + " rotateY(90deg)"});
+                fun = function () {
+                    img.css({
+                        "-webkit-transform": rotate + " rotateY(0deg)",
+                    });
+                };
+                break;
+            case "Entry":
+                this.updateAllowed = false;
+                img.css({"-webkit-transform": rotate + " scale(.01, 20) "});
+                fun = function () {
+                    img.css({
+                        "-webkit-transform": rotate + " scale(1, 1) ",
+                    });
+                };
+                break;
+            default: //Recovery
+                img.css({opacity: 0});
+                fun = function () { img.css({opacity: 1}); };
+        }
+        _.delay(fun, 100);
+    },
+    rotate: function () {
+        var angle = -this.model.get("angle") - 90;
+        return "rotate(" + angle + "deg)";
+    },
     update: function () {
+        if (!this.updateAllowed) return;
         var model = this.model;
         var xShift = this.width / 2;
         var yShift = model.get("height") / 2;
         var pos = Victor.fromArray(model.get("pos"))
                   .subtract(new Victor(xShift, yShift));
-        var angle = -model.get("angle") - 90;
         this.$el.css({left: pos.x, bottom: pos.y});
-        this.img.css({"-webkit-transform": "rotate(" + angle + "deg)"});
+        this.img.css({"-webkit-transform": this.rotate()});
     },
     destroy: function (reason) {
-        //TODO
+        this.disappearanceEffect(reason);
         this.remove();
+    },
+    disappearanceEffect: function (reason) {
+        var el = this.$el;
+        var img = this.img.clone();
+        var model = this.model;
+        var rotate = this.rotate();
+        var width = model.get("width");
+        var height = model.get("height");
+        var pos = Victor.fromArray(model.get("pos"))
+                  .subtract(new Victor(width / 2, height / 2));
+        var endEffect = function () { img.remove(); };
+        var fun;
+        img.appendTo(el.parent())
+           .addClass("fast-effect")
+           .css({
+               left: pos.x,
+               bottom: pos.y,
+               position: "absolute",
+               "-webkit-tranform": rotate,
+           })
+           .bind("webkitTransitionEnd", endEffect);
+        _.delay(endEffect, 600); // must be synchronized with the transition duration
+        switch (reason) {
+            case "Burst":
+                fun = function () {
+                    img.css({
+                        "-webkit-transform": rotate + " scale(2, 2)",
+                        opacity: 0
+                    });
+                };
+                break;
+            case "Exit":
+                fun = function () {
+                    img.css({
+                        "-webkit-transform": rotate + " scale(.01, 20) ",
+                    });
+                };
+                break;
+            default: //LogOut
+                fun = function () {
+                    img.css({
+                        "-webkit-transform": rotate + " rotateY(90deg)",
+                    });
+                };
+        }
+        _.delay(fun, 100);
     }
 });

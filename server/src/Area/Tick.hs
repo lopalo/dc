@@ -103,7 +103,8 @@ handleEvents = do
 handleEvent :: Event -> State' Bool
 handleEvent (Disappearance uid Burst) = do
     enterPos <- gets $ uncurry Pos . S.enterPos . settings
-    modify $ updateUser (\u -> u{U.pos=enterPos, U.durability=1}) uid
+    let resetUser u = u{U.pos=enterPos, U.durability=1, U.actions=[]}
+    modify $ updateUser resetUser uid
     events' %= (Appearance uid Recovery :)
     return True
 handleEvent _ = return True
