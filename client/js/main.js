@@ -11,8 +11,12 @@ $(function () {
     var connection = new Connection();
     _connection = connection;
     $("#connect").one("click", _.partial(connect, connection));
-    //TODO: check query string and if it is filled, trigger the click
-    //$("#connect").trigger("click"); //cleanup
+    var query = $.getQuery();
+    if (query.address && query.name) {
+        $("#connect-address").val(query.address);
+        $("#connect-name").val(query.name);
+        $("#connect").trigger("click");
+    }
 });
 
 
@@ -30,7 +34,6 @@ function onOpen(connection) {
         $("#connect-form").remove();
         initGame(connection);
     });
-    //TODO: show error if a user is already connected
     //TODO: process disconnection
 }
 

@@ -8,6 +8,10 @@ body {
     color: #777;
 }
 
+.popover-content {
+    white-space: nowrap;
+}
+
 .alert {
     display: none;
 }
@@ -35,26 +39,24 @@ body {
 }
 
 #focus-to-myself {
-    top: 3%;
+    bottom: 3%;
     left: 1%;
 }
 
 #ignite {
-    top: 3%;
+    bottom: 3%;
     left: 6%;
 }
 
 #control-mode {
-    width: 7%;
     top: 3%;
     right: 1%;
 }
 
 
-#select-area {
-    width: 7%;
-    bottom: 3%;
-    right: 1%;
+#area {
+    top: 3%;
+    left: 1%;
 }
 
 

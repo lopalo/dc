@@ -114,6 +114,11 @@ UserView = Backbone.View.extend({
     width: 140, //pixels
     labelHeight: 20, //pixels
     className: "world-object text-center",
+    events: {
+        mouseenter: "mouseEnter",
+        mouseleave: "mouseLeave"
+    },
+    popoverTemplate: _.template($("#user-popover-template").html()),
     initialize: function (options) {
         this.appearanceReason = options.reason;
         this.updateAllowed = true;
@@ -137,6 +142,39 @@ UserView = Backbone.View.extend({
         this.update();
         this.appearanceEffect();
         return el;
+    },
+    rotate: function () {
+        var angle = -this.model.get("angle") - 90;
+        return "rotate(" + angle + "deg)";
+    },
+    update: function () {
+        if (!this.updateAllowed) return;
+        var model = this.model;
+        var xShift = this.width / 2;
+        var yShift = model.get("height") / 2;
+        var pos = Victor.fromArray(model.get("pos"))
+                  .subtract(new Victor(xShift, yShift));
+        this.$el.css({left: pos.x, bottom: pos.y});
+        this.img.css({"-webkit-transform": this.rotate()});
+    },
+    destroy: function (reason) {
+        this.disappearanceEffect(reason);
+        this.remove();
+    },
+    mouseEnter: function () {
+        var el = this.$el;
+        var model = this.model;
+        var content = this.popoverTemplate(model.attributes);
+        el.popover({
+            title: model.get("name"),
+            content: content,
+            container: el,
+            html: true
+        });
+        el.popover("show");
+    },
+    mouseLeave: function () {
+        this.$el.popover("destroy");
     },
     appearanceEffect: function () {
         var self = this;
@@ -175,24 +213,6 @@ UserView = Backbone.View.extend({
                 fun = function () { img.css({opacity: 1}); };
         }
         _.delay(fun, 100);
-    },
-    rotate: function () {
-        var angle = -this.model.get("angle") - 90;
-        return "rotate(" + angle + "deg)";
-    },
-    update: function () {
-        if (!this.updateAllowed) return;
-        var model = this.model;
-        var xShift = this.width / 2;
-        var yShift = model.get("height") / 2;
-        var pos = Victor.fromArray(model.get("pos"))
-                  .subtract(new Victor(xShift, yShift));
-        this.$el.css({left: pos.x, bottom: pos.y});
-        this.img.css({"-webkit-transform": this.rotate()});
-    },
-    destroy: function (reason) {
-        this.disappearanceEffect(reason);
-        this.remove();
     },
     disappearanceEffect: function (reason) {
         var el = this.$el;

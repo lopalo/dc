@@ -4,6 +4,7 @@ var SelectControlMode;
 var SelectArea;
 
 function setupUI(uiEl, ui, user, area) {
+    uiEl.find(".selectpicker").selectpicker();
     new Button({
         el: uiEl.find("#focus-to-myself"),
         model: ui,
@@ -14,7 +15,7 @@ function setupUI(uiEl, ui, user, area) {
         model: ui,
         event: "ignite"
     });
-    new SelectControlMode({el: uiEl.find("#control-mode"), model: ui});
+    new SelectControlMode({el: uiEl.find("#select-control-mode"), model: ui});
     new SelectArea({
         el: uiEl.find("#select-area"),
         model: ui,
@@ -57,6 +58,7 @@ SelectControlMode = Backbone.View.extend({
     },
     render: function () {
         this.$el.val(this.model.get("controlMode"));
+        this.$el.selectpicker("render");
     },
     changeMode: function () {
         this.model.set("controlMode", this.$el.val());
@@ -96,6 +98,7 @@ SelectArea = Backbone.View.extend({
             el.append(this.template({v: areaId}));
         }, this);
         this.$el.val(this.area.get("areaId"));
+        this.$el.selectpicker("refresh");
     },
     changeArea: function () {
         this.model.trigger("enter-area", this.$el.val());

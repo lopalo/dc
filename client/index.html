@@ -3,10 +3,19 @@
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <title>DC</title>
+
+    <script type="text/template" id="user-popover-template">
+        <ul class="list-unstyled">
+            <li>Durability: <%= durability %></li>
+            <li>Speed: <%= speed %></li>
+        </ul>
+    </script>
+
     <link rel="stylesheet" href="css/libs/bootstrap.min.css">
     <link rel="stylesheet" href="css/libs/bootstrap-select.min.css">
     <link rel="stylesheet" href="css/main.css">
     <script src="js/libs/jquery.min.js"></script>
+    <script src="js/libs/jquery-queryParser.min.js"></script>
     <script src="js/libs/bootstrap.min.js"></script>
     <script src="js/libs/bootstrap-select.min.js"></script>
     <script src="js/libs/underscore-min.js"></script>
@@ -50,17 +59,18 @@
                 <button id="ignite" class="btn btn-default ui">
                     <span class="glyphicon glyphicon-fire"></span>
                 </button>
-                <select id="control-mode" class="ui form-control selectpicker">
-                    <option value="view">
-                        view
-                        <span class="glyphicon glyphicon-eye-open"></span>
-                    </option>
-                    <option value="move">
-                        move
-                        <span class="glyphicon glyphicon-arrow-right"></span>
-                    </option>
-                </select>
-                <select id="select-area" class="form-control ui"></select>
+                <div id="control-mode" class="form-group ui">
+                    <select id="select-control-mode" class="form-control selectpicker">
+                        <option value="view" data-icon="glyphicon-eye-open">
+                        </option>
+                        <option value="move" data-icon="glyphicon-arrow-right">
+                        </option>
+                    </select>
+                </div>
+                <div id="area" class="form-group ui">
+                    <select id="select-area" class="form-control selectpicker">
+                    </select>
+                </div>
             </div>
         </div>
     </div>

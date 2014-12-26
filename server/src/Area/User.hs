@@ -70,6 +70,7 @@ initClientInfo user =
             "tag" .= ("User" :: String),
             "name" .= name user,
             "durability" .= durability user,
+            "speed" .= speed user,
             "angle" .= angle user,
             "pos" .= pos user]
 
