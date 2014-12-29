@@ -3,29 +3,31 @@
 module Area.User where
 
 import Data.Aeson (Value, object, (.=))
-import Data.Lens.Common (lens, Lens)
+import Data.Lens.Common (lens, Lens, (^-=))
 
 import Types (UserId, UserName, AreaId)
 import qualified User.External as UE
-import Area.Types (Pos)
+import Area.Types (Object(..), Destroyable(..), Pos, ObjId(UId))
 import Area.Action (Active(..), Action(MoveDistance, Burning),
                     moveDistance, burning)
-import Area.Event (Event(Disappearance), DReason(Burst))
 
+
+instance Object User where
+    objId = UId . userId
+
+instance Destroyable User where
+
+    objDurability = durability
 
 instance Active User where
 
     apply user action@MoveDistance{} ts =
         let (pos', action') = moveDistance action ts
         in (user{pos=pos'}, action', [])
-    apply user@User{durability=d} action@Burning{} ts =
+    apply user action@Burning{} ts =
         let (damage, action') = burning action ts
-            durability' = d - damage
-            user' = user{durability=durability'}
-        in
-            if durability' <= 0
-               then (user', Nothing, [Disappearance (userId user) Burst])
-               else (user', action', [])
+            user' = (durability' ^-= damage) user
+        in (user', action', [])
 
 
     getActions = actions
@@ -40,6 +42,9 @@ data User = User {userId :: UserId,
                   speed :: Int, --units per second
                   durability :: Int,
                   actions :: [Action]}
+
+durability' :: Lens User Int
+durability' = lens durability (\v user -> user{durability=v})
 
 actions' :: Lens User [Action]
 actions' = lens actions (\v user -> user{actions=v})

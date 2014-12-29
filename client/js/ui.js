@@ -25,7 +25,7 @@ function setupUI(uiEl, ui, user, area) {
 }
 
 UI = Backbone.Model.extend({
-    controlModes: ["view", "move"],
+    controlModes: ["view", "move", "shot"],
     defaults: function () {
         return {
             controlMode: this.controlModes[1]
@@ -46,7 +46,7 @@ Button = Backbone.View.extend({
 });
 
 SelectControlMode = Backbone.View.extend({
-    keyMap: [49, 50],
+    keyMap: [49, 50, 51],
     events: {
         change: "changeMode",
     },

@@ -10,6 +10,7 @@ user:
   period-milliseconds: 1000
 area:
   enter-pos: [10, 10]
+  shot-damage: 10
   tick-milliseconds: 100
   broadcast-every-tick: 10
   log-every-tick: 10

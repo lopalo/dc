@@ -115,12 +115,15 @@ UserView = Backbone.View.extend({
     labelHeight: 20, //pixels
     className: "world-object text-center",
     events: {
+        click: "click",
         mouseenter: "mouseEnter",
         mouseleave: "mouseLeave"
     },
     popoverTemplate: _.template($("#user-popover-template").html()),
     initialize: function (options) {
+        this.isSelf = options.isSelf;
         this.appearanceReason = options.reason;
+        this.ui = options.ui;
         this.updateAllowed = true;
         this.img = null;
         this.listenTo(this.model, "change", this.update);
@@ -162,6 +165,7 @@ UserView = Backbone.View.extend({
         this.remove();
     },
     mouseEnter: function () {
+        if (this.ui.get("controlMode") !== "view") return;
         var el = this.$el;
         var model = this.model;
         var content = this.popoverTemplate(model.attributes);
@@ -176,6 +180,10 @@ UserView = Backbone.View.extend({
     mouseLeave: function () {
         this.$el.popover("destroy");
     },
+    click: function () {
+        if (this.ui.get("controlMode") !== "shot" || this.isSelf) return;
+        this.trigger("shot", this.model.get("id"));
+    },
     appearanceEffect: function () {
         var self = this;
         var endEffect = function () {
@@ -189,6 +197,7 @@ UserView = Backbone.View.extend({
         img.addClass("fast-effect")
            .bind("webkitTransitionEnd", endEffect);
         _.delay(endEffect, 600); // must be synchronized with the transition duration
+        //TODO: animation refactoring
         switch (this.appearanceReason) {
             case "LogIn":
                 this.updateAllowed = false;
@@ -247,7 +256,7 @@ UserView = Backbone.View.extend({
             case "Exit":
                 fun = function () {
                     img.css({
-                        "-webkit-transform": rotate + " scale(.01, 20) ",
+                        "-webkit-transform": rotate + " scale(.01, 20)",
                     });
                 };
                 break;

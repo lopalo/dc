@@ -5,18 +5,19 @@ import qualified Data.Map.Strict as M
 
 import Data.Aeson(Value)
 import Data.String.Utils (startswith)
-import Data.Lens.Common ((^%=))
+import Data.Lens.Common ((^%=), (^-=))
 import Control.Distributed.Process
 
 import Utils (milliseconds)
 import Connection (Connection)
 import Types (UserId)
+import qualified Settings as S
 import qualified Area.User as U
 import Area.Action (Action(..))
 import Area.Utils (distance, angle)
 import Area.Types
 import Area.State
-import Area.Event (Event(Disappearance), DReason(Exit))
+import Area.Event (Event(Disappearance, Shot), DReason(Exit))
 import Area.External (enter)
 
 
@@ -33,7 +34,7 @@ handleEnterArea state (EnterArea aid, conn) = do
     let user@U.User{U.userId=uid} = conn `userByConn` state
         userPid = (userPids . users) state M.! uid
         delUser = users' ^%= deleteUser uid
-        addEvent = events' ^%= (Disappearance uid Exit :)
+        addEvent = events' ^%= (Disappearance (UId uid) Exit :)
     enter aid (U.userArea user) userPid False conn
     return $ addEvent $ delUser state
 
@@ -79,6 +80,14 @@ handleIgnite state (Ignite dmgSpeed, conn) = do
     return $ addUserAction uid action state
 
 
+handleShoot :: State -> (Shoot, Connection) -> Process State
+handleShoot state (Shoot target, conn) = return $ addEvent $ updUsr state
+    where event = Shot (uidByConn conn state) target
+          damage = S.shotDamage $ settings state
+          addEvent = events' ^%= (event :)
+          updUsr = updateUser (U.durability' ^-= damage) target
+
+
 userByConn :: Connection -> State -> U.User
 userByConn conn state = (usersData . users) state M.! uidByConn conn state
 
@@ -87,8 +96,7 @@ uidByConn conn state = (connToIds . users) state M.! conn
 
 
 updateUserActions :: ([Action] -> [Action]) -> UserId -> State -> State
-updateUserActions f = updateUser update
-    where update user = user{U.actions=f $ U.actions user}
+updateUserActions f = updateUser (U.actions' ^%= f)
 
 addUserAction :: UserId -> Action -> State -> State
 addUserAction uid action = updateUserActions (action:) uid

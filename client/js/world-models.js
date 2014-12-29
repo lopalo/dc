@@ -1,7 +1,7 @@
 
 var Camera;
 var WorldObject;
-var Unit;
+var User;
 
 Camera = Backbone.Model.extend({
     defaults: {
@@ -24,6 +24,7 @@ Camera = Backbone.Model.extend({
 WorldObject = Backbone.Model.extend({
     defaults: function () {
         return {
+            id: "",
             pos: [0, 0],
             height: 80,
             width: 40,
@@ -33,10 +34,10 @@ WorldObject = Backbone.Model.extend({
 });
 
 
-Unit = WorldObject.extend({
+User = WorldObject.extend({
     defaults: function () {
         var defaults = {
-            name: "unit",
+            name: "",
             actions: [],
         };
         return _.extend(defaults, WorldObject.prototype.defaults.call(this));

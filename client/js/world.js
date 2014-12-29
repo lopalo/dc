@@ -17,6 +17,7 @@ function World(viewportEl, connection, user, area, ui) {
     this.appearanceReasons = {}; //FIXME: remove old events
     this.disappearanceReasons = {};
     this.firstEnter = true;
+    this.eventHandler = new EventHandler(this);
     this.documentFragment = null;
     _.bindAll(this, "animationLoopStep", "animationCallback");
     this.setupLayers();
@@ -78,10 +79,10 @@ _.extend(World.prototype, {
         var excessIdents = [];
         _.each(data.events, function (ev) {
             if (ev.tag === "Appearance") {
-                this.appearanceReasons[ev.ident] = ev.aReason;
+                this.appearanceReasons[ev.userId] = ev.aReason;
             }
             if (ev.tag === "Disappearance") {
-                this.disappearanceReasons[ev.ident] = ev.dReason;
+                this.disappearanceReasons[ev.objId] = ev.dReason;
             }
         }, this);
         _.each(data.objects, function (value) {
@@ -101,10 +102,11 @@ _.extend(World.prototype, {
                 this
             );
         }
+        this.animationStep();
+        this.eventHandler.process(data.events);
         excessIdents = _.difference(_.keys(objectModels), idents);
         _.each(excessIdents, this.removeObject, this);
         this.disappearanceReasons = [];
-        this.animationStep();
     },
     getTime: function () {
         return performance.now();
@@ -126,16 +128,24 @@ _.extend(World.prototype, {
     },
     addObject: function (data) {
         var reason = this.appearanceReasons[data.id];
+        var isSelf = false;
         var model;
         var view;
         delete this.appearanceReasons[data.id];
         switch (data.tag) {
             case "User":
-                if (!reason && data.id === this.user.get("userId")) {
+                isSelf = data.id === this.user.get("userId");
+                if (!reason && isSelf) {
                     reason = this.firstEnter ? "LogIn" : "Entry";
                 }
-                model = new Unit(data);
-                view = new UserView({model: model, reason: reason});
+                model = new User(data);
+                view = new UserView({
+                    model: model,
+                    reason: reason,
+                    isSelf: isSelf,
+                    ui: this.ui
+                });
+                this.listenTo(view, "shot", this.shot);
                 break;
             default:
                 throw "Unknown type " + data.tag;
@@ -150,6 +160,9 @@ _.extend(World.prototype, {
     },
     moveTo: function (pos) {
         this.connection.send("area.move-to", pos.toArray());
+    },
+    shot: function (ident) {
+        this.connection.send("area.shoot", ident);
     },
     listenToUI: function () {
         this.listenTo(this.ui, "focus-to-myself", this.showMyself);
@@ -195,3 +208,39 @@ _.extend(World.prototype, {
 });
 
 
+function EventHandler(world) {
+    this.world = world;
+}
+EventHandler.prototype = {
+    process: function (events) {
+        var world = this.world;
+        world.createDocumentFragment();
+        _.each(events, function (ev) {
+            var handler = this["handle" + ev.tag];
+            if (!handler) return;
+            handler.call(this, ev);
+        }, this);
+        world.applyDocumentFragment(world.objectLayer);
+
+    },
+    handleShot: function (ev) {
+        var world = this.world;
+        var objects = world.objectModels;
+        var start = Victor.fromArray(objects[ev.shooter].get("pos"));
+        var end = Victor.fromArray(objects[ev.target].get("pos"));
+        var delta = end.subtract(start);
+        var endEffect = function () { shot.remove(); };
+        var shot = $("<div></div>")
+            .addClass("shot slow-effect")
+            .css({
+                "-webkit-transform": "rotate(" + -delta.angle() + "rad)",
+                width: delta.length(),
+                left: start.x,
+                bottom: start.y,
+            })
+            .appendTo(world.documentFragment)
+           .bind("webkitTransitionEnd", endEffect);
+        _.delay(endEffect, 3100); // must be synchronized with the transition duration
+        _.delay(function () { shot.css("opacity", 0); }, 100);
+    }
+};

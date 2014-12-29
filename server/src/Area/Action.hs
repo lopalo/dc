@@ -50,7 +50,7 @@ burning action@Burning{previousTs=pts, damageSpeed=speed} ts =
     let damage = round $ speed * fromIntegral (ts - pts) / 1000
     in
         if damage > 1
-           then(damage, Just action{previousTs=ts})
+           then (damage, Just action{previousTs=ts})
            else (0, Just action)
 
 moveDistance :: Action -> Ts -> (Pos, Maybe Action)

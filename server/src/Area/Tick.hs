@@ -23,8 +23,8 @@ import Area.User (tickClientInfo)
 import Area.Utils (broadcastCmd, syncUsers)
 import Area.Action (Active(applyActions))
 import Area.State
-import Area.Event
-import Area.Types (Pos(..))
+import Area.Event (Event(Appearance, Disappearance), AReason(..), DReason(..))
+import Area.Types (Object(..), Destroyable(..), Pos(..), ObjId(UId))
 import qualified Area.User as U
 
 
@@ -60,6 +60,7 @@ handleTick state TimeTick = do
 calculateTick :: Ts -> State' (Maybe Value)
 calculateTick ts = do
     handleActions ts
+    checkDurability
     handleEvents
     tnum <- access tickNumber'
     tickNumber' += 1
@@ -73,19 +74,31 @@ handleActions :: Ts -> State' ()
 handleActions ts = do
     let handleActive :: (Ord a, Active b) => Lens State (M.Map a b) -> State' ()
         handleActive lens = do
-            as <- access lens
+            actives <- access lens
             evs <- access events'
-            let (as', evs') = M.foldrWithKey handle (M.empty, evs) as
-            lens ~= as'
+            let (actives', evs') = M.foldrWithKey handle (M.empty, evs) actives
+            lens ~= actives'
             events' ~= evs'
             return ()
-        handle ident act (res, evs) =
-            let (act', newEvents) = applyActions ts act
-                res' = M.insert ident act' res
+        handle ident active (res, evs) =
+            let (active', newEvents) = applyActions ts active
+                res' = M.insert ident active' res
             in (res', newEvents ++ evs)
     handleActive $ users' >>> usersData'
     --TODO: update other active objects
-    return ()
+
+checkDurability :: State' ()
+checkDurability =
+    M.elems `liftM` access users'' >>= mapM_ check
+    where
+        users'' = users' >>> usersData'
+        check :: Destroyable b => b -> State' ()
+        check obj =
+            when (objDurability obj <= 0) $ do
+                events' %= (Disappearance (objId obj) Burst :)
+                return ()
+
+
 
 handleEvents :: State' ()
 handleEvents = do
@@ -101,7 +114,7 @@ handleEvents = do
 
 
 handleEvent :: Event -> State' Bool
-handleEvent (Disappearance uid Burst) = do
+handleEvent (Disappearance (UId uid) Burst) = do
     enterPos <- gets $ uncurry Pos . S.enterPos . settings
     let resetUser u = u{U.pos=enterPos, U.durability=1, U.actions=[]}
     modify $ updateUser resetUser uid

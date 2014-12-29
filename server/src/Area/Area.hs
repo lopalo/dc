@@ -69,7 +69,7 @@ handleMonitorNotification state (ProcessMonitorNotification ref pid _) = do
     return $ case UserPid pid `M.lookup` userPidToIds (users state) of
         Just uid ->
             let delUser = users' ^%= deleteUser uid
-                addEvent = events' ^%= (Disappearance uid LogOut :)
+                addEvent = events' ^%= (Disappearance (UId uid) LogOut :)
             in addEvent $ delUser state
         Nothing -> state
 
@@ -102,6 +102,7 @@ loop state = safeReceive handlers state >>= loop
                     prepare handleMoveTo,
                     prepare (request handleObjectsInfo),
                     prepare handleEnter,
+                    prepare handleShoot,
                     prepare handleReconnection,
                     prepare handleEnterArea,
                     prepare handleIgnite,

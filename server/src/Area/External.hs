@@ -37,6 +37,9 @@ parseClientCmd "move-to" body = do
 parseClientCmd "ignite" body = do
     let Success dmgSpeed = fromJSON body :: Result Float
     forward (Ignite dmgSpeed)
+parseClientCmd "shoot" body = do
+    let Success uid = fromJSON body :: Result UserId
+    forward (Shoot uid)
 
 
 

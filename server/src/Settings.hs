@@ -50,6 +50,7 @@ instance FromJSON UserSettings where
 
 data AreaSettings =
     ASettings {enterPos :: (Int, Int),
+               shotDamage :: Int,
                tickMilliseconds :: Ts,
                broadcastEveryTick :: Int,
                logEveryTick :: Int,
@@ -58,6 +59,7 @@ data AreaSettings =
 instance FromJSON AreaSettings where
     parseJSON (Object v) = ASettings <$>
                            v .: "enter-pos" <*>
+                           v .: "shot-damage" <*>
                            v .: "tick-milliseconds" <*>
                            v .: "broadcast-every-tick" <*>
                            v .: "log-every-tick" <*>

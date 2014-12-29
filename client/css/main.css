@@ -1,3 +1,4 @@
+/* TODO: move ui and world styles to the separate modules */
 
 body {
     background-color: #272835;
@@ -98,6 +99,7 @@ body {
 
 
 .world-object {
+    z-index: 10;
     position: absolute;
 }
 
@@ -106,3 +108,17 @@ body {
     -webkit-transition: opacity .5s, -webkit-transform .5s;
 }
 
+.slow-effect {
+    -webkit-transition: opacity 3s, -webkit-transform 3s;
+}
+
+
+
+.shot {
+    z-index: 5;
+    position: absolute;
+    height: 1px;
+    background-color: #ffffff;
+    -webkit-box-shadow: 0 0 8px 3px #1c8bf7;
+    -webkit-transform-origin: 0 0 0;
+}

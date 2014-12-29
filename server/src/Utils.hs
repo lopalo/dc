@@ -18,7 +18,7 @@ type Ts = Int -- time in milliseconds
 delPrefix :: String -> String -> String -> String
 delPrefix delimiter prefix str =
     case delimiter `split` str of
-        h:rest | h == prefix-> delimiter `join` rest
+        h:rest | h == prefix -> delimiter `join` rest
 
 milliseconds :: IO Ts
 --TODO: use CLOCK_MONOTONIC
