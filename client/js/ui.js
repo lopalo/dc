@@ -6,16 +6,16 @@ var SelectArea;
 function setupUI(uiEl, ui, user, area) {
     uiEl.find(".selectpicker").selectpicker();
     new Button({
-        el: uiEl.find("#focus-to-myself"),
+        el: uiEl.find("#ui-focus-to-myself"),
         model: ui,
         event: "focus-to-myself"
     });
     new Button({
-        el: uiEl.find("#ignite"),
+        el: uiEl.find("#ui-ignite"),
         model: ui,
         event: "ignite"
     });
-    new SelectControlMode({el: uiEl.find("#select-control-mode"), model: ui});
+    new SelectControlMode({el: uiEl.find("#control-mode"), model: ui});
     new SelectArea({
         el: uiEl.find("#select-area"),
         model: ui,

@@ -231,7 +231,7 @@ EventHandler.prototype = {
         var delta = end.subtract(start);
         var endEffect = function () { shot.remove(); };
         var shot = $("<div></div>")
-            .addClass("shot slow-effect")
+            .addClass("world-shot world-slow-effect")
             .css({
                 "-webkit-transform": "rotate(" + -delta.angle() + "rad)",
                 width: delta.length(),

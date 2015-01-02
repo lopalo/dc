@@ -9,7 +9,7 @@ Layer = Backbone.View.extend({
     attributes: {
         draggable: false
     },
-    className: "layer",
+    className: "world-layer",
     initialize: function (options) {
         this.parallaxIndex = options.parallaxIndex;
         this.listenTo(this.model, "change:pos", this.move);
@@ -34,7 +34,7 @@ Layer = Backbone.View.extend({
 
 var Background = Layer.extend({
     id: "background",
-    className: "layer background",
+    className: "world-layer world-background",
     events: {
         click: "click",
         mousedown: "mouseDown",
@@ -78,7 +78,7 @@ var Background = Layer.extend({
 
 
 var Midground = Layer.extend({
-    className: "layer midground",
+    className: "world-layer world-midground",
     updatePos: function (delta) {
         delta.invertX();
         var el = this.$el;
@@ -188,13 +188,13 @@ UserView = Backbone.View.extend({
         var self = this;
         var endEffect = function () {
             img.off("webkitTransitionEnd", endEffect)
-               .removeClass("fast-effect");
+               .removeClass("world-fast-effect");
             self.updateAllowed = true;
         };
         var rotate = this.rotate();
         var img = this.img;
         var fun;
-        img.addClass("fast-effect")
+        img.addClass("world-fast-effect")
            .bind("webkitTransitionEnd", endEffect);
         _.delay(endEffect, 600); // must be synchronized with the transition duration
         //TODO: animation refactoring
@@ -235,7 +235,7 @@ UserView = Backbone.View.extend({
         var endEffect = function () { img.remove(); };
         var fun;
         img.appendTo(el.parent())
-           .addClass("fast-effect")
+           .addClass("world-fast-effect")
            .css({
                left: pos.x,
                bottom: pos.y,

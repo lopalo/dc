@@ -83,6 +83,7 @@ handleActions ts = do
         handle ident active (res, evs) =
             let (active', newEvents) = applyActions ts active
                 res' = M.insert ident active' res
+            --TODO: use Writer monad
             in (res', newEvents ++ evs)
     handleActive $ users' >>> usersData'
     --TODO: update other active objects

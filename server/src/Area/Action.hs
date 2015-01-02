@@ -28,6 +28,7 @@ class Active a where
         where
             handleActions action (act, actions, events) =
                 let (act', maybeAction, newEvents) = apply act action ts
+                    --TODO: use Writer monad
                     events' = newEvents ++ events
                 in case maybeAction of
                     Nothing -> (act', actions, events')

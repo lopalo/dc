@@ -1,0 +1,26 @@
+
+.ui {
+    position: absolute;
+}
+
+#ui-focus-to-myself {
+    bottom: 3%;
+    left: 1%;
+}
+
+#ui-ignite {
+    bottom: 3%;
+    left: 6%;
+}
+
+#ui-control-mode {
+    top: 3%;
+    right: 1%;
+}
+
+
+#ui-area {
+    top: 3%;
+    left: 1%;
+}
+
