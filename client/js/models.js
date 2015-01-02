@@ -1,20 +1,26 @@
 
-var User;
-var Area;
+define(["backbone"], function (Backbone) {
+    var User;
+    var Area;
 
-User = Backbone.Model.extend({
-    defaults: {
-        userId: "",
-        name: "",
-        areas: []
-    }
-});
+    User = Backbone.Model.extend({
+        defaults: {
+            userId: "",
+            name: "",
+            areas: []
+        }
+    });
 
 
-Area = Backbone.Model.extend({
-    defaults: {
-        areaId: null,
-        background: null
-    }
+    Area = Backbone.Model.extend({
+        defaults: {
+            areaId: null,
+            background: null
+        }
+    });
+    return {
+        User: User,
+        Area: Area
+    };
 });
 
