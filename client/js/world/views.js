@@ -4,6 +4,8 @@ define(function (require) {
     var _ = require("underscore");
     var Backbone = require("backbone");
     var Victor = require("victor");
+    var TweenLite = require("tween-lite");
+    require("tween-lite-css");
 
     var Layer;
     var Background;
@@ -164,7 +166,7 @@ define(function (require) {
             var pos = Victor.fromArray(model.get("pos"))
                       .subtract(new Victor(xShift, yShift));
             this.$el.css({left: pos.x, bottom: pos.y});
-            this.img.css({"-webkit-transform": this.rotate()});
+            this.img.css({transform: this.rotate()});
         },
         destroy: function (reason) {
             this.disappearanceEffect(reason);
@@ -192,88 +194,62 @@ define(function (require) {
         },
         appearanceEffect: function () {
             var self = this;
-            var endEffect = function () {
-                img.off("webkitTransitionEnd", endEffect)
-                   .removeClass("world-fast-effect");
-                self.updateAllowed = true;
-            };
-            var rotate = this.rotate();
+            var onComplete = function () { self.updateAllowed = true; };
             var img = this.img;
-            var fun;
-            img.addClass("world-fast-effect")
-               .bind("webkitTransitionEnd", endEffect);
-            _.delay(endEffect, 600); // must be synchronized with the transition duration
-            //TODO: animation refactoring
+            var rotate = this.rotate();
+            var duration = 1;
+            var fromProps;
+            var toProps;
             switch (this.appearanceReason) {
                 case "LogIn":
                     this.updateAllowed = false;
-                    img.css({"-webkit-transform": rotate + " rotateY(90deg)"});
-                    fun = function () {
-                        img.css({
-                            "-webkit-transform": rotate + " rotateY(0deg)",
-                        });
-                    };
+                    fromProps = {rotationY: 90, rotationZ: rotate};
+                    toProps = {rotationY: 0};
                     break;
                 case "Entry":
                     this.updateAllowed = false;
-                    img.css({"-webkit-transform": rotate + " scale(.01, 20)"});
-                    fun = function () {
-                        img.css({
-                            "-webkit-transform": rotate + " scale(1, 1)",
-                        });
-                    };
+                    duration = 0.5;
+                    fromProps = {scaleX: 0.01, scaleY: 50, rotationZ: rotate};
+                    toProps = {scaleX: 1, scaleY: 1, rotationZ: rotate};
                     break;
                 default: //Recovery
-                    img.css({opacity: 0});
-                    fun = function () { img.css({opacity: 1}); };
+                    fromProps = {opacity: 0};
+                    toProps = {opacity: 1};
             }
-            _.delay(fun, 100);
+            TweenLite.fromTo(img, duration, fromProps, toProps)
+                     .eventCallback("onComplete", onComplete);
         },
         disappearanceEffect: function (reason) {
             var el = this.$el;
             var img = this.img.clone();
             var model = this.model;
-            var rotate = this.rotate();
             var width = model.get("width");
             var height = model.get("height");
             var pos = Victor.fromArray(model.get("pos"))
                       .subtract(new Victor(width / 2, height / 2));
-            var endEffect = function () { img.remove(); };
-            var fun;
+            var onComplete = function () { img.remove(); };
+            var duration = 1;
+            var toProps;
             img.appendTo(el.parent())
-               .addClass("world-fast-effect")
                .css({
                    left: pos.x,
                    bottom: pos.y,
                    position: "absolute",
-                   "-webkit-tranform": rotate,
-               })
-               .bind("webkitTransitionEnd", endEffect);
-            _.delay(endEffect, 600); // must be synchronized with the transition duration
+                   transform: this.rotate(),
+               });
             switch (reason) {
                 case "Burst":
-                    fun = function () {
-                        img.css({
-                            "-webkit-transform": rotate + " scale(2, 2)",
-                            opacity: 0
-                        });
-                    };
+                    toProps = {scaleX: 2, scaleY: 2, opacity: 0};
                     break;
                 case "Exit":
-                    fun = function () {
-                        img.css({
-                            "-webkit-transform": rotate + " scale(.01, 20)",
-                        });
-                    };
+                    duration = 0.5;
+                    toProps = {scaleX: 0.01, scaleY: 50};
                     break;
                 default: //LogOut
-                    fun = function () {
-                        img.css({
-                            "-webkit-transform": rotate + " rotateY(90deg)",
-                        });
-                    };
+                    toProps = {rotationY: 90};
             }
-            _.delay(fun, 100);
+            TweenLite.to(img, duration, toProps)
+                     .eventCallback("onComplete", onComplete);
         }
     });
     return {

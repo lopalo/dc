@@ -4,6 +4,8 @@ define(function (require) {
     var _ = require("underscore");
     var Backbone = require("backbone");
     var Victor = require("victor");
+    var TweenLite = require("tween-lite");
+    require("tween-lite-css");
     var models = require("./models");
     var views = require("./views");
 
@@ -251,19 +253,17 @@ define(function (require) {
             var start = Victor.fromArray(objects[ev.shooter].get("pos"));
             var end = Victor.fromArray(objects[ev.target].get("pos"));
             var delta = end.subtract(start);
-            var endEffect = function () { shot.remove(); };
+            var onComplete = function () { shot.remove(); };
             var shot = $("<div></div>")
-                .addClass("world-shot world-slow-effect")
+                .addClass("world-shot")
                 .css({
-                    "-webkit-transform": "rotate(" + -delta.angle() + "rad)",
+                    transform: "rotate(" + -delta.angle() + "rad)",
                     width: delta.length(),
                     left: start.x,
                     bottom: start.y,
                 })
-                .appendTo(world.documentFragment)
-               .bind("webkitTransitionEnd", endEffect);
-            _.delay(endEffect, 3100); // must be synchronized with the transition duration
-            _.delay(function () { shot.css("opacity", 0); }, 100);
+                .appendTo(world.documentFragment);
+            TweenLite.to(shot, 2, {opacity: 0, onComplete: onComplete});
         }
     };
     return World;

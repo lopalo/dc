@@ -32,19 +32,11 @@
 }
 
 
-.world-fast-effect {
-    -webkit-transition: opacity .5s, -webkit-transform .5s;
-}
-
-.world-slow-effect {
-    -webkit-transition: opacity 3s, -webkit-transform 3s;
-}
-
 .world-shot {
     z-index: 5;
     position: absolute;
     height: 1px;
     background-color: #ffffff;
-    -webkit-box-shadow: 0 0 8px 3px #1c8bf7;
-    -webkit-transform-origin: 0 0 0;
+    box-shadow: 0 0 8px 3px #1c8bf7;
+    transform-origin: 0 0 0;
 }
