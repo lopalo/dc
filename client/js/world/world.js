@@ -228,6 +228,12 @@ define(function (require) {
                     model.applyActions(timestamp);
                 }
             }, this);
+        },
+        destroy: function () {
+            this.stopListening();
+            this.stopAnimationLoop();
+            _.each(_.keys(this.objectModels), this.removeObject, this);
+            this.viewportEl.empty();
         }
     });
 

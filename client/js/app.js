@@ -33,17 +33,14 @@ define(function (require) {
         var userName = $("#connect-name").val();
         connection.send("login", userName);
         connection.once("init", function () {
-            $("#connect-form").remove();
+            $("#connect-form").hide();
             initGame(connection);
         });
-        //TODO: process disconnection
     }
 
 
     function onTimeout(connection) {
-        var error = $("#connect-error");
-        error.html("Connection timeout");
-        error.show();
+        $("#connect-error").html("Connection timeout").show();
         $("#connect").one("click", _.partial(connect, connection));
     }
 
@@ -52,11 +49,22 @@ define(function (require) {
         var user = new models.User();
         var area = new models.Area();
         var ui = new UI.UI();
+        var world;
         connection.once("user.init", user.set, user);
         gameEl.show();
-        new World(gameEl.find("#viewport"), connection, user, area, ui);
+        world = new World(gameEl.find("#viewport"), connection, user, area, ui);
         UI.setupUI(gameEl.find("#ui"), ui, user, area);
+        connection.once("disconnection", _.partial(onClose, connection, world));
     }
+
+    function onClose(connection, world) {
+        world.destroy();
+        $("#game").hide();
+        $("#connect-form").show();
+        $("#connect-error").html("Disconnection").show();
+        $("#connect").one("click", _.partial(connect, connection));
+    }
+
     return runApp;
 });
 

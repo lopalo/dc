@@ -57,6 +57,7 @@ define(["backbone"], function (Backbone) {
                 self._ws = null;
                 self._checkInputId = null;
                 self.connected = false;
+                self.trigger("disconnection");
                 console.log("Connection closed");
             };
         },
