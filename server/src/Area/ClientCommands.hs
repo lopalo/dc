@@ -5,7 +5,7 @@ import qualified Data.Map.Strict as M
 
 import Data.Aeson(Value)
 import Data.String.Utils (startswith)
-import Data.Lens.Common ((^%=), (^-=))
+import Data.Lens.Strict ((^%=), (^-=))
 import Control.Distributed.Process
 
 import Utils (milliseconds)
@@ -33,8 +33,8 @@ handleEnterArea :: State -> (EnterArea, Connection) -> Process State
 handleEnterArea state (EnterArea aid, conn) = do
     let user@U.User{U.userId=uid} = conn `userByConn` state
         userPid = (userPids . users) state M.! uid
-        delUser = users' ^%= deleteUser uid
-        addEvent = events' ^%= (Disappearance (UId uid) Exit :)
+        delUser = usersL ^%= deleteUser uid
+        addEvent = eventsL ^%= (Disappearance (UId uid) Exit :)
     enter aid (U.userArea user) userPid False conn
     return $ addEvent $ delUser state
 
@@ -84,8 +84,8 @@ handleShoot :: State -> (Shoot, Connection) -> Process State
 handleShoot state (Shoot target, conn) = return $ addEvent $ updUsr state
     where event = Shot (uidByConn conn state) target
           damage = S.shotDamage $ settings state
-          addEvent = events' ^%= (event :)
-          updUsr = updateUser (U.durability' ^-= damage) target
+          addEvent = eventsL ^%= (event :)
+          updUsr = updateUser (U.durabilityL ^-= damage) target
 
 
 userByConn :: Connection -> State -> U.User
@@ -96,7 +96,7 @@ uidByConn conn state = (connToIds . users) state M.! conn
 
 
 updateUserActions :: ([Action] -> [Action]) -> UserId -> State -> State
-updateUserActions f = updateUser (U.actions' ^%= f)
+updateUserActions f = updateUser (U.actionsL ^%= f)
 
 addUserAction :: UserId -> Action -> State -> State
 addUserAction uid action = updateUserActions (action:) uid

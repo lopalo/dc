@@ -3,7 +3,7 @@
 module Area.User where
 
 import Data.Aeson (Value, object, (.=))
-import Data.Lens.Common (lens, Lens, (^-=))
+import Data.Lens.Strict (lens, Lens, (^-=))
 
 import Types (UserId, UserName, AreaId)
 import qualified User.External as UE
@@ -26,7 +26,7 @@ instance Active User where
         in (user{pos=pos'}, action', [])
     apply user action@Burning{} ts =
         let (damage, action') = burning action ts
-            user' = (durability' ^-= damage) user
+            user' = (durabilityL ^-= damage) user
         in (user', action', [])
 
 
@@ -35,19 +35,19 @@ instance Active User where
     setActions as user = user{actions=as}
 
 
-data User = User {userId :: UserId,
-                  name :: UserName,
-                  pos :: Pos,
-                  angle :: Float, --degrees
-                  speed :: Int, --units per second
-                  durability :: Int,
-                  actions :: [Action]}
+data User = User {userId :: !UserId,
+                  name :: !UserName,
+                  pos :: !Pos,
+                  angle :: !Float, --degrees
+                  speed :: !Int, --units per second
+                  durability :: !Int,
+                  actions :: ![Action]}
 
-durability' :: Lens User Int
-durability' = lens durability (\v user -> user{durability=v})
+durabilityL :: Lens User Int
+durabilityL = lens durability (\v user -> user{durability=v})
 
-actions' :: Lens User [Action]
-actions' = lens actions (\v user -> user{actions=v})
+actionsL :: Lens User [Action]
+actionsL = lens actions (\v user -> user{actions=v})
 
 
 userArea :: User -> AreaId -> UE.UserArea

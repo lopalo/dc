@@ -12,8 +12,7 @@ import Control.Concurrent (threadDelay)
 import qualified Data.Map.Strict as M
 import Text.Printf (printf)
 
-import Data.Lens.Common (Lens)
-import Data.Lens.Strict (access, (~=), (+=), (%=))
+import Data.Lens.Strict (Lens, access, (~=), (+=), (%=))
 import Control.Distributed.Process
 import Data.Aeson(Value, object, (.=))
 
@@ -57,56 +56,56 @@ handleTick state TimeTick = do
     when (tnum `rem` syncEveryTick == 0) (syncUsers state)
     return state'
 
-calculateTick :: Ts -> State' (Maybe Value)
+calculateTick :: Ts -> StateS (Maybe Value)
 calculateTick ts = do
     handleActions ts
     checkDurability
     handleEvents
-    tnum <- access tickNumber'
-    tickNumber' += 1
+    tnum <- access tickNumberL
+    tickNumberL += 1
     broadcastEveryTick <- gets $ S.broadcastEveryTick . settings
     let broadcast = tnum `rem` broadcastEveryTick == 0
     if broadcast
         then liftM Just (tickData ts)
         else return Nothing
 
-handleActions :: Ts -> State' ()
+handleActions :: Ts -> StateS ()
 handleActions ts = do
-    let handleActive :: (Ord a, Active b) => Lens State (M.Map a b) -> State' ()
+    let handleActive :: (Ord a, Active b) => Lens State (M.Map a b) -> StateS ()
         handleActive lens = do
             actives <- access lens
-            evs <- access events'
+            evs <- access eventsL
             let (actives', evs') = M.foldrWithKey handle (M.empty, evs) actives
             lens ~= actives'
-            events' ~= evs'
+            eventsL ~= evs'
             return ()
         handle ident active (res, evs) =
             let (active', newEvents) = applyActions ts active
                 res' = M.insert ident active' res
             --TODO: use Writer monad
             in (res', newEvents ++ evs)
-    handleActive $ users' >>> usersData'
+    handleActive $ usersL >>> usersDataL
     --TODO: update other active objects
 
-checkDurability :: State' ()
+checkDurability :: StateS ()
 checkDurability =
-    M.elems `liftM` access users'' >>= mapM_ check
+    M.elems `liftM` access usersL' >>= mapM_ check
     where
-        users'' = users' >>> usersData'
-        check :: Destroyable b => b -> State' ()
+        usersL' = usersL >>> usersDataL
+        check :: Destroyable b => b -> StateS ()
         check obj =
             when (objDurability obj <= 0) $ do
-                events' %= (Disappearance (objId obj) Burst :)
+                eventsL %= (Disappearance (objId obj) Burst :)
                 return ()
 
 
 
-handleEvents :: State' ()
+handleEvents :: StateS ()
 handleEvents = do
-    evs <- access events'
-    events' ~= []
+    evs <- access eventsL
+    eventsL ~= []
     evs' <- foldM handle [] evs
-    eventsForBroadcast' %= (evs' ++)
+    eventsForBroadcastL %= (evs' ++)
     return ()
     where
         handle res event = do
@@ -114,21 +113,21 @@ handleEvents = do
             return $ if sendEvent then event:res else res
 
 
-handleEvent :: Event -> State' Bool
+handleEvent :: Event -> StateS Bool
 handleEvent (Disappearance (UId uid) Burst) = do
     enterPos <- gets $ uncurry Pos . S.enterPos . settings
     let resetUser u = u{U.pos=enterPos, U.durability=1, U.actions=[]}
     modify $ updateUser resetUser uid
-    events' %= (Appearance uid Recovery :)
+    eventsL %= (Appearance uid Recovery :)
     return True
 handleEvent _ = return True
 
 
-tickData :: Ts -> State' Value
+tickData :: Ts -> StateS Value
 tickData ts = do
     aid <- gets areaId
-    evs <- access eventsForBroadcast'
-    eventsForBroadcast' ~= []
+    evs <- access eventsForBroadcastL
+    eventsForBroadcastL ~= []
     usd <- gets $ usersData . users
     let res = object ["areaId" .= aid,
                       "objects" .= usersInfo,

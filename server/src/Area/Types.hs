@@ -44,7 +44,7 @@ instance Binary Shoot
 --------
 
 
-data Pos = Pos Int Int deriving (Generic, Typeable)
+data Pos = Pos !Int !Int deriving (Generic, Typeable)
 instance Binary Pos
 
 instance ToJSON Pos where

@@ -61,9 +61,9 @@ moveDistance action ts =
         else let t = getT action ts
                  Pos fx fy = from action
                  Pos tx ty = to action
-                 x' = fx + round (fromIntegral (tx - fx) * t)
-                 y' = fy + round (fromIntegral (ty - fy) * t)
-             in (Pos x' y', Just action)
+                 x = fx + round (fromIntegral (tx - fx) * t)
+                 y = fy + round (fromIntegral (ty - fy) * t)
+             in (Pos x y, Just action)
 
 getT :: Action -> Ts -> Float
 getT action ts =

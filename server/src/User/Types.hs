@@ -15,11 +15,11 @@ import Database.SQLite.Simple (FromRow(fromRow), ToRow(toRow), field)
 import Types (UserId(..), UserName, AreaId)
 
 
-data User = User {userId :: UserId,
-                  name :: UserName,
-                  area :: AreaId,
-                  speed :: Int, --units per second
-                  durability :: Int}
+data User = User {userId :: !UserId,
+                  name :: !UserName,
+                  area :: !AreaId,
+                  speed :: !Int, --units per second
+                  durability :: !Int}
             deriving (Generic, Typeable)
 
 instance Binary User

@@ -33,9 +33,9 @@ userArea usr aid =
                 UE.durability=durability usr}
 
 
-data State = State {user :: User,
-                    areas :: [AreaId],
-                    settings :: S.UserSettings,
+data State = State {user :: !User,
+                    areas :: ![AreaId],
+                    settings :: !S.UserSettings,
                     connection :: Maybe C.Connection,
                     disconnectTs :: Maybe Ts}
 
@@ -92,7 +92,7 @@ userProcess userName conn globalSettings = do
     case userProc of
         Just pid -> do
             reconnect pid conn
-            die ("reconnect" :: String)
+            terminate
         Nothing -> return ()
     getSelfPid >>= register (show uid)
     res <- getUser uid =<< newTagPool

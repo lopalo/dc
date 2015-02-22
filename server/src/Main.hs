@@ -20,7 +20,7 @@ start settings = do
     spawnLocal (dbProcess settings)
     mapM_ startArea $ S.areas settings
     where
-        startArea areaId = spawnLocal $ areaProcess (S.area settings) areaId
+        startArea aid = spawnLocal $ areaProcess (S.area settings) aid
 
 
 main :: IO ()

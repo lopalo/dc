@@ -6,7 +6,7 @@ import Control.Category ((.))
 import qualified Control.Monad.State.Strict as S
 import qualified Data.Map.Strict as M
 
-import Data.Lens.Common (lens, Lens, (^%=))
+import Data.Lens.Strict (lens, Lens, (^%=))
 
 import Settings (AreaSettings)
 import Connection (Connection)
@@ -28,65 +28,65 @@ type ConnToIds = M.Map Connection UserId
 type UserPids = M.Map UserId UserPid
 type UserPidToIds = M.Map UserPid UserId
 
-data State = State {areaId :: AreaId,
-                    settings :: AreaSettings,
-                    tickNumber :: Int,
+data State = State {areaId :: !AreaId,
+                    settings :: !AreaSettings,
+                    tickNumber :: !Int,
                     users :: !Users,
                     events :: !Events,
                     eventsForBroadcast :: !Events}
 
-type State' a = S.State State a
+type StateS a = S.State State a
 
-tickNumber' :: Lens State Int
-tickNumber' = lens tickNumber (\v s -> s{tickNumber=v})
+tickNumberL :: Lens State Int
+tickNumberL = lens tickNumber (\v s -> s{tickNumber=v})
 
-users' :: Lens State Users
-users' = lens users (\v s -> s{users=v})
+usersL :: Lens State Users
+usersL = lens users (\v s -> s{users=v})
 
-usersData' :: Lens Users UsersData
-usersData' = lens usersData (\v us -> us{usersData=v})
+usersDataL :: Lens Users UsersData
+usersDataL = lens usersData (\v us -> us{usersData=v})
 
-connToIds' :: Lens Users ConnToIds
-connToIds' = lens connToIds (\v us -> us{connToIds=v})
+connToIdsL :: Lens Users ConnToIds
+connToIdsL = lens connToIds (\v us -> us{connToIds=v})
 
-connections' :: Lens Users Connections
-connections' = lens connections (\v us -> us{connections=v})
+connectionsL :: Lens Users Connections
+connectionsL = lens connections (\v us -> us{connections=v})
 
-userPids' :: Lens Users UserPids
-userPids' = lens userPids (\v us -> us{userPids=v})
-
-
-userPidToIds' :: Lens Users UserPidToIds
-userPidToIds' = lens userPidToIds (\v us -> us{userPidToIds=v})
+userPidsL :: Lens Users UserPids
+userPidsL = lens userPids (\v us -> us{userPids=v})
 
 
-events' :: Lens State Events
-events' = lens events (\v s -> s{events=v})
+userPidToIdsL :: Lens Users UserPidToIds
+userPidToIdsL = lens userPidToIds (\v us -> us{userPidToIds=v})
 
-eventsForBroadcast' :: Lens State Events
-eventsForBroadcast' = lens eventsForBroadcast (\v s -> s{eventsForBroadcast=v})
+
+eventsL :: Lens State Events
+eventsL = lens events (\v s -> s{events=v})
+
+eventsForBroadcastL :: Lens State Events
+eventsForBroadcastL = lens eventsForBroadcast (\v s -> s{eventsForBroadcast=v})
 
 
 
 addUser :: UserId -> Connection -> UserPid -> U.User -> Users -> Users
-addUser uid conn userPid user = (usersData' ^%= M.insert uid user)
-                              . (connToIds' ^%= M.insert conn uid)
-                              . (connections' ^%= M.insert uid conn)
-                              . (userPids' ^%= M.insert uid userPid)
-                              . (userPidToIds' ^%= M.insert userPid uid)
+addUser uid conn userPid user = (usersDataL ^%= M.insert uid user)
+                              . (connToIdsL ^%= M.insert conn uid)
+                              . (connectionsL ^%= M.insert uid conn)
+                              . (userPidsL ^%= M.insert uid userPid)
+                              . (userPidToIdsL ^%= M.insert userPid uid)
 
 
 updateUser :: (U.User -> U.User) -> UserId -> State -> State
-updateUser f uid = usersData' . users' ^%= M.adjust f uid
+updateUser f uid = usersDataL . usersL ^%= M.adjust f uid
 
 
 deleteUser :: UserId -> Users -> Users
 deleteUser uid us = fun us
     where conn = connections us M.! uid
           pid = userPids us M.! uid
-          fun = (usersData' ^%= M.delete uid)
-              . (connections' ^%= M.delete uid)
-              . (connToIds' ^%= M.delete conn)
-              . (userPids' ^%= M.delete uid)
-              . (userPidToIds' ^%= M.delete pid)
+          fun = (usersDataL ^%= M.delete uid)
+              . (connectionsL ^%= M.delete uid)
+              . (connToIdsL ^%= M.delete conn)
+              . (userPidsL ^%= M.delete uid)
+              . (userPidToIdsL ^%= M.delete pid)
 

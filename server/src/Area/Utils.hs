@@ -5,7 +5,7 @@ import Prelude hiding ((.))
 import Control.Category ((.))
 import qualified Data.Map.Strict as M
 
-import Data.Lens.Common ((^$))
+import Data.Lens.Strict ((^$))
 import Data.Aeson(ToJSON)
 import Control.Distributed.Process hiding (forward)
 
@@ -32,7 +32,7 @@ sendCmd conn cmd = C.sendCmd conn ("area." ++ cmd)
 
 broadcastCmd :: ToJSON a => State -> String -> a -> Process ()
 broadcastCmd state cmd = C.broadcastCmd (M.elems cs) ("area." ++ cmd)
-    where cs = connections' . users' ^$ state
+    where cs = connectionsL . usersL ^$ state
 
 
 syncUsers :: State -> Process ()
@@ -41,8 +41,8 @@ syncUsers state = mapM_ sync us
         sync usr = let pid = uPids M.! U.userId usr
                    in UE.syncState pid $ U.userArea usr aid
         aid = areaId state
-        uPids = userPids' . users' ^$ state
-        us = M.elems $ usersData' . users' ^$ state
+        uPids = userPidsL . usersL ^$ state
+        us = M.elems $ usersDataL . usersL ^$ state
 
 
 

@@ -8,7 +8,7 @@ import Control.Category ((.), (>>>))
 import qualified Data.Map.Strict as M
 
 import Data.Aeson(ToJSON, object, (.=))
-import Data.Lens.Common ((^$), (^%=))
+import Data.Lens.Strict ((^$), (^%=))
 import Control.Distributed.Process
 import Control.Distributed.Process.Serializable (Serializable)
 
@@ -40,9 +40,9 @@ handleEnter state (Enter ua userPid login, conn) = do
                       U.speed=UE.speed ua,
                       U.durability=UE.durability ua,
                       U.actions=[]}
-        addUsr = users' ^%= addUser uid conn userPid user
+        addUsr = usersL ^%= addUser uid conn userPid user
         reason = if login then LogIn else Entry
-        addEvent = events' ^%= (Appearance uid reason :)
+        addEvent = eventsL ^%= (Appearance uid reason :)
         state' = addEvent $ addUsr state
     UE.monitorUser userPid
     initConnection conn state'
@@ -51,12 +51,12 @@ handleEnter state (Enter ua userPid login, conn) = do
 
 handleReconnection :: State -> (Reconnection, Connection) -> Process State
 handleReconnection state (Reconnection uid, conn) = do
-    let connections'' = connections' . users'
-        connToIds'' = connToIds' . users'
-        oldConn = (connections'' ^$ state) M.! uid
-        changeConnection = (connections'' ^%= M.insert uid conn) >>>
-                           (connToIds'' ^%= M.delete oldConn) >>>
-                           (connToIds'' ^%= M.insert conn uid)
+    let connectionsL' = connectionsL . usersL
+        connToIdsL' = connToIdsL . usersL
+        oldConn = (connectionsL' ^$ state) M.! uid
+        changeConnection = (connectionsL' ^%= M.insert uid conn) >>>
+                           (connToIdsL' ^%= M.delete oldConn) >>>
+                           (connToIdsL' ^%= M.insert conn uid)
         state' = changeConnection state
     evaluate state'
     initConnection conn state'
@@ -68,8 +68,8 @@ handleMonitorNotification state (ProcessMonitorNotification ref pid _) = do
     unmonitor ref
     return $ case UserPid pid `M.lookup` userPidToIds (users state) of
         Just uid ->
-            let delUser = users' ^%= deleteUser uid
-                addEvent = events' ^%= (Disappearance (UId uid) LogOut :)
+            let delUser = usersL ^%= deleteUser uid
+                addEvent = eventsL ^%= (Disappearance (UId uid) LogOut :)
             in addEvent $ delUser state
         Nothing -> state
 
