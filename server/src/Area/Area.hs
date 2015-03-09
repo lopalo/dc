@@ -7,15 +7,14 @@ import Control.Monad (liftM)
 import Control.Category ((.), (>>>))
 import qualified Data.Map.Strict as M
 
-import Data.Aeson(ToJSON, object, (.=))
+import Data.Aeson(object, (.=))
 import Data.Lens.Strict ((^$), (^%=))
 import Control.Distributed.Process
-import Control.Distributed.Process.Serializable (Serializable)
 
-import Connection (Connection, setArea, sendResponse)
+import Connection (Connection, setArea)
 import Utils (milliseconds, safeReceive, evaluate)
 import qualified Settings as S
-import Types (UserPid(..), AreaId, AreaPid(..), RequestNumber)
+import Types (UserPid(..), AreaId, AreaPid(..))
 import qualified User.External as UE
 import qualified Area.User as U
 import Area.Utils (sendCmd)
@@ -99,14 +98,10 @@ loop state = safeReceive handlers state >>= loop
         prepare h = match (h state)
         --NOTE: handlers are matched by a type
         handlers = [prepare handleTick,
-                    prepare handleMoveTo,
-                    prepare (request handleObjectsInfo),
+                    prepare handleClientCommand,
+                    prepare handleClientReq,
                     prepare handleEnter,
-                    prepare handleShoot,
                     prepare handleReconnection,
-                    prepare handleEnterArea,
-                    prepare handleIgnite,
-                    prepare (request handleEcho),
                     prepare handleMonitorNotification,
                     matchUnknown (return state)]
 
@@ -121,18 +116,5 @@ initConnection conn state = do
     now <- liftIO milliseconds
     sendCmd conn "init" $ object ["areaId" .= areaId state,
                                   "timestamp" .= now]
-
-request :: (Serializable a, ToJSON b) =>
-           (State -> (a, Connection) -> Process (Response b)) ->
-           State -> ((a, Connection), RequestNumber) -> Process State
-request h state ((a, conn), req) = do
-    (resp, state') <- h state (a, conn)
-    sendResponse conn req resp
-    return state'
-
-
-
-
-
 
 

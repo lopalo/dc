@@ -3,14 +3,14 @@ module Area.ClientCommands where
 
 import qualified Data.Map.Strict as M
 
-import Data.Aeson(Value)
+import Data.Aeson(ToJSON, Value, toJSON)
 import Data.String.Utils (startswith)
 import Data.Lens.Strict ((^%=), (^-=))
 import Control.Distributed.Process
 
 import Utils (milliseconds)
-import Connection (Connection)
-import Types (UserId)
+import Connection (Connection, sendResponse)
+import Types (UserId, RequestNumber)
 import qualified Settings as S
 import qualified Area.User as U
 import Area.Action (Action(..))
@@ -21,27 +21,25 @@ import Area.Event (Event(Disappearance, Shot), DReason(Exit))
 import Area.External (enter)
 
 
-type Response a = (a, State)
+type Response = Process (Value, State)
 
-handleEcho :: State -> (Echo, Connection) -> Process (Response String)
-handleEcho state (Echo txt, _) = do
+response :: ToJSON a => a -> State -> Response
+response resp state = return (toJSON resp, state)
+
+handleClientReq :: State -> ((ClientCommand, Connection), RequestNumber) ->
+                   Process State
+handleClientReq state ((a, conn), req) = do
+    (resp, state') <- handleClientRequest state (a, conn)
+    sendResponse conn req resp
+    return state'
+
+
+handleClientRequest :: State -> (ClientCommand, Connection) -> Response
+handleClientRequest state (Echo txt, _) = do
     let resp = areaId state ++ " echo: " ++ txt
-    return (resp, state)
+    response resp state
 
-
-handleEnterArea :: State -> (EnterArea, Connection) -> Process State
-handleEnterArea state (EnterArea aid, conn) = do
-    let user@U.User{U.userId=uid} = conn `userByConn` state
-        userPid = (userPids . users) state M.! uid
-        delUser = usersL ^%= deleteUser uid
-        addEvent = eventsL ^%= (Disappearance (UId uid) Exit :)
-    enter aid (U.userArea user) userPid False conn
-    return $ addEvent $ delUser state
-
-
-handleObjectsInfo :: State -> (GetObjectsInfo, Connection)
-                     -> Process (Response [Value])
-handleObjectsInfo state (GetObjectsInfo ids, _) = do
+handleClientRequest state (GetObjectsInfo ids, _) = do
     let objects = foldl getObj [] ids
         us = usersData $ users state
         getObj :: [Value] -> String -> [Value]
@@ -51,11 +49,19 @@ handleObjectsInfo state (GetObjectsInfo ids, _) = do
                 in case ident' `M.lookup` us of
                     Nothing -> res
                     Just user -> U.initClientInfo user:res
-    return (objects, state)
+    response objects state
 
 
-handleMoveTo :: State -> (MoveTo, Connection) -> Process State
-handleMoveTo state (MoveTo toPos, conn) = do
+handleClientCommand :: State -> (ClientCommand, Connection) -> Process State
+handleClientCommand state (EnterArea aid, conn) = do
+    let user@U.User{U.userId=uid} = conn `userByConn` state
+        userPid = (userPids . users) state M.! uid
+        delUser = usersL ^%= deleteUser uid
+        addEvent = eventsL ^%= (Disappearance (UId uid) Exit :)
+    enter aid (U.userArea user) userPid False conn
+    return $ addEvent $ delUser state
+
+handleClientCommand state (MoveTo toPos, conn) = do
     now <- liftIO milliseconds
     let uid = uidByConn conn state
         user = userByConn conn state
@@ -70,18 +76,15 @@ handleMoveTo state (MoveTo toPos, conn) = do
         updUser = updateUser (\u -> u{U.angle=angle (U.pos u) toPos}) uid
     return $ updActions $ updUser state
 
-
-handleIgnite :: State -> (Ignite, Connection) -> Process State
-handleIgnite state (Ignite dmgSpeed, conn) = do
+handleClientCommand state (Ignite dmgSpeed, conn) = do
     now <- liftIO milliseconds
     let uid = uidByConn conn state
         action = Burning{previousTs=now,
                          damageSpeed=dmgSpeed}
     return $ addUserAction uid action state
 
-
-handleShoot :: State -> (Shoot, Connection) -> Process State
-handleShoot state (Shoot target, conn) = return $ addEvent $ updUsr state
+handleClientCommand state (Shoot target, conn) =
+    return $ addEvent $ updUsr state
     where event = Shot (uidByConn conn state) target
           damage = S.shotDamage $ settings state
           addEvent = eventsL ^%= (event :)

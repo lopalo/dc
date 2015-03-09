@@ -19,27 +19,17 @@ import qualified User.External as UE
 data Reconnection = Reconnection UserId deriving (Generic, Typeable)
 instance Binary Reconnection
 
-data Echo = Echo !String deriving (Generic, Typeable)
-instance Binary Echo
-
 data Enter = Enter !UE.UserArea UserPid Bool deriving (Generic, Typeable)
 instance Binary Enter
 
-data GetObjectsInfo = GetObjectsInfo ![String] deriving (Generic, Typeable)
-instance Binary GetObjectsInfo
-
-data EnterArea = EnterArea !AreaId deriving (Generic, Typeable)
-instance Binary EnterArea
-
-data MoveTo = MoveTo !Pos deriving (Generic, Typeable)
-instance Binary MoveTo
-
-data Ignite = Ignite !Float deriving (Generic, Typeable)
-instance Binary Ignite
-
-data Shoot = Shoot !UserId deriving (Generic, Typeable)
-instance Binary Shoot
-
+data ClientCommand = Echo !String
+                   | GetObjectsInfo ![String]
+                   | EnterArea !AreaId
+                   | MoveTo !Pos
+                   | Ignite !Float
+                   | Shoot !UserId
+                   deriving (Generic, Typeable)
+instance Binary ClientCommand
 
 --------
 
