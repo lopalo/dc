@@ -14,10 +14,10 @@ import Types (UserId, RequestNumber)
 import qualified Settings as S
 import qualified Area.User as U
 import Area.Action (Action(..))
-import Area.Utils (distance, angle)
+import Area.Utils (distance, getIntervals)
 import Area.Types
 import Area.State
-import Area.Event (Event(Disappearance, Shot), DReason(Exit))
+import Area.Signal (Signal(Disappearance, Shot), DReason(Exit))
 import Area.External (enter)
 
 
@@ -48,7 +48,7 @@ handleClientRequest state (GetObjectsInfo ids, _) = do
                 let ident' = read ident :: UserId
                 in case ident' `M.lookup` us of
                     Nothing -> res
-                    Just user -> U.initClientInfo user:res
+                    Just user -> U.initClientInfo user : res
     response objects state
 
 
@@ -57,24 +57,30 @@ handleClientCommand state (EnterArea aid, conn) = do
     let user@U.User{U.userId=uid} = conn `userByConn` state
         userPid = (userPids . users) state M.! uid
         delUser = usersL ^%= deleteUser uid
-        addEvent = eventsL ^%= (Disappearance (UId uid) Exit :)
+        addSig = addSignal $ Disappearance (UId uid) Exit
     enter aid (U.userArea user) userPid False conn
-    return $ addEvent $ delUser state
+    return $ addSig $ delUser state
 
-handleClientCommand state (MoveTo toPos, conn) = do
+handleClientCommand state (MoveAlongRoute route, conn) = do
     now <- liftIO milliseconds
     let uid = uidByConn conn state
         user = userByConn conn state
-        dt = distance (U.pos user) toPos / (fromIntegral (U.speed user) / 1000)
-        action = MoveDistance{startTs=now,
-                              endTs=now + round dt,
-                              from=U.pos user,
-                              to=toPos}
+        --TODO: filter route points
+        route' = U.pos user : route
+        pathLength = sum $ map (uncurry distance) $ getIntervals route'
+        dt = pathLength / (fromIntegral (U.speed user) / 1000)
+        --TODO: if it's moving, consider current direction;
+        --      otherwise rotate it before moving along the route
+        --TODO: implement
+        action = MoveRoute{startTs=now,
+                           endTs=now + round dt,
+                           positions=route'}
         replace MoveDistance{} = True
+        replace Rotation{} = True
         replace _ = False
         updActions = replaceUserAction uid replace action
-        updUser = updateUser (\u -> u{U.angle=angle (U.pos u) toPos}) uid
-    return $ updActions $ updUser state
+    return $ updActions state
+
 
 handleClientCommand state (Ignite dmgSpeed, conn) = do
     now <- liftIO milliseconds
@@ -84,10 +90,9 @@ handleClientCommand state (Ignite dmgSpeed, conn) = do
     return $ addUserAction uid action state
 
 handleClientCommand state (Shoot target, conn) =
-    return $ addEvent $ updUsr state
-    where event = Shot (uidByConn conn state) target
+    return $ addSig $ updUsr state
+    where addSig = addSignal $ Shot (uidByConn conn state) target
           damage = S.shotDamage $ settings state
-          addEvent = eventsL ^%= (event :)
           updUsr = updateUser (U.durabilityL ^-= damage) target
 
 
@@ -102,7 +107,7 @@ updateUserActions :: ([Action] -> [Action]) -> UserId -> State -> State
 updateUserActions f = updateUser (U.actionsL ^%= f)
 
 addUserAction :: UserId -> Action -> State -> State
-addUserAction uid action = updateUserActions (action:) uid
+addUserAction uid action = updateUserActions (action :) uid
 
 cancelUserAction :: UserId -> (Action -> Bool) -> State -> State
 cancelUserAction uid f = updateUserActions (filter (not . f)) uid

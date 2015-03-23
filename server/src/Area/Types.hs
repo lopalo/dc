@@ -25,7 +25,7 @@ instance Binary Enter
 data ClientCommand = Echo !String
                    | GetObjectsInfo ![String]
                    | EnterArea !AreaId
-                   | MoveTo !Pos
+                   | MoveAlongRoute ![Pos]
                    | Ignite !Float
                    | Shoot !UserId
                    deriving (Generic, Typeable)
@@ -44,6 +44,11 @@ instance FromJSON Pos where
     parseJSON val = do
         (x, y) <- parseJSON val
         return (Pos x y)
+
+
+type Angle = Float --degrees
+
+data Point = Point Float Float
 
 
 data ObjId = UId UserId | AsteroidId String deriving (Eq, Ord)

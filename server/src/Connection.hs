@@ -18,7 +18,7 @@ import qualified Control.Distributed.Process.Node as Node
 import qualified Network.WebSockets as WS
 
 import Types (RequestNumber, UserPid, AreaPid)
-import Utils (logDebug)
+import Utils (evaluate, logDebug)
 
 
 data Connection = Connection {output :: ProcessId, input :: ProcessId}
@@ -70,7 +70,8 @@ logInput bytes = logDebug $ "Input: " ++ toString bytes
 
 --external interface
 sendCmd :: ToJSON a => Connection -> String -> a -> Process ()
-sendCmd conn cmd body =
+sendCmd conn cmd body = do
+    evaluate body
     send (output conn) ("send", encode (cmd, body))
 
 sendResponse :: ToJSON a => Connection -> RequestNumber -> a -> Process ()

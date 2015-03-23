@@ -5,26 +5,29 @@ module Area.Tick (handleTick, scheduleTick) where
 import GHC.Generics (Generic)
 import Data.Binary (Binary)
 import Data.Typeable (Typeable)
+import Prelude hiding ((.))
 import Control.Monad (foldM, liftM, when)
-import Control.Category ((>>>))
+import Control.Category ((>>>), (.))
 import Control.Monad.State.Strict (runState, gets, modify)
 import Control.Concurrent (threadDelay)
 import qualified Data.Map.Strict as M
 import Text.Printf (printf)
 
-import Data.Lens.Strict (Lens, access, (~=), (+=), (%=))
+import Data.Lens.Strict (Lens, access, (^$), (~=), (+=), (%=))
 import Control.Distributed.Process
-import Data.Aeson(Value, object, (.=))
+import Data.Aeson(ToJSON, Value, object, (.=))
 
 import Utils (milliseconds, logInfo, Ts)
 import qualified Settings as S
+import qualified Connection as C
 import Area.User (tickClientInfo)
-import Area.Utils (broadcastCmd, syncUsers)
 import Area.Action (Active(applyActions))
 import Area.State
-import Area.Event (Event(Appearance, Disappearance), AReason(..), DReason(..))
+import Area.Signal (Signal(Appearance, Disappearance),
+                    AReason(..), DReason(..))
 import Area.Types (Object(..), Destroyable(..), Pos(..), ObjId(UId))
 import qualified Area.User as U
+import qualified User.External as UE
 
 
 data TimeTick = TimeTick deriving (Generic, Typeable)
@@ -60,7 +63,7 @@ calculateTick :: Ts -> StateS (Maybe Value)
 calculateTick ts = do
     handleActions ts
     checkDurability
-    handleEvents
+    handleSignals
     tnum <- access tickNumberL
     tickNumberL += 1
     broadcastEveryTick <- gets $ S.broadcastEveryTick . settings
@@ -74,16 +77,19 @@ handleActions ts = do
     let handleActive :: (Ord a, Active b) => Lens State (M.Map a b) -> StateS ()
         handleActive lens = do
             actives <- access lens
-            evs <- access eventsL
-            let (actives', evs') = M.foldrWithKey handle (M.empty, evs) actives
+            signals <- access signalsL
+            let (actives', signals') = M.foldrWithKey handle
+                                                      (M.empty, signals)
+                                                      actives
             lens ~= actives'
-            eventsL ~= evs'
+            signalsL ~= signals'
             return ()
-        handle ident active (res, evs) =
-            let (active', newEvents) = applyActions ts active
+        handle ident active (res, signals) =
+            let (active', newSignals) = applyActions ts active
                 res' = M.insert ident active' res
-            --TODO: use Writer monad
-            in (res', newEvents ++ evs)
+            --TODO: use Writer monad with Set as Monoid;
+            --      use foldM, toAscList, fromAscList
+            in (res', newSignals ++ signals)
     handleActive $ usersL >>> usersDataL
     --TODO: update other active objects
 
@@ -94,46 +100,59 @@ checkDurability =
         usersL' = usersL >>> usersDataL
         check :: Destroyable b => b -> StateS ()
         check obj =
-            when (objDurability obj <= 0) $ do
-                eventsL %= (Disappearance (objId obj) Burst :)
-                return ()
+            when (objDurability obj <= 0) $
+                addSignalS $ Disappearance (objId obj) Burst
 
 
 
-handleEvents :: StateS ()
-handleEvents = do
-    evs <- access eventsL
-    eventsL ~= []
-    evs' <- foldM handle [] evs
-    eventsForBroadcastL %= (evs' ++)
+handleSignals :: StateS ()
+handleSignals = do
+    signals <- access signalsL
+    signalsL ~= []
+    signals' <- foldM handle [] signals
+    signalsForBroadcastL %= (signals' ++)
     return ()
     where
-        handle res event = do
-            sendEvent <- handleEvent event
-            return $ if sendEvent then event:res else res
+        handle res signal = do
+            sendSignal <- handleSignal signal
+            return $ if sendSignal then signal : res else res
 
 
-handleEvent :: Event -> StateS Bool
-handleEvent (Disappearance (UId uid) Burst) = do
+handleSignal :: Signal -> StateS Bool
+handleSignal (Disappearance (UId uid) Burst) = do
     enterPos <- gets $ uncurry Pos . S.enterPos . settings
     let resetUser u = u{U.pos=enterPos, U.durability=1, U.actions=[]}
     modify $ updateUser resetUser uid
-    eventsL %= (Appearance uid Recovery :)
+    addSignalS $ Appearance uid Recovery
     return True
-handleEvent _ = return True
+handleSignal _ = return True
 
 
 tickData :: Ts -> StateS Value
 tickData ts = do
     aid <- gets areaId
-    evs <- access eventsForBroadcastL
-    eventsForBroadcastL ~= []
+    signals <- access signalsForBroadcastL
+    signalsForBroadcastL ~= []
     usd <- gets $ usersData . users
     let res = object ["areaId" .= aid,
                       "objects" .= usersInfo,
-                      "events" .= evs,
+                      "signals" .= signals,
                       "timestamp" .= ts]
         usersInfo = map tickClientInfo $ M.elems usd
     return res
 
+
+syncUsers :: State -> Process ()
+syncUsers state = mapM_ sync us
+    where
+        sync usr = let pid = uPids M.! U.userId usr
+                   in UE.syncState pid $ U.userArea usr aid
+        aid = areaId state
+        uPids = userPidsL . usersL ^$ state
+        us = M.elems $ usersDataL . usersL ^$ state
+
+
+broadcastCmd :: ToJSON a => State -> String -> a -> Process ()
+broadcastCmd state cmd = C.broadcastCmd (M.elems cs) ("area." ++ cmd)
+    where cs = connectionsL . usersL ^$ state
 

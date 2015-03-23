@@ -21,9 +21,9 @@ import Area.Utils (sendCmd)
 import Area.Types
 import Area.State
 import Area.ClientCommands
-import Area.Event (Event(Appearance, Disappearance),
-                   AReason(LogIn, Entry),
-                   DReason(LogOut))
+import Area.Signal (Signal(Appearance, Disappearance),
+                    AReason(LogIn, Entry),
+                    DReason(LogOut))
 import Area.Tick (handleTick, scheduleTick)
 
 
@@ -41,8 +41,8 @@ handleEnter state (Enter ua userPid login, conn) = do
                       U.actions=[]}
         addUsr = usersL ^%= addUser uid conn userPid user
         reason = if login then LogIn else Entry
-        addEvent = eventsL ^%= (Appearance uid reason :)
-        state' = addEvent $ addUsr state
+        addSig = addSignal $ Appearance uid reason
+        state' = addSig $ addUsr state
     UE.monitorUser userPid
     initConnection conn state'
     UE.syncState userPid $ U.userArea user $ areaId state'
@@ -68,8 +68,8 @@ handleMonitorNotification state (ProcessMonitorNotification ref pid _) = do
     return $ case UserPid pid `M.lookup` userPidToIds (users state) of
         Just uid ->
             let delUser = usersL ^%= deleteUser uid
-                addEvent = eventsL ^%= (Disappearance (UId uid) LogOut :)
-            in addEvent $ delUser state
+                addSig = addSignal $ Disappearance (UId uid) LogOut
+            in addSig $ delUser state
         Nothing -> state
 
 
@@ -80,8 +80,8 @@ areaProcess aSettings aid = do
                       settings=aSettings,
                       tickNumber=0,
                       users=us,
-                      events=[],
-                      eventsForBroadcast=[]}
+                      signalBuffer=[],
+                      signalsForBroadcast=[]}
         us = Users{connections=M.empty,
                    usersData=M.empty,
                    connToIds=M.empty,

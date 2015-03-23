@@ -3,16 +3,17 @@ module Area.State where
 
 import Prelude hiding ((.))
 import Control.Category ((.))
+import Control.Monad (void)
 import qualified Control.Monad.State.Strict as S
 import qualified Data.Map.Strict as M
 
-import Data.Lens.Strict (lens, Lens, (^%=))
+import Data.Lens.Strict (lens, Lens, (^%=), (%=))
 
 import Settings (AreaSettings)
 import Connection (Connection)
 import Types (UserId, UserPid, AreaId)
 import qualified Area.User as U
-import Area.Event (Events)
+import Area.Signal (Signal, Signals)
 
 
 
@@ -32,8 +33,8 @@ data State = State {areaId :: !AreaId,
                     settings :: !AreaSettings,
                     tickNumber :: !Int,
                     users :: !Users,
-                    events :: !Events,
-                    eventsForBroadcast :: !Events}
+                    signalBuffer :: !Signals,
+                    signalsForBroadcast :: !Signals}
 
 type StateS a = S.State State a
 
@@ -60,11 +61,12 @@ userPidToIdsL :: Lens Users UserPidToIds
 userPidToIdsL = lens userPidToIds (\v us -> us{userPidToIds=v})
 
 
-eventsL :: Lens State Events
-eventsL = lens events (\v s -> s{events=v})
+signalsL :: Lens State Signals
+signalsL = lens signalBuffer (\v s -> s{signalBuffer=v})
 
-eventsForBroadcastL :: Lens State Events
-eventsForBroadcastL = lens eventsForBroadcast (\v s -> s{eventsForBroadcast=v})
+signalsForBroadcastL :: Lens State Signals
+signalsForBroadcastL = lens signalsForBroadcast
+                            (\v s -> s{signalsForBroadcast=v})
 
 
 
@@ -90,3 +92,10 @@ deleteUser uid us = fun us
               . (userPidsL ^%= M.delete uid)
               . (userPidToIdsL ^%= M.delete pid)
 
+
+addSignal :: Signal -> State -> State
+addSignal signal = signalsL ^%= (signal :)
+
+
+addSignalS :: Signal -> StateS ()
+addSignalS signal = void $ signalsL %= (signal :)

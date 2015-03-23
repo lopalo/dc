@@ -1,6 +1,7 @@
 
 body {
     background-color: #272835;
+    cursor: default;
 }
 
 .container {
@@ -16,10 +17,14 @@ body {
     display: none;
 }
 
+#logo {
+    margin-bottom: 2%;
+}
+
 #game {
     border: 1px solid;
     border-radius: 10px;
-    border-color: #b1b1b1;
+    border-color: #ffffff;
     margin-bottom: 10%;
     width: 100%;
     height: 80%;

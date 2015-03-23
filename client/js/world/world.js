@@ -11,6 +11,7 @@ define(function (require) {
 
 
     var FPS = 30;
+    var ENABLE_ANIMATION = true;
 
     function World(viewportEl, connection, user, area, ui) {
         this.viewportEl = viewportEl;
@@ -29,10 +30,11 @@ define(function (require) {
         this.backgroundLayer = null;
         this.objectLayer = null;
         this.objectModels = {};
-        this.appearanceReasons = {}; //FIXME: remove old events
+        this.objectViews = {};
+        this.appearanceReasons = {}; //FIXME: remove old signals
         this.disappearanceReasons = {};
         this.firstEnter = true;
-        this.eventHandler = new EventHandler(this);
+        this.signalHandler = new SignalHandler(this);
         this.documentFragment = null;
         _.bindAll(this, "animationLoopStep", "animationCallback");
         this.setupLayers();
@@ -61,7 +63,8 @@ define(function (require) {
             this.backgroundLayer.$el.appendTo(this.viewportEl);
             this.midgroundLayer.$el.appendTo(this.viewportEl);
             this.objectLayer.$el.appendTo(this.viewportEl);
-            this.listenTo(this.backgroundLayer, "move-to", this.moveTo);
+            this.listenTo(this.backgroundLayer, "move-along-route",
+                                                this.moveAlongRoute);
         },
         listenToConnection: function () {
             this.listenTo(this.connection, "area", this.dispatch);
@@ -98,12 +101,12 @@ define(function (require) {
             var idents = [];
             var unknownIdents = [];
             var excessIdents = [];
-            _.each(data.events, function (ev) {
-                if (ev.tag === "Appearance") {
-                    this.appearanceReasons[ev.userId] = ev.aReason;
+            _.each(data.signals, function (signal) {
+                if (signal.tag === "Appearance") {
+                    this.appearanceReasons[signal.userId] = signal.aReason;
                 }
-                if (ev.tag === "Disappearance") {
-                    this.disappearanceReasons[ev.objId] = ev.dReason;
+                if (signal.tag === "Disappearance") {
+                    this.disappearanceReasons[signal.objId] = signal.dReason;
                 }
             }, this);
             _.each(data.objects, function (value) {
@@ -124,7 +127,7 @@ define(function (require) {
                 );
             }
             this.animationStep();
-            this.eventHandler.process(data.events);
+            this.signalHandler.process(data.signals);
             excessIdents = _.difference(_.keys(objectModels), idents);
             _.each(excessIdents, this.removeObject, this);
             this.disappearanceReasons = [];
@@ -172,15 +175,22 @@ define(function (require) {
                     throw "Unknown type " + data.tag;
             }
             this.objectModels[data.id] = model;
+            this.objectViews[data.id] = view;
             view.render().appendTo(this.documentFragment);
         },
         removeObject: function (ident) {
             var reason = this.disappearanceReasons[ident];
-            this.objectModels[ident].trigger("destroy-view", reason);
+            var view = this.objectViews[ident];
+            this.stopListening(view);
+            view.destroy(reason);
             delete this.objectModels[ident];
+            delete this.objectViews[ident];
         },
-        moveTo: function (pos) {
-            this.connection.send("area.move-to", pos.toArray());
+        moveAlongRoute: function (route) {
+            var positions = _.map(route, function (pos) {
+                return pos.toArray();
+            });
+            this.connection.send("area.move-along-route", positions);
         },
         shot: function (ident) {
             this.connection.send("area.shoot", ident);
@@ -200,8 +210,7 @@ define(function (require) {
         },
         enterArea: function (areaId) {
             this.firstEnter = false;
-            var self = this.objectModels[this.user.get("userId")];
-            self.trigger("destroy-view", "Exit");
+            this.objectViews[this.user.get("userId")].destroy("Exit");
             this.connection.send("area.enter-area", areaId);
         },
         requestAnimation: function () {
@@ -215,7 +224,9 @@ define(function (require) {
         },
         animationCallback: function () {
             this.requestAnimation();
-            this.animationStep();
+            if (ENABLE_ANIMATION) {
+                this.animationStep();
+            }
         },
         stopAnimationLoop: function () {
             clearTimeout(this.animationLoopId);
@@ -238,26 +249,26 @@ define(function (require) {
     });
 
 
-    function EventHandler(world) {
+    function SignalHandler(world) {
         this.world = world;
     }
-    EventHandler.prototype = {
-        process: function (events) {
+    SignalHandler.prototype = {
+        process: function (signals) {
             var world = this.world;
             world.createDocumentFragment();
-            _.each(events, function (ev) {
-                var handler = this["handle" + ev.tag];
+            _.each(signals, function (signal) {
+                var handler = this["handle" + signal.tag];
                 if (!handler) return;
-                handler.call(this, ev);
+                handler.call(this, signal);
             }, this);
             world.applyDocumentFragment(world.objectLayer);
 
         },
-        handleShot: function (ev) {
+        handleShot: function (signal) {
             var world = this.world;
             var objects = world.objectModels;
-            var start = Victor.fromArray(objects[ev.shooter].get("pos"));
-            var end = Victor.fromArray(objects[ev.target].get("pos"));
+            var start = Victor.fromArray(objects[signal.shooter].get("pos"));
+            var end = Victor.fromArray(objects[signal.target].get("pos"));
             var delta = end.subtract(start);
             var onComplete = function () { shot.remove(); };
             var shot = $("<div></div>")

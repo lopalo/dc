@@ -1,6 +1,8 @@
 
 module Area.External (enter, clientCmd, reconnect) where
 
+import Control.Applicative ((<$>))
+
 import Data.Aeson(Value, Result(Success), fromJSON)
 import Control.Distributed.Process hiding (reconnect)
 
@@ -12,12 +14,12 @@ import Area.Types
 
 
 parseClientCmd :: String -> Value -> Result ClientCommand
-parseClientCmd "echo" body = Echo `fmap` fromJSON body
-parseClientCmd "enter-area" body = EnterArea `fmap` fromJSON body
-parseClientCmd "get-objects-info" body = GetObjectsInfo `fmap` fromJSON body
-parseClientCmd "move-to" body = MoveTo `fmap` fromJSON body
-parseClientCmd "ignite" body = Ignite `fmap` fromJSON body
-parseClientCmd "shoot" body = Shoot `fmap` fromJSON body
+parseClientCmd "echo" body = Echo <$> fromJSON body
+parseClientCmd "enter-area" body = EnterArea <$> fromJSON body
+parseClientCmd "get-objects-info" body = GetObjectsInfo <$> fromJSON body
+parseClientCmd "move-along-route" body = MoveAlongRoute <$> fromJSON body
+parseClientCmd "ignite" body = Ignite <$> fromJSON body
+parseClientCmd "shoot" body = Shoot <$> fromJSON body
 
 
 enter :: AreaId -> (AreaId -> UE.UserArea) ->

@@ -2,14 +2,16 @@
 
 module Area.User where
 
+import Data.Maybe (fromMaybe)
+
 import Data.Aeson (Value, object, (.=))
 import Data.Lens.Strict (lens, Lens, (^-=))
 
 import Types (UserId, UserName, AreaId)
 import qualified User.External as UE
-import Area.Types (Object(..), Destroyable(..), Pos, ObjId(UId))
-import Area.Action (Active(..), Action(MoveDistance, Burning),
-                    moveDistance, burning)
+import Area.Types (Object(..), Destroyable(..), Pos, Angle, ObjId(UId))
+import Area.Action (Active(..), Action(MoveRoute, Burning),
+                    moveRoute, burning)
 
 
 instance Object User where
@@ -21,9 +23,10 @@ instance Destroyable User where
 
 instance Active User where
 
-    apply user action@MoveDistance{} ts =
-        let (pos', action') = moveDistance action ts
-        in (user{pos=pos'}, action', [])
+    apply user@User{angle=oldAngle} action@MoveRoute{} ts =
+        let (newPos, maybeAngle, action') = moveRoute action ts
+            user' = user{pos=newPos, angle=fromMaybe oldAngle maybeAngle}
+        in (user', action', [])
     apply user action@Burning{} ts =
         let (damage, action') = burning action ts
             user' = (durabilityL ^-= damage) user
@@ -38,7 +41,7 @@ instance Active User where
 data User = User {userId :: !UserId,
                   name :: !UserName,
                   pos :: !Pos,
-                  angle :: !Float, --degrees
+                  angle :: !Angle,
                   speed :: !Int, --units per second
                   durability :: !Int,
                   actions :: ![Action]}

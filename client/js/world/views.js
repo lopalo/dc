@@ -44,8 +44,8 @@ define(function (require) {
         id: "background",
         className: "world-layer world-background",
         events: {
-            click: "click",
             mousedown: "mouseDown",
+            mouseup: "mouseUp",
             mousemove: "mouseMove"
         },
         initialize: function (options) {
@@ -54,33 +54,41 @@ define(function (require) {
             this.ui = options.ui;
             this.listenTo(this.area, "change:background", this.render);
             this.mousePos = null;
+            this.route = [];
         },
         render: function () {
             var bg = this.area.get("background");
             this.$el.css({"background-image": "url(img/" + bg + ")"});
         },
-        click: function (e) {
-            if (this.ui.get("controlMode") !== "move") return;
-            var height = this.model.get("height");
-            var pos = new Victor(e.offsetX, height - e.offsetY);
-            pos.add(Victor.fromArray(this.model.get("pos")));
-            this.trigger("move-to", pos);
-        },
         mouseDown: function () {
             this.mousePos = null;
+            this.route = [];
+        },
+        mouseUp: function () {
+            if (this.ui.get("controlMode") !== "move") return;
+            if (!_.isEmpty(this.route)) {
+                this.trigger("move-along-route", this.route);
+            }
+            this.route = [];
         },
         mouseMove: function (e) {
-            if (this.ui.get("controlMode") !== "view") return;
             if (e.which !== 1) return;
             var height = this.model.get("height");
-            var pos = new Victor(e.screenX, height - e.screenY);
-            if (this.mousePos === null) {
-                this.mousePos = pos;
+            var pos = new Victor(e.offsetX, height - e.offsetY);
+            switch (this.ui.get("controlMode")) {
+                case "view":
+                    if (this.mousePos === null) {
+                        this.mousePos = pos;
+                    }
+                    var previousPos = this.mousePos.clone();
+                    this.mousePos = pos;
+                    this.model.move(previousPos.subtract(pos));
+                    break;
+                case "move":
+                    pos = pos.add(Victor.fromArray(this.model.get("pos")));
+                    this.route.push(pos);
+                    break;
             }
-            var previousPos = this.mousePos.clone();
-            this.mousePos = pos;
-            t = previousPos.subtract(pos);
-            this.model.move(t);
         }
     });
 
@@ -135,7 +143,6 @@ define(function (require) {
             this.updateAllowed = true;
             this.img = null;
             this.listenTo(this.model, "change", this.update);
-            this.listenTo(this.model, "destroy-view", this.destroy);
         },
         render: function () {
             var el = this.$el;
