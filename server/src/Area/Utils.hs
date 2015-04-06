@@ -1,33 +1,16 @@
 
 module Area.Utils where
 
-import Prelude hiding ((.))
-import Control.Category ((.))
-
 import Data.Aeson(ToJSON)
 import Control.Distributed.Process
 
 import qualified Connection as C
-import Area.Types (Pos(Pos), Point(Point), Angle)
+import Area.Types (Pos)
+import Area.Vector (len, sub, toVect)
 
 
 distance :: Pos -> Pos -> Float
-distance (Pos x y) (Pos x' y') =
-    sqrt $ fromIntegral (x' - x) ** 2 + fromIntegral (y' - y) ** 2
-
-angle :: Point -> Point -> Angle
-angle (Point x y) (Point x' y') = degrees $ atan2 (y' - y) (x' - x)
-
-degrees :: Float -> Float
-degrees = (/ pi) . (* 180)
-
-
-toPoint :: Pos -> Point
-toPoint (Pos x y) = Point (fromIntegral x) (fromIntegral y)
-
-fromPoint :: Point -> Pos
-fromPoint (Point x y) = Pos (round x) (round y)
-
+distance pos pos' = len $ toVect pos' `sub` toVect pos
 
 getIntervals :: [a] -> [(a, a)]
 getIntervals (val:values) = f val values

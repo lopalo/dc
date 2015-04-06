@@ -11,6 +11,7 @@ user:
 area:
   enter-pos: [100, 100]
   shot-damage: 10
+  route-filter-threshold: 10 #units
   tick-milliseconds: 50
   broadcast-every-tick: 4
   log-every-tick: 100

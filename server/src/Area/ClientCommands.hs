@@ -2,6 +2,7 @@
 module Area.ClientCommands where
 
 import qualified Data.Map.Strict as M
+import Data.List (elemIndex, maximumBy)
 
 import Data.Aeson(ToJSON, Value, toJSON)
 import Data.String.Utils (startswith)
@@ -19,6 +20,7 @@ import Area.Types
 import Area.State
 import Area.Signal (Signal(Disappearance, Shot), DReason(Exit))
 import Area.External (enter)
+import Area.Vector (toVect, add, sub, mul, lenSqr, len, dot)
 
 
 type Response = Process (Value, State)
@@ -65,13 +67,12 @@ handleClientCommand state (MoveAlongRoute route, conn) = do
     now <- liftIO milliseconds
     let uid = uidByConn conn state
         user = userByConn conn state
-        --TODO: filter route points
-        route' = U.pos user : route
+        threshold = S.routeFilterThreshold $ settings state
+        route' = filterRoute threshold (U.pos user : route)
         pathLength = sum $ map (uncurry distance) $ getIntervals route'
         dt = pathLength / (fromIntegral (U.speed user) / 1000)
         --TODO: if it's moving, consider current direction;
         --      otherwise rotate it before moving along the route
-        --TODO: implement
         action = MoveRoute{startTs=now,
                            endTs=now + round dt,
                            positions=route'}
@@ -115,4 +116,41 @@ cancelUserAction uid f = updateUserActions (filter (not . f)) uid
 replaceUserAction :: UserId -> (Action -> Bool) -> Action -> State -> State
 replaceUserAction uid f action = addUserAction uid action
                                . cancelUserAction uid f
+
+
+filterRoute :: Float -> [Pos] -> [Pos]
+--Ramer–Douglas–Peucker algorithm
+filterRoute threshold = filterRoute'
+    where
+        filterRoute' [] = []
+        filterRoute' [a] = [a]
+        filterRoute' [a, b] = [a, b]
+        filterRoute' ps' =
+            let start = head ps'
+                end = last ps'
+                distPairs = map (distToSegment start end) ps'
+                maxPair = maximumBy comp $ tail $ init distPairs
+                Just index = elemIndex maxPair distPairs
+                (left, right) = splitAt (index + 1) ps'
+                (maxDist, point) = maxPair
+                left' = filterRoute' left
+                right' = tail $ filterRoute' $ point : right
+            in
+                if maxDist <= threshold
+                    then [start, end]
+                    else left' ++ right'
+        comp a b = fst a `compare` fst b
+        distToSegment start end point =
+            let p = toVect point
+                s = toVect start
+                e = toVect end
+                sp = p `sub` s
+                se = e `sub` s
+                ep = p `sub` e
+                v = case sp `dot` se / lenSqr se of
+                    t | start == end -> sp
+                      | t < 0 -> sp
+                      | t > 1 -> ep
+                      | otherwise -> se `mul` t `add` s `sub` p
+            in (len v, point)
 

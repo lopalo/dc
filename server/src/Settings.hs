@@ -51,6 +51,7 @@ instance FromJSON UserSettings where
 data AreaSettings =
     ASettings {enterPos :: (Int, Int),
                shotDamage :: Int,
+               routeFilterThreshold :: Float,
                tickMilliseconds :: Ts,
                broadcastEveryTick :: Int,
                logEveryTick :: Int,
@@ -60,6 +61,7 @@ instance FromJSON AreaSettings where
     parseJSON (Object v) = ASettings <$>
                            v .: "enter-pos" <*>
                            v .: "shot-damage" <*>
+                           v .: "route-filter-threshold" <*>
                            v .: "tick-milliseconds" <*>
                            v .: "broadcast-every-tick" <*>
                            v .: "log-every-tick" <*>

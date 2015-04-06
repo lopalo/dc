@@ -46,6 +46,9 @@ define(["underscore", "backbone", "victor"], function(_, Backbone, Victor) {
         applyActions: function (timestamp) {
             _.each(this.get("actions"), function(action) {
                 switch (action.tag) {
+                    case "MoveRoute":
+                        this._applyMoveRoute(timestamp, action);
+                        break;
                     case "MoveDistance":
                         this._applyMoveDistance(timestamp, action);
                         break;
@@ -54,17 +57,46 @@ define(["underscore", "backbone", "victor"], function(_, Backbone, Victor) {
                 }
             }, this);
         },
+        _getT: function(timestamp, a) {
+            return (timestamp - a.startTs) / (a.endTs - a.startTs);
+        },
+        _applyMoveRoute: function (timestamp, a) {
+            if (timestamp >= a.endTs) {
+                this.set("pos", _.last(a.positions));
+                return;
+            }
+            var t = this._getT(timestamp, a);
+            var tv = new Victor(t, t);
+            function reduce(points) {
+                if (points.length === 2) {
+                    var vect = points[1].subtract(points[0]);
+                    var angle = vect.angleDeg();
+                    var pos = vect.multiply(tv).add(points[0]).unfloat();
+                    return {pos: pos.toArray(), angle: angle};
+                }
+                var prev = _.head(points);
+                var newPoints = [];
+                _.each(_.tail(points), function (point) {
+                    newPoints.push(point.clone().subtract(prev)
+                                   .multiply(tv).add(prev));
+                    prev = point;
+                });
+                return reduce(newPoints);
+            }
+            var res = reduce(_.map(a.positions, Victor.fromArray));
+            this.set(res);
+        },
         _applyMoveDistance: function (timestamp, a) {
             if (timestamp >= a.endTs) {
                 this.set("pos", a.to);
                 return;
             }
-            var f = (timestamp - a.startTs) / (a.endTs - a.startTs);
+            var t = this._getT(timestamp, a);
             var fromPos = Victor.fromArray(a.from);
             var toPos = Victor.fromArray(a.to);
             var pos = toPos
                       .subtract(fromPos)
-                      .multiply(new Victor(f, f))
+                      .multiply(new Victor(t, t))
                       .add(fromPos)
                       .unfloat();
             this.set("pos", pos.toArray());

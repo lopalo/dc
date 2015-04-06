@@ -40,7 +40,7 @@ define(function (require) {
     });
 
 
-    var Background = Layer.extend({
+    Background = Layer.extend({
         id: "background",
         className: "world-layer world-background",
         events: {
@@ -93,7 +93,7 @@ define(function (require) {
     });
 
 
-    var Midground = Layer.extend({
+    Midground = Layer.extend({
         className: "world-layer world-midground",
         updatePos: function (delta) {
             delta.invertX();

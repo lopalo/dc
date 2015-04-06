@@ -8,8 +8,9 @@ import GHC.Generics (Generic)
 import Data.Aeson (ToJSON)
 
 import Utils (Ts)
-import Area.Utils (getIntervals, angle, fromPoint, toPoint)
-import Area.Types (Pos(Pos), Point(Point), Angle)
+import Area.Utils (getIntervals)
+import Area.Types (Pos, Angle)
+import Area.Vector (Vect, angle, fromVect, toVect, mul, sub, add)
 import Area.Signal (Signals)
 
 
@@ -71,25 +72,26 @@ moveDistance action ts =
     if ts >= endTs action
         then (toPos action, Nothing)
         else let t = getT action ts
-                 startPoint = toPoint $ fromPos action
-                 endPoint = toPoint $ toPos action
+                 startPoint = toVect $ fromPos action
+                 endPoint = toVect $ toPos action
                  point = middlePoint t startPoint endPoint
-             in (fromPoint point, Just action)
+             in (fromVect point, Just action)
 
 
 moveRoute :: Action -> Ts -> (Pos, Maybe Angle, Maybe Action)
 moveRoute action ts =
     if ts >= endTs action
         then (endPos, Nothing, Nothing)
-        else let (pos, ang) = reduce $ map toPoint $ positions action
+        else let (pos, ang) = reduce $ map toVect $ positions action
              in (pos, Just ang, Just action)
     where
         endPos = last $ positions action
         t = getT action ts
-        reduce :: [Point] -> (Pos, Angle)
+        --De Casteljau's algorithm
+        reduce :: [Vect] -> (Pos, Angle)
         reduce [point, point'] =
-            let pos = fromPoint $ middlePoint t point point'
-                ang = angle point point'
+            let pos = fromVect $ middlePoint t point point'
+                ang = angle $ point' `sub` point
             in (pos, ang)
         reduce points =
             reduce $ map (uncurry (middlePoint t)) $ getIntervals points
@@ -104,9 +106,5 @@ getT action ts =
 
 
 
-middlePoint :: T -> Point -> Point -> Point
-middlePoint t (Point x y) (Point x' y') =
-    let x'' = x + (x' - x) * t
-        y'' = y + (y' - y) * t
-    in Point x'' y''
-
+middlePoint :: T -> Vect -> Vect -> Vect
+middlePoint t v v' = v' `sub` v `mul` t `add` v

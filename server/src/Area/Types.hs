@@ -34,7 +34,7 @@ instance Binary ClientCommand
 --------
 
 
-data Pos = Pos !Int !Int deriving (Generic, Typeable)
+data Pos = Pos !Int !Int deriving (Generic, Typeable, Eq, Show)
 instance Binary Pos
 
 instance ToJSON Pos where
@@ -47,8 +47,6 @@ instance FromJSON Pos where
 
 
 type Angle = Float --degrees
-
-data Point = Point Float Float
 
 
 data ObjId = UId UserId | AsteroidId String deriving (Eq, Ord)

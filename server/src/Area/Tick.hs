@@ -54,6 +54,8 @@ handleTick state TimeTick = do
         Nothing -> return ()
     let logEveryTick = (S.logEveryTick . settings) state
         syncEveryTick = (S.syncEveryTick . settings) state
+    --TODO: timers that are processed only inside ticks. Save the last time
+    --of each timers in the state
     when (tnum `rem` logEveryTick == 0) $
         logInfo $ printf "Tick %d of the area '%s'" tnum aid
     when (tnum `rem` syncEveryTick == 0) (syncUsers state)
