@@ -1,0 +1,18 @@
+areas: [alpha, beta]
+start-area: alpha
+node-address: [127.0.0.1, "10500"]
+ws-address: [127.0.0.1, 10501]
+db: ../dbs/dev.db
+user:
+  speed: 60 #units per second
+  init-durability: 100
+  logout-seconds: 10
+  period-milliseconds: 1000
+area:
+  enter-pos: [100, 100]
+  shot-damage: 10
+  route-filter-threshold: 10 #units
+  tick-milliseconds: 50
+  broadcast-every-tick: 4
+  log-every-tick: 100
+  sync-every-tick: 100

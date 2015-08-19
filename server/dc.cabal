@@ -41,18 +41,18 @@ Executable dc
         sqlite-simple == 0.4.8.0
     Hs-Source-Dirs: src
     Other-Modules:
-        Settings,
-        Connection,
-        Controller,
-        Types,
-        Utils,
-        Area.Area,
-        Area.Action,
-        Area.Event,
-        Area.State,
-        Area.Tick,
-        Area.Types,
-        Area.User,
-        Area.Utils
+        App.Settings,
+        App.Connection,
+        App.Controller,
+        App.Types,
+        App.Utils,
+        App.Area.Area,
+        App.Area.Action,
+        App.Area.Event,
+        App.Area.State,
+        App.Area.Tick,
+        App.Area.Types,
+        App.Area.User,
+        App.Area.Utils
 
 

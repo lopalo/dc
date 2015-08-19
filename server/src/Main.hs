@@ -7,11 +7,11 @@ import Network.WebSockets (runServer)
 import qualified Control.Distributed.Process.Node as Node
 import Data.Yaml (ParseException, decodeFileEither)
 
-import Connection (acceptConnection)
-import Controller (inputHandler)
-import Area.Area (areaProcess)
-import DB (dbProcess)
-import qualified Settings as S
+import App.Connection (acceptConnection)
+import App.Controller (inputHandler)
+import App.Area.Area (areaProcess)
+import App.DB (dbProcess)
+import qualified App.Settings as S
 
 
 

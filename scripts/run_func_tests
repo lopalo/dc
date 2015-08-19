@@ -1,0 +1,2 @@
+#!/bin/bash
+(cd ../func_tests && python -m unittest discover ../func_tests/)

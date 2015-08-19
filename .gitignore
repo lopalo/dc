@@ -9,3 +9,5 @@
 cabal.sandbox.config
 Main
 dist
+nohup.out
+

@@ -2,15 +2,15 @@
 require.config({
     baseUrl: "js",
     paths: {
-        jquery: "libs/jquery.min",
-        underscore: "libs/underscore-min",
-        backbone: "libs/backbone-min",
-        victor: "libs/victor.min",
-        "query-parser": "libs/jquery-queryParser.min",
-        bootstrap: "libs/bootstrap.min",
-        "bootstrap-select": "libs/bootstrap-select.min",
-        "tween-lite": "libs/TweenLite.min",
-        "tween-lite-css": "libs/CSSPlugin.min"
+        jquery: "vendors/jquery.min",
+        underscore: "vendors/underscore-min",
+        backbone: "vendors/backbone-min",
+        victor: "vendors/victor.min",
+        "query-parser": "vendors/jquery-queryParser.min",
+        bootstrap: "vendors/bootstrap.min",
+        "bootstrap-select": "vendors/bootstrap-select.min",
+        "tween-lite": "vendors/TweenLite.min",
+        "tween-lite-css": "vendors/CSSPlugin.min"
     },
     shim: {
         jquery: {
