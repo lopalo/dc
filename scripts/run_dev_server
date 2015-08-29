@@ -1,3 +1,2 @@
 #!/bin/bash
-runghc ../server/src/Main.hs server/settings/dev.yaml
-(cd ../server/src && runghc Main.hs ../settings/dev.yaml)
+cd ../server/src && runghc Main.hs ../settings/dev.yaml
