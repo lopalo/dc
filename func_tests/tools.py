@@ -7,8 +7,13 @@ import json
 
 from websocket import create_connection
 
-SERVER_DIR = "../server/src"
+
+SERVER_CWD = "../server/src"
+### paths are relative to the SERVER_CWD ###
 SERVER_NAME = "Main.hs"
+SERVER_SETTINGS = '../settings/test.yaml'
+######
+
 SERVER_OUTPUT_DIR = "logs"
 TIMEOUT = 1.5
 URL = "ws://127.0.0.1:11501"
@@ -76,9 +81,9 @@ class FuncTestCase(unittest.TestCase):
         self._clients = []
         fname = "{}/{}.log".format(SERVER_OUTPUT_DIR, self.__class__.__name__)
         self._server_stdout = stdout = open(fname, "wb")
-        args = ['runghc', SERVER_NAME, '../settings/test.yaml']
+        args = ['runghc', SERVER_NAME, SERVER_SETTINGS]
         self._server_proc = subprocess.Popen(args,
-                                             cwd=SERVER_DIR,
+                                             cwd=SERVER_CWD,
                                              stdin=subprocess.PIPE,
                                              stdout=stdout,
                                              stderr=stdout,

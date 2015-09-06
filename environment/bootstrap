@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+
+USER=vagrant #TODO: pass USER as argument
+HOME_DIR=/home/$USER
+PROFILE=$HOME_DIR/.profile
+GHC_VERSION=7.8.4
+CABAL_VERSION=1.20
+
+sudo add-apt-repository ppa:hvr/ghc --yes
+apt-get update
+
+apt-get install zlib1g-dev -y
+
+apt-get install python -y
+apt-get install python-pip -y
+cd /dc/environment
+pip install -r py_requirements.txt
+
+apt-get install ghc-$GHC_VERSION -y
+apt-get install cabal-install-$CABAL_VERSION -y
+
+su $USER <<USER_COMMANDS
+cat <<TEXT >> $PROFILE
+cd /dc
+PATH=$PATH:/opt/ghc/$GHC_VERSION/bin:/opt/cabal/$CABAL_VERSION/bin
+TEXT
+source $PROFILE
+
+cd /dc/server
+cabal update
+cabal install --only-dependencies
+USER_COMMANDS
+
+
