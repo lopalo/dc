@@ -1,2 +1,3 @@
 #!/bin/bash
+cd "$(dirname "$0")"
 cd ../server/src && runghc Main.hs ../settings/dev.yaml

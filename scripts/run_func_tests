@@ -1,2 +1,3 @@
 #!/bin/bash
+cd "$(dirname "$0")"
 cd ../func_tests && python -m unittest discover ../func_tests/
