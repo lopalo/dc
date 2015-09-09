@@ -1,0 +1,11 @@
+{
+    "world": {
+        "fps": 30,
+        "enable-animation": true
+    },
+    "connection": {
+        "check-period-msec": 5,
+        "freeze-factor": 100,
+        "input-delay-msec": 500
+    }
+}

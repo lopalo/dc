@@ -9,18 +9,26 @@ define(function (require) {
     require("query-parser");
 
 
-    function runApp () {
+    function runApp() {
         var connection = new Connection();
         window._connection = connection; //use only for debugging
+        $.getJSON("/ws-addresses").done(fillAddressField);
         $("#connect").one("click", _.partial(connect, connection));
+    }
+
+    function fillAddressField(addresses) {
+        var el = $("#connect-address");
+        var tmpl = _.template("<option value='<%= v %>'><%= v %></option>");
         var query = $.getQuery();
-        if (query.address && query.name) {
-            $("#connect-address").val(query.address);
+        _.each(addresses, function (pair) {
+            el.append(tmpl({v: pair[0] + ":" + pair[1]}));
+        });
+        el.selectpicker();
+        if (query.name) {
             $("#connect-name").val(query.name);
             $("#connect").trigger("click");
         }
     }
-
 
     function connect(connection) {
         $("#connect-error").hide();
@@ -28,16 +36,15 @@ define(function (require) {
         connection.connect(address, 2000, onOpen, onTimeout);
     }
 
-
     function onOpen(connection) {
         var userName = $("#connect-name").val();
         connection.send("login", userName);
+        window.history.pushState({}, '', "?name=" + userName);
         connection.once("init", function () {
             $("#connect-form").hide();
             initGame(connection);
         });
     }
-
 
     function onTimeout(connection) {
         $("#connect-error").html("Connection timeout").show();

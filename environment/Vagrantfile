@@ -8,6 +8,8 @@ Vagrant.configure("2") do |config|
     config.vm.synced_folder "../", "/dc"
 
     config.vm.network "forwarded_port", guest: 10501, host: 10501
+    config.vm.network "forwarded_port", guest: 10502, host: 10502
+    config.vm.network "forwarded_port", guest: 10503, host: 10503
 
     config.vm.provider "virtualbox" do |v|
         v.memory = 1500

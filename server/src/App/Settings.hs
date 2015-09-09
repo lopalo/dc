@@ -14,7 +14,10 @@ import App.Types (AreaId)
 data Settings = Settings {areas :: [AreaId],
                           startArea :: AreaId,
                           nodeAddress :: (String, String),
+                          httpPort :: Int,
+                          clientDir :: String,
                           wsAddress :: (String, Int),
+                          wsAddresses :: [(String, Int)],
                           db :: String,
                           user :: UserSettings,
                           area :: AreaSettings}
@@ -25,7 +28,10 @@ instance FromJSON Settings where
              v .: "areas" <*>
              v .: "start-area" <*>
              v .: "node-address" <*>
+             v .: "http-port" <*>
+             v .: "client-dir" <*>
              v .: "ws-address" <*>
+             v .: "ws-addresses" <*>
              v .: "db"
         uSettings <- parseJSON =<< (v .: "user")
         aSettings <- parseJSON =<< (v .: "area")

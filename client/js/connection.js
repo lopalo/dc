@@ -1,8 +1,8 @@
 
-define(["backbone"], function (Backbone) {
-    var CHECK_PERIOD = 5; //milliseconds
-    var INPUT_DELAY = 500; //milliseconds
-    var FREEZE_FACTOR = 100; //a less value means more frequently
+define(["backbone", "json!settings.json"], function (Backbone, settings) {
+    var checkPeriod = settings.connection["check-period-msec"];
+    var freezeFactor = settings.connection["freeze-factor"];
+    var inputDelay = settings.connection["input-delay-msec"];
 
 
     function Connection() {
@@ -43,7 +43,7 @@ define(["backbone"], function (Backbone) {
             this._ws = ws = new WebSocket(address);
             ws.onopen = function () {
                 clearTimeout(timeoutId);
-                self._checkInputId = setTimeout(self._checkInput, CHECK_PERIOD);
+                self._checkInputId = setTimeout(self._checkInput, checkPeriod);
                 self.connected = true;
                 onOpen(self);
             };
@@ -63,13 +63,13 @@ define(["backbone"], function (Backbone) {
         },
         _checkInput: function () {
             var inputQueue = this._inputQueue;
-            var period = CHECK_PERIOD;
+            var period = checkPeriod;
             var data;
             var cmd;
             var body;
             var parts;
-            if (_.random(0, FREEZE_FACTOR) === 0) {
-                period += INPUT_DELAY;
+            if (_.random(0, freezeFactor) === 0) {
+                period += inputDelay;
                 console.log("Connection input freezed");
             }
             this._checkInputId = setTimeout(this._checkInput, period);

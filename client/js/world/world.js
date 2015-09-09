@@ -6,12 +6,10 @@ define(function (require) {
     var Victor = require("victor");
     var TweenLite = require("tween-lite");
     require("tween-lite-css");
+    var settings = require("json!settings.json").world;
     var models = require("./models");
     var views = require("./views");
 
-
-    var FPS = 30;
-    var ENABLE_ANIMATION = true;
 
     function World(viewportEl, connection, user, area, ui) {
         this.viewportEl = viewportEl;
@@ -216,7 +214,7 @@ define(function (require) {
         requestAnimation: function () {
             this.animationLoopId = setTimeout(
                 this.animationLoopStep,
-                1000 / FPS
+                1000 / settings.fps
             );
         },
         animationLoopStep: function () {
@@ -224,7 +222,7 @@ define(function (require) {
         },
         animationCallback: function () {
             this.requestAnimation();
-            if (ENABLE_ANIMATION) {
+            if (settings["enable-animation"]) {
                 this.animationStep();
             }
         },

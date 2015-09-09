@@ -2,6 +2,8 @@
 require.config({
     baseUrl: "js",
     paths: {
+        "text": "vendors/require-text.min",
+        "json": "vendors/require-json.min",
         jquery: "vendors/jquery.min",
         underscore: "vendors/underscore-min",
         backbone: "vendors/backbone-min",

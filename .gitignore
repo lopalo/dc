@@ -11,4 +11,5 @@ Main
 dist
 nohup.out
 .vagrant
+client/js/settings.json
 

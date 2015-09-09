@@ -40,7 +40,7 @@ Executable dc
         direct-sqlite == 2.3.14,
         sqlite-simple == 0.4.8.0,
         scotty == 0.10.2,
-        wai-app-static == 3.1.1,
+        wai-middleware-static == 0.7.0.1,
         heist == 0.14.1.1
     Hs-Source-Dirs: src
     Other-Modules:

@@ -1,7 +1,10 @@
 areas: [alpha, beta]
 start-area: alpha
 node-address: [127.0.0.1, "10500"]
-ws-address: [0.0.0.0, 10501]
+http-port: 10502
+client-dir: ../../client
+ws-address: &ws-address-1 [0.0.0.0, 10501]
+ws-addresses: [*ws-address-1]
 db: ../dbs/dev.db
 user:
   speed: 60 #units per second
