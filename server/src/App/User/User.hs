@@ -16,6 +16,7 @@ import Control.Distributed.Process.Extras (newTagPool)
 
 import App.Utils (logInfo, logDebug, safeReceive, milliseconds, Ts)
 import App.Types (UserPid(UserPid), UserId(UserId), UserName, AreaId)
+import App.GlobalRegistry (globalRegister)
 import qualified App.Connection as C
 import qualified App.Settings as S
 import qualified App.Area.External as AE
@@ -81,6 +82,7 @@ handleSyncState :: State -> UE.SyncState -> Process State
 handleSyncState state (UE.SyncState ua) = do
     let usr = user state
         usr' = usr{area=UE.area ua, durability=UE.durability ua}
+    --TODO: mabye link to the current area
     putUser usr'
     logDebug $ printf "User '%s' synchronized" $ show $ userId usr'
     return state{user=usr'}
@@ -94,7 +96,7 @@ userProcess userName conn globalSettings = do
             reconnect pid conn
             terminate
         Nothing -> return ()
-    getSelfPid >>= register (show uid)
+    getSelfPid >>= globalRegister (show uid)
     res <- getUser uid =<< newTagPool
     let currentArea = S.startArea globalSettings
         uSettings = S.user globalSettings
@@ -112,6 +114,7 @@ userProcess userName conn globalSettings = do
     putUser usr
     initConnection conn state
     userPid <- makeSelfPid
+    --TODO: maybe check whether the area process is alive
     AE.enter (area usr) (userArea usr) userPid True conn
     logInfo $ "Login: " ++ userName
     runPeriodic $ S.periodMilliseconds uSettings

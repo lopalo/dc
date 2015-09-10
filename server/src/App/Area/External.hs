@@ -31,6 +31,7 @@ enter aid userArea userPid login conn =
 clientCmd :: AreaPid -> String -> Value -> RequestNumber ->
              Connection -> Process ()
 clientCmd (AreaPid pid) cmd body req conn = do
+    --TODO: do pre-check for EnterErea. We must be sure that the area is alive
     let Success parsed = parseClientCmd cmd body
     evaluate parsed
     case req of

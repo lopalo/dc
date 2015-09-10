@@ -14,6 +14,7 @@ import Control.Distributed.Process.Extras.Call (callResponse, callAt)
 import Database.SQLite.Simple (Only(..), Connection, open,
                                close, query, execute)
 
+import App.GlobalRegistry (globalRegister)
 import App.Types (UserId(..))
 import App.Utils (safeReceive)
 import App.User.Types (User)
@@ -27,10 +28,12 @@ instance Binary GetUser
 data PutUser = PutUser User deriving (Generic, Typeable)
 instance Binary PutUser
 
+dbServiceName :: String
+dbServiceName = "db"
 
 dbProcess :: S.Settings -> Process ()
 dbProcess settings = do
-    register "db" =<< getSelfPid
+    globalRegister dbServiceName =<< getSelfPid
     conn <- liftIO $ open $ S.db settings
     loop conn
     liftIO $ close conn
@@ -64,10 +67,10 @@ handlePutUser conn (PutUser user) = do
 
 getUser :: UserId -> TagPool -> Process (Maybe User)
 getUser uid tagPool = do
-    Just pid <- whereis "db"
+    Just pid <- whereis dbServiceName
     tag <- getTag tagPool
     res <- callAt pid (GetUser uid) tag
     return $ fromMaybe Nothing res
 
 putUser :: User -> Process ()
-putUser user = nsend "db" $ PutUser user
+putUser user = nsend dbServiceName $ PutUser user

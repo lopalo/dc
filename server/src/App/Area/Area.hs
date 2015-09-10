@@ -12,6 +12,7 @@ import Data.Lens.Strict ((^$), (^%=))
 import Control.Distributed.Process
 
 import App.Connection (Connection, setArea)
+import App.GlobalRegistry (globalRegister)
 import App.Utils (milliseconds, safeReceive, evaluate)
 import qualified App.Settings as S
 import App.Types (UserPid(..), AreaId, AreaPid(..))
@@ -22,8 +23,8 @@ import App.Area.Types
 import App.Area.State
 import App.Area.ClientCommands
 import App.Area.Signal (Signal(Appearance, Disappearance),
-                    AReason(LogIn, Entry),
-                    DReason(LogOut))
+                        AReason(LogIn, Entry),
+                        DReason(LogOut))
 import App.Area.Tick (handleTick, scheduleTick)
 
 
@@ -87,7 +88,7 @@ areaProcess aSettings aid = do
                    connToIds=M.empty,
                    userPids=M.empty,
                    userPidToIds=M.empty}
-    register aid =<< getSelfPid
+    globalRegister aid =<< getSelfPid
     scheduleTick $ S.tickMilliseconds aSettings
     loop state
 

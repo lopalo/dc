@@ -1,0 +1,4 @@
+port: 10503
+static-dir: ../../admin/static
+template-dir: ../../admin/templates
+

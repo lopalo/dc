@@ -17,7 +17,7 @@ import Control.Distributed.Process
 import qualified Control.Distributed.Process.Node as Node
 import qualified Network.WebSockets as WS
 
-import App.Types (RequestNumber, UserPid, AreaPid)
+import App.Types (RequestNumber, UserPid(..), AreaPid)
 import App.Utils (evaluate, logDebug)
 
 
@@ -44,7 +44,9 @@ acceptConnection node inputHandler pending = do
         let conn = Connection outputPid inputPid
             final = do exit outputPid "closed"
                        logDebug "Connection: input closed"
-            setUserPid (_, areaPid) userPid = return (Just userPid, areaPid)
+            setUserPid (_, areaPid) userPid@(UserPid pid) = do
+                link pid
+                return (Just userPid, areaPid)
             setAreaPid (userPid, _) areaPid = return (userPid, Just areaPid)
             updateState state = do
                 ret <- receiveTimeout 0 [match (setUserPid state),
@@ -62,9 +64,11 @@ acceptConnection node inputHandler pending = do
 
 
 logOutput :: B.ByteString -> Process ()
+--TODO: remove. Log on the client instead
 logOutput bytes = logDebug $ "Output: " ++ toString bytes
 
 logInput :: B.ByteString -> Process ()
+--TODO: remove. Log on the client instead
 logInput bytes = logDebug $ "Input: " ++ toString bytes
 
 
