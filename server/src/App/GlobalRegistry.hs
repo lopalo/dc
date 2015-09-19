@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveGeneric, DeriveDataTypeable, OverloadedStrings #-}
 
 module App.GlobalRegistry (globalRegistryProcess,
-                           getAllNames, globalRegister) where
+                           getRegistry, globalRegister) where
 
 import GHC.Generics (Generic)
 import Data.Binary (Binary)
@@ -24,8 +24,8 @@ data Register = Register String ProcessId deriving (Generic, Typeable)
 instance Binary Register
 
 
-data GetAllNames = GetAllNames deriving (Generic, Typeable)
-instance Binary GetAllNames
+data GetRegistry = GetRegistry deriving (Generic, Typeable)
+instance Binary GetRegistry
 
 
 globalRegistryServiceName :: String
@@ -45,7 +45,7 @@ loop registry = safeReceive handlers registry >>= loop
         prepareCall h = callResponse (h registry)
         handlers = [prepare handleRegister,
                     prepare handleMonitorNotification,
-                    prepareCall handleGetAllNames]
+                    prepareCall handleGetRegistry]
 
 
 handleRegister :: Registry -> Register -> Process Registry
@@ -60,19 +60,18 @@ handleMonitorNotification registry (ProcessMonitorNotification _ pid _) =
     return $ M.delete pid registry
 
 
-handleGetAllNames :: Registry -> GetAllNames
-                     -> Process (Maybe [String], Registry)
-handleGetAllNames registry GetAllNames =
-    return (Just (M.elems registry), registry)
+handleGetRegistry :: Registry -> GetRegistry
+                     -> Process (Maybe Registry, Registry)
+handleGetRegistry registry GetRegistry = return (Just registry, registry)
 
 
 --external interface
 
-getAllNames :: TagPool -> Process (Maybe [String])
-getAllNames tagPool = do
+getRegistry :: TagPool -> Process (Maybe Registry)
+getRegistry tagPool = do
     Just pid <- whereis globalRegistryServiceName
     tag <- getTag tagPool
-    res <- callAt pid GetAllNames tag
+    res <- callAt pid GetRegistry tag
     return $ fromMaybe Nothing res
 
 globalRegister :: String -> ProcessId -> Process ()
