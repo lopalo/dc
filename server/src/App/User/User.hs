@@ -10,7 +10,7 @@ import Data.Maybe (fromMaybe)
 import Control.Concurrent (threadDelay)
 import Text.Printf (printf)
 
-import Data.Aeson(ToJSON, Value, object, (.=))
+import Data.Aeson (ToJSON, Value, object, (.=))
 import Control.Distributed.Process hiding (reconnect)
 import Control.Distributed.Process.Extras (newTagPool)
 

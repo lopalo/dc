@@ -7,7 +7,7 @@ import Control.Monad (liftM)
 import Control.Category ((.), (>>>))
 import qualified Data.Map.Strict as M
 
-import Data.Aeson(object, (.=))
+import Data.Aeson (object, (.=))
 import Data.Lens.Strict ((^$), (^%=))
 import Control.Distributed.Process
 

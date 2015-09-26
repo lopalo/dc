@@ -12,7 +12,7 @@ import Control.Monad (forever, void)
 import Data.ByteString.Lazy.UTF8 (toString)
 import qualified Data.ByteString.Lazy as B
 
-import Data.Aeson(ToJSON, encode)
+import Data.Aeson (ToJSON, encode)
 import Control.Distributed.Process
 import qualified Control.Distributed.Process.Node as Node
 import qualified Network.WebSockets as WS

@@ -15,12 +15,11 @@
             </div>
             <div id="navbar" class="collapse navbar-collapse">
                 <ul class="nav navbar-nav">
-                    <li class="${registry-nav-class}">
-                        <a href="/ui/registry">Registry</a>
-                    </li>
-                    <li class="${node-statistic-nav-class}">
-                        <a href="/ui/node-statistic">Node Statistic</a>
-                    </li>
+                    <navigation>
+                        <li class="${class}">
+                            <a href="/ui/${ident}"><title/></a>
+                        </li>
+                    </navigation>
                 </ul>
             </div>
         </div>

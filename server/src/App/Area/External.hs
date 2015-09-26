@@ -3,7 +3,7 @@ module App.Area.External (enter, clientCmd, reconnect) where
 
 import Control.Applicative ((<$>))
 
-import Data.Aeson(Value, Result(Success), fromJSON)
+import Data.Aeson (Value, Result(Success), fromJSON)
 import Control.Distributed.Process hiding (reconnect)
 
 import App.Utils (evaluate)

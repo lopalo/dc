@@ -1,10 +1,7 @@
 <apply template="base">
-    <bind tag="title-text">Registry</bind>
-    <bind tag="registry-nav-class">active</bind>
-    <!-- TODO: fix it -->
-    <bind tag="node-statistic-nav-class"></bind>
     <bind tag="main-content">
-        <form action="/ui/kill-process-by-name" method="post">
+        <form action="/ui/kill-process-by-name"
+              method="post" class="col-md-8 col-md-offset-2">
         <table class="table stripped">
             <thead>
                 <tr>

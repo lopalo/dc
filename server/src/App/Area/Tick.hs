@@ -15,7 +15,7 @@ import Text.Printf (printf)
 
 import Data.Lens.Strict (Lens, access, (^$), (~=), (+=), (%=))
 import Control.Distributed.Process
-import Data.Aeson(ToJSON, Value, object, (.=))
+import Data.Aeson (ToJSON, Value, object, (.=))
 
 import App.Utils (milliseconds, logInfo, Ts)
 import qualified App.Settings as S

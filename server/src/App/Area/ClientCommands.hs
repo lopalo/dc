@@ -4,7 +4,7 @@ module App.Area.ClientCommands where
 import qualified Data.Map.Strict as M
 import Data.List (elemIndex, maximumBy)
 
-import Data.Aeson(ToJSON, Value, toJSON)
+import Data.Aeson (ToJSON, Value, toJSON)
 import Data.String.Utils (startswith)
 import Data.Lens.Strict ((^%=), (^-=))
 import Control.Distributed.Process

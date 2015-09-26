@@ -31,6 +31,11 @@ killProcessByName node = do
         kill pid "admin"
 
 
+getNodeStatistic :: LocalNode -> ActionM NodeStats
+getNodeStatistic node =
+    execProcess node getLocalNodeStats
+
+
 execProcess :: LocalNode -> Process a -> ActionM a
 execProcess node proc = liftIO $ do
     var <- newEmptyMVar

@@ -1,7 +1,7 @@
 
 module App.Area.Utils where
 
-import Data.Aeson(ToJSON)
+import Data.Aeson (ToJSON)
 import Control.Distributed.Process
 
 import qualified App.Connection as C
