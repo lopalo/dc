@@ -46,7 +46,7 @@ handleEnter state (Enter ua userPid login, conn) = do
         state' = addSig $ addUsr state
     UE.monitorUser userPid
     initConnection conn state'
-    UE.syncState userPid $ U.userArea user $ areaId state'
+    UE.syncState userPid $ U.userArea user
     return state'
 
 handleReconnection :: State -> (Reconnection, Connection) -> Process State

@@ -14,6 +14,7 @@ import App.Connection (Connection, sendResponse)
 import App.Types (UserId, RequestNumber)
 import qualified App.Settings as S
 import qualified App.Area.User as U
+import qualified App.User.External as UE
 import App.Area.Action (Action(..))
 import App.Area.Utils (distance, getIntervals)
 import App.Area.Types
@@ -60,6 +61,7 @@ handleClientCommand state (EnterArea aid, conn) = do
         userPid = (userPids . users) state M.! uid
         delUser = usersL ^%= deleteUser uid
         addSig = addSignal $ Disappearance (UId uid) Exit
+    UE.switchArea userPid aid
     enter aid (U.userArea user) userPid False conn
     return $ addSig $ delUser state
 
@@ -76,7 +78,7 @@ handleClientCommand state (MoveAlongRoute route, conn) = do
         action = MoveRoute{startTs=now,
                            endTs=now + round dt,
                            positions=route'}
-        replace MoveDistance{} = True
+        replace MoveRoute{} = True
         replace Rotation{} = True
         replace _ = False
         updActions = replaceUserAction uid replace action

@@ -11,7 +11,8 @@ define(["backbone", "json!settings.json"], function (Backbone, settings) {
         this._inputQueue = [];
         this._checkInputId = null;
         this.connected = false;
-        _.bindAll(this, "_checkInput");
+        this.lastError = "";
+        _.bindAll(this, "_checkInput", "close");
     }
     Connection.prototype = Object.create(Backbone.Events);
     _.extend(Connection.prototype, {
@@ -30,6 +31,9 @@ define(["backbone", "json!settings.json"], function (Backbone, settings) {
             this._send(cmd, body, num);
             event = "response:" + num;
             return this.once(event, onResponse, context);
+        },
+        close: function () {
+            this._ws.close();
         },
         connect: function (address, timeout, onOpen, onTimeout) {
             var self = this;
@@ -58,6 +62,8 @@ define(["backbone", "json!settings.json"], function (Backbone, settings) {
                 self._checkInputId = null;
                 self.connected = false;
                 self.trigger("disconnection");
+                self.stopListening();
+                self.off();
                 console.log("Connection closed");
             };
         },
@@ -77,6 +83,9 @@ define(["backbone", "json!settings.json"], function (Backbone, settings) {
                 data = inputQueue.shift();
                 cmd = data[0];
                 body = data[1];
+                if (cmd === "error") {
+                    this.lastError = body;
+                }
                 if (_.contains(cmd, '.')) {
                     parts = cmd.split('.');
                     this.trigger(parts[0], {cmd: parts[1], body: body});

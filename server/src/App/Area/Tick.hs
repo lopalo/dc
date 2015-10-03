@@ -148,8 +148,7 @@ syncUsers :: State -> Process ()
 syncUsers state = mapM_ sync us
     where
         sync usr = let pid = uPids M.! U.userId usr
-                   in UE.syncState pid $ U.userArea usr aid
-        aid = areaId state
+                   in UE.syncState pid $ U.userArea usr
         uPids = userPidsL . usersL ^$ state
         us = M.elems $ usersDataL . usersL ^$ state
 

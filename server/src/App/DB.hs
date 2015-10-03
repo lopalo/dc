@@ -14,7 +14,7 @@ import Control.Distributed.Process.Extras.Call (callResponse, callAt)
 import Database.SQLite.Simple (Only(..), Connection, open,
                                close, query, execute)
 
-import App.GlobalRegistry (globalRegister)
+import App.GlobalRegistry (globalRegister, globalWhereIs, globalNSend)
 import App.Types (UserId(..))
 import App.Utils (safeReceive)
 import App.User.Types (User)
@@ -67,10 +67,10 @@ handlePutUser conn (PutUser user) = do
 
 getUser :: UserId -> TagPool -> Process (Maybe User)
 getUser uid tagPool = do
-    Just pid <- whereis dbServiceName
+    Just pid <- globalWhereIs dbServiceName
     tag <- getTag tagPool
     res <- callAt pid (GetUser uid) tag
     return $ fromMaybe Nothing res
 
 putUser :: User -> Process ()
-putUser user = nsend dbServiceName $ PutUser user
+putUser user = globalNSend dbServiceName $ PutUser user

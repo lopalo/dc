@@ -3,12 +3,13 @@
 module App.Connection (acceptConnection, InputHandler, Connection,
                        sendCmd, sendResponse, broadcastCmd, setUser,
                        setArea, close, monitorConnection,
-                       checkMonitorNotification) where
+                       checkMonitorNotification, sendErrorAndClose) where
 
 import GHC.Generics (Generic)
 import Data.Binary (Binary)
 import Data.Typeable (Typeable)
 import Control.Monad (forever, void)
+import Control.Concurrent (threadDelay)
 import Data.ByteString.Lazy.UTF8 (toString)
 import qualified Data.ByteString.Lazy as B
 
@@ -93,6 +94,15 @@ setArea (Connection _ inputPid) = send inputPid
 
 close :: Connection -> Process ()
 close conn = exit (input conn) "close connection"
+
+sendErrorAndClose :: Connection -> String -> Process ()
+sendErrorAndClose conn errorMsg = do
+    sendCmd conn "error" errorMsg
+    spawnLocal $ do
+        liftIO $ threadDelay $ timeoutSeconds * 1000 * 1000
+        close conn
+    return ()
+    where timeoutSeconds = 5
 
 monitorConnection :: Connection -> Process ()
 monitorConnection conn = void $ monitor $ output conn

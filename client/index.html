@@ -8,17 +8,19 @@
 
         <link rel="stylesheet" href="css/vendors/bootstrap.min.css">
         <link rel="stylesheet" href="css/vendors/bootstrap-select.min.css">
+        <!-- TODO: use media queries or col-xs-* and col-md-*
+                   for different display sizes *-->
         <link rel="stylesheet" href="css/main.css">
         <link rel="stylesheet" href="css/ui.css">
         <link rel="stylesheet" href="css/world.css">
         <script data-main="js/main" src="js/vendors/require.min.js"></script>
     </head>
     <body>
-        <div class="container">
-            <h2 id="logo" class="text-center">
-                <img src="img/logo.jpg" class="img-rounded">
-            </h2>
+        <div class="container-fluid">
             <div id="connect-form" class="form-horizontal col-xs-4 col-xs-offset-4">
+                <h2 id="logo" class="text-center">
+                    <img src="img/logo.jpg" class="img-rounded">
+                </h2>
                 <div id="connect-error" class="form-group alert alert-danger"></div>
                 <div class="form-group">
                     <label for="connect-address">Address</label>
@@ -39,6 +41,7 @@
             <div id="game">
                 <div id="viewport"></div>
                 <div id="ui">
+                    <!--TODO: make container for buttons-->
                     <button id="ui-focus-to-myself" class="btn btn-default ui">
                         <span class="glyphicon glyphicon-search"></span>
                     </button>

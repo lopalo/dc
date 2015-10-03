@@ -16,7 +16,7 @@ import Control.Distributed.Process.Extras (newTagPool)
 
 import App.Utils (logInfo, logDebug, safeReceive, milliseconds, Ts)
 import App.Types (UserPid(UserPid), UserId(UserId), UserName, AreaId)
-import App.GlobalRegistry (globalRegister)
+import App.GlobalRegistry (globalRegister, globalWhereIs)
 import qualified App.Connection as C
 import qualified App.Settings as S
 import qualified App.Area.External as AE
@@ -25,11 +25,10 @@ import App.DB (putUser, getUser)
 import App.User.Types
 
 
-userArea :: User -> AreaId -> UE.UserArea
-userArea usr aid =
+userArea :: User -> UE.UserArea
+userArea usr =
     UE.UserArea{UE.userId=userId usr,
                 UE.name=name usr,
-                UE.area=aid,
                 UE.speed=speed usr,
                 UE.durability=durability usr}
 
@@ -70,7 +69,7 @@ handlePeriod state Period = do
 handleReconnection :: State -> Reconnection -> Process State
 handleReconnection state (Reconnection conn) = do
     case connection state of
-        Just oldConn -> C.close oldConn
+        Just oldConn -> C.sendErrorAndClose oldConn "Reconnection"
         Nothing -> return ()
     initConnection conn state
     AE.reconnect (area usr) (userId usr) conn
@@ -81,29 +80,43 @@ handleReconnection state (Reconnection conn) = do
 handleSyncState :: State -> UE.SyncState -> Process State
 handleSyncState state (UE.SyncState ua) = do
     let usr = user state
-        usr' = usr{area=UE.area ua, durability=UE.durability ua}
-    --TODO: mabye link to the current area
+        usr' = usr{durability=UE.durability ua}
     putUser usr'
     logDebug $ printf "User '%s' synchronized" $ show $ userId usr'
+    return state{user=usr'}
+
+
+handleSwitchArea :: State -> UE.SwitchArea -> Process State
+handleSwitchArea state (UE.SwitchArea newAreaId) = do
+    let usr = user state
+        conn = connection state
+        oldAreaId = area usr
+        usr' = usr{area=newAreaId}
+    maybeOldAreaPid <- globalWhereIs oldAreaId
+    case maybeOldAreaPid of
+        Just pid -> unlink pid
+        Nothing -> return () -- a link exception will be received later
+    tryToLinkToArea newAreaId conn
     return state{user=usr'}
 
 userProcess :: UserName -> C.Connection -> S.Settings -> Process ()
 userProcess userName conn globalSettings = do
     let uid = UserId userName
-    userProc <- whereis (show uid)
-    case userProc of
+    maybeUserPid <- globalWhereIs (show uid)
+    case maybeUserPid of
         Just pid -> do
             reconnect pid conn
             terminate
         Nothing -> return ()
     getSelfPid >>= globalRegister (show uid)
     res <- getUser uid =<< newTagPool
-    let currentArea = S.startArea globalSettings
+    let startArea = S.startArea globalSettings
         uSettings = S.user globalSettings
         usr = fromMaybe newUser res
+        areaId = area usr
         newUser = User{userId=uid,
                        name=userName,
-                       area=currentArea,
+                       area=startArea,
                        speed=S.speed uSettings,
                        durability=S.initDurability uSettings}
         state = State{user=usr,
@@ -111,11 +124,11 @@ userProcess userName conn globalSettings = do
                       settings=uSettings,
                       connection=Just conn,
                       disconnectTs=Nothing}
+    tryToLinkToArea areaId (Just conn)
     putUser usr
     initConnection conn state
     userPid <- makeSelfPid
-    --TODO: maybe check whether the area process is alive
-    AE.enter (area usr) (userArea usr) userPid True conn
+    AE.enter areaId (userArea usr) userPid True conn
     logInfo $ "Login: " ++ userName
     runPeriodic $ S.periodMilliseconds uSettings
     loop state
@@ -128,6 +141,7 @@ loop state = safeReceive handlers state >>= loop
         --NOTE: handlers are matched by a type
         handlers = [prepare handlePeriod,
                     prepare handleSyncState,
+                    prepare handleSwitchArea,
                     prepare handleMonitorNotification,
                     prepare handleReconnection,
                     matchUnknown (return state)]
@@ -147,6 +161,17 @@ makeSelfPid = fmap UserPid getSelfPid
 reconnect :: ProcessId -> C.Connection -> Process ()
 reconnect pid conn = send pid (Reconnection conn)
 
+tryToLinkToArea :: AreaId -> Maybe C.Connection -> Process ()
+tryToLinkToArea areaId maybeConn = do
+    maybeAreaPid <- globalWhereIs areaId
+    case maybeAreaPid of
+        Nothing -> do
+            case maybeConn of
+                Just conn -> C.sendErrorAndClose conn "Area is inaccessible"
+                Nothing -> return ()
+            terminate
+        Just areaPid ->
+            link areaPid
 
 initConnection :: C.Connection -> State -> Process ()
 initConnection conn state = do

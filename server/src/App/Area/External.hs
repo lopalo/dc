@@ -8,6 +8,7 @@ import Control.Distributed.Process hiding (reconnect)
 
 import App.Utils (evaluate)
 import App.Connection (Connection)
+import App.GlobalRegistry (globalNSend)
 import qualified App.User.External as UE
 import App.Types (UserId, UserPid(..), AreaId, AreaPid(..), RequestNumber)
 import App.Area.Types
@@ -22,16 +23,14 @@ parseClientCmd "ignite" body = Ignite <$> fromJSON body
 parseClientCmd "shoot" body = Shoot <$> fromJSON body
 
 
-enter :: AreaId -> (AreaId -> UE.UserArea) ->
-         UserPid -> Bool -> Connection -> Process ()
+enter :: AreaId -> UE.UserArea -> UserPid -> Bool -> Connection -> Process ()
 enter aid userArea userPid login conn =
-    nsend aid (Enter (userArea aid) userPid login, conn)
+    globalNSend aid (Enter userArea userPid login, conn)
 
 
 clientCmd :: AreaPid -> String -> Value -> RequestNumber ->
              Connection -> Process ()
 clientCmd (AreaPid pid) cmd body req conn = do
-    --TODO: do pre-check for EnterErea. We must be sure that the area is alive
     let Success parsed = parseClientCmd cmd body
     evaluate parsed
     case req of
@@ -41,5 +40,5 @@ clientCmd (AreaPid pid) cmd body req conn = do
 
 reconnect :: AreaId -> UserId -> Connection -> Process ()
 reconnect areaId userId conn =
-    nsend areaId (Reconnection userId, conn)
+    globalNSend areaId (Reconnection userId, conn)
 

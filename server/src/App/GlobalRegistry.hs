@@ -1,7 +1,8 @@
 {-# LANGUAGE DeriveGeneric, DeriveDataTypeable, OverloadedStrings #-}
 
 module App.GlobalRegistry (globalRegistryProcess,
-                           getRegistry, globalRegister) where
+                           getRegistry, globalRegister,
+                           globalWhereIs, globalNSend) where
 
 import GHC.Generics (Generic)
 import Data.Binary (Binary)
@@ -11,6 +12,7 @@ import Data.Maybe (fromMaybe)
 import qualified Data.Map.Strict as M
 
 import Control.Distributed.Process
+import Control.Distributed.Process.Serializable (Serializable)
 import Control.Distributed.Process.Extras (TagPool, getTag)
 import Control.Distributed.Process.Extras.Call (callResponse, callAt)
 
@@ -78,4 +80,14 @@ globalRegister :: String -> ProcessId -> Process ()
 globalRegister name pid = do
     register name pid
     nsend globalRegistryServiceName $ Register name pid
+
+globalWhereIs :: String -> Process (Maybe ProcessId)
+globalWhereIs = whereis
+
+globalNSend :: Serializable a => String -> a -> Process ()
+globalNSend name payload = void $ spawnLocal $ do
+    maybePid <- globalWhereIs name
+    case maybePid of
+        Just pid -> send pid payload
+        Nothing -> return ()
 

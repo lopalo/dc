@@ -3,7 +3,7 @@ start-area: alpha
 node-address: [127.0.0.1, "10500"]
 http-port: 10502
 client-dir: ../../client
-ws-address: &ws-address-1 [0.0.0.0, 10501]
+ws-address: &ws-address-1 [192.168.1.5, 10501]
 ws-addresses: [*ws-address-1]
 db: ../dbs/dev.db
 user:

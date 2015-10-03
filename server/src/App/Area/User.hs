@@ -7,7 +7,7 @@ import Data.Maybe (fromMaybe)
 import Data.Aeson (Value, object, (.=))
 import Data.Lens.Strict (lens, Lens, (^-=))
 
-import App.Types (UserId, UserName, AreaId)
+import App.Types (UserId, UserName)
 import qualified App.User.External as UE
 import App.Area.Types (Object(..), Destroyable(..), Pos, Angle, ObjId(UId))
 import App.Area.Action (Active(..), Action(MoveRoute, Burning),
@@ -53,14 +53,12 @@ actionsL :: Lens User [Action]
 actionsL = lens actions (\v user -> user{actions=v})
 
 
-userArea :: User -> AreaId -> UE.UserArea
-userArea user area =
+userArea :: User -> UE.UserArea
+userArea user =
     UE.UserArea{UE.userId=userId user,
                 UE.name=name user,
-                UE.area=area,
                 UE.speed=speed user,
                 UE.durability=durability user}
-
 
 
 tickClientInfo :: User -> Value

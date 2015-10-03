@@ -175,6 +175,9 @@ define(function (require) {
             this.objectModels[data.id] = model;
             this.objectViews[data.id] = view;
             view.render().appendTo(this.documentFragment);
+            if (isSelf) {
+                this.showMyself();
+            }
         },
         removeObject: function (ident) {
             var reason = this.disappearanceReasons[ident];

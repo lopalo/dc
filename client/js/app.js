@@ -10,10 +10,8 @@ define(function (require) {
 
 
     function runApp() {
-        var connection = new Connection();
-        window._connection = connection; //use only for debugging
         $.getJSON("/ws-addresses").done(fillAddressField);
-        $("#connect").one("click", _.partial(connect, connection));
+        $("#connect").one("click", connect);
     }
 
     function fillAddressField(addresses) {
@@ -30,7 +28,9 @@ define(function (require) {
         }
     }
 
-    function connect(connection) {
+    function connect() {
+        var connection = new Connection();
+        window._connection = connection; //use only for debugging
         $("#connect-error").hide();
         var address = "ws://" + $("#connect-address").val();
         connection.connect(address, 2000, onOpen, onTimeout);
@@ -62,13 +62,15 @@ define(function (require) {
         world = new World(gameEl.find("#viewport"), connection, user, area, ui);
         UI.setupUI(gameEl.find("#ui"), ui, user, area);
         connection.once("disconnection", _.partial(onClose, connection, world));
+        connection.once("error", connection.close);
     }
 
     function onClose(connection, world) {
+        var error = connection.lastError || "Disconnection";
         world.destroy();
         $("#game").hide();
         $("#connect-form").show();
-        $("#connect-error").html("Disconnection").show();
+        $("#connect-error").html(error).show();
         $("#connect").one("click", _.partial(connect, connection));
     }
 
