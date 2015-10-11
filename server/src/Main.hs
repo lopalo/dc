@@ -12,7 +12,7 @@ import Data.Yaml (ParseException, decodeFileEither)
 
 import App.GlobalRegistry (globalRegistryProcess)
 import App.Connection (acceptConnection)
-import App.Controller (inputHandler)
+import App.ClientCommands (inputHandler)
 import App.Area.Area (areaProcess)
 import App.DB (dbProcess)
 import App.HTTPServer (httpServer)
@@ -42,7 +42,8 @@ wsServer :: S.Settings -> Node.LocalNode -> Process ()
 wsServer settings node = liftIO $ do
     let (wsHost, wsPort) = S.wsAddress settings
         accept = acceptConnection node $ inputHandler settings
-    WS.runServer wsHost wsPort accept
+        wsHost' = if wsHost == "<host>" then "0.0.0.0" else wsHost
+    WS.runServer wsHost' wsPort accept
 
 
 loadAdminSettings :: [String] -> IO (Maybe AS.Settings)

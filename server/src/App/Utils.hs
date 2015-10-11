@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables, CPP #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module App.Utils where
 

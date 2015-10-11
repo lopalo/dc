@@ -49,7 +49,7 @@ Executable dc
     Other-Modules:
         App.Settings,
         App.Connection,
-        App.Controller,
+        App.ClientCommands,
         App.Types,
         App.Utils,
         App.Area.Area,

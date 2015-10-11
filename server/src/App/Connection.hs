@@ -10,7 +10,6 @@ import Data.Binary (Binary)
 import Data.Typeable (Typeable)
 import Control.Monad (forever, void)
 import Control.Concurrent (threadDelay)
-import Data.ByteString.Lazy.UTF8 (toString)
 import qualified Data.ByteString.Lazy as B
 
 import Data.Aeson (ToJSON, encode)
@@ -37,7 +36,6 @@ acceptConnection node inputHandler pending = do
     outputPid <- Node.forkProcess node $ do
         let outputLoop = forever $ do
             ("send", outputData) <- expect :: Process (String, B.ByteString)
-            logOutput outputData
             liftIO $ WS.sendTextData wsConn outputData
         outputLoop `finally` logDebug "Connection: output closed"
     Node.runProcess node $ do
@@ -57,25 +55,16 @@ acceptConnection node inputHandler pending = do
                     Nothing -> return state
             inputLoop state = do
                 inputData <- liftIO (WS.receiveData wsConn :: IO B.ByteString)
-                logInput inputData
                 state' <- updateState state
                 uncurry (inputHandler inputData conn) state'
                 inputLoop state'
         link outputPid >> inputLoop (Nothing, Nothing) `finally` final
 
 
-logOutput :: B.ByteString -> Process ()
---TODO: remove. Log on the client instead
-logOutput bytes = logDebug $ "Output: " ++ toString bytes
-
-logInput :: B.ByteString -> Process ()
---TODO: remove. Log on the client instead
-logInput bytes = logDebug $ "Input: " ++ toString bytes
-
-
 --external interface
 sendCmd :: ToJSON a => Connection -> String -> a -> Process ()
 sendCmd conn cmd body = do
+    --logDebug $ "Outgoing command: " ++ cmd
     evaluate body
     send (output conn) ("send", encode (cmd, body))
 
