@@ -12,7 +12,6 @@ require.config({
         bootstrap: "vendors/bootstrap.min",
         "bootstrap-select": "vendors/bootstrap-select.min",
         "tween-lite": "vendors/TweenLite.min",
-        "tween-lite-css": "vendors/CSSPlugin.min"
     },
     shim: {
         jquery: {
@@ -34,7 +33,6 @@ require.config({
         "tween-lite": {
             exports: "TweenLite"
         },
-        "tween-lite-css": ["tween-lite"],
     }
 });
 

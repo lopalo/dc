@@ -3,9 +3,7 @@ define(function (require) {
     var $ = require("jquery");
     var _ = require("underscore");
     var Connection = require("connection");
-    var models = require("models");
-    var UI = require("ui");
-    var World = require("world/world");
+    var Controller = require("controller");
     require("query-parser");
 
 
@@ -44,6 +42,8 @@ define(function (require) {
             $("#connect-form").hide();
             initGame(connection);
         });
+        connection.once("disconnection", _.partial(onClose, connection));
+        connection.once("error", connection.close);
     }
 
     function onTimeout(connection) {
@@ -52,23 +52,15 @@ define(function (require) {
     }
 
     function initGame(connection) {
-        var gameEl = $("#game");
-        var user = new models.User();
-        var area = new models.Area();
-        var ui = new UI.UI();
-        var world;
-        connection.once("user.init", user.set, user);
-        gameEl.show();
-        world = new World(gameEl.find("#viewport"), connection, user, area, ui);
-        UI.setupUI(gameEl.find("#ui"), ui, user, area);
-        connection.once("disconnection", _.partial(onClose, connection, world));
-        connection.once("error", connection.close);
+        var controller = new Controller($("#game"), connection);
+        controller.init();
+        controller.start();
+        connection.once("disconnection", controller.destroy);
     }
 
-    function onClose(connection, world) {
+    function onClose(connection) {
         var error = connection.lastError || "Disconnection";
-        world.destroy();
-        $("#game").hide();
+        controller.destroy();
         $("#connect-form").show();
         $("#connect-error").html(error).show();
         $("#connect").one("click", _.partial(connect, connection));

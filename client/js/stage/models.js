@@ -1,7 +1,7 @@
 
 define(["underscore", "backbone", "victor"], function(_, Backbone, Victor) {
     var Camera;
-    var WorldObject;
+    var StageObject;
     var User;
 
     Camera = Backbone.Model.extend({
@@ -22,7 +22,7 @@ define(["underscore", "backbone", "victor"], function(_, Backbone, Victor) {
     });
 
 
-    WorldObject = Backbone.Model.extend({
+    StageObject = Backbone.Model.extend({
         defaults: function () {
             return {
                 id: "",
@@ -35,13 +35,13 @@ define(["underscore", "backbone", "victor"], function(_, Backbone, Victor) {
     });
 
 
-    User = WorldObject.extend({
+    User = StageObject.extend({
         defaults: function () {
             var defaults = {
                 name: "",
                 actions: [],
             };
-            return _.extend(defaults, WorldObject.prototype.defaults.call(this));
+            return _.extend(defaults, StageObject.prototype.defaults.call(this));
         },
         applyActions: function (timestamp) {
             _.each(this.get("actions"), function(action) {

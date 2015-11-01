@@ -5,7 +5,6 @@ define(function (require) {
     var Backbone = require("backbone");
     var Victor = require("victor");
     var TweenLite = require("tween-lite");
-    require("tween-lite-css");
 
     var Layer;
     var Background;
@@ -223,6 +222,7 @@ define(function (require) {
                     fromProps = {opacity: 0};
                     toProps = {opacity: 1};
             }
+            //TODO: do not use tween-lite-css
             TweenLite.fromTo(img, duration, fromProps, toProps)
                      .eventCallback("onComplete", onComplete);
         },
@@ -255,6 +255,7 @@ define(function (require) {
                 default: //LogOut
                     toProps = {rotationY: 90};
             }
+            //TODO: do not use tween-lite-css
             TweenLite.to(img, duration, toProps)
                      .eventCallback("onComplete", onComplete);
         }

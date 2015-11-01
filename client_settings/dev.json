@@ -1,7 +1,7 @@
 {
-    "world": {
-        "fps": 60,
-        "enable-animation": true
+    "stage": {
+        "interpolation-msec": 30,
+        "enable-interpolation": true
     },
     "connection": {
         "check-period-msec": 5,

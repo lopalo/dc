@@ -5,7 +5,6 @@ define(function (require) {
     var Backbone = require("backbone");
     var Victor = require("victor");
     var TweenLite = require("tween-lite");
-    require("tween-lite-css");
     var settings = require("json!settings.json").world;
     var models = require("./models");
     var views = require("./views");
@@ -37,7 +36,6 @@ define(function (require) {
         _.bindAll(this, "animationLoopStep", "animationCallback");
         this.setupLayers();
         this.listenToConnection();
-        this.listenToUI();
         this.requestAnimation();
     }
     World.prototype = Object.create(Backbone.Events);
@@ -196,32 +194,16 @@ define(function (require) {
         shot: function (ident) {
             this.connection.send("area.shoot", ident);
         },
-        listenToUI: function () {
-            this.listenTo(this.ui, "focus-to-myself", this.showMyself);
-            this.listenTo(this.ui, "ignite", this.ignite);
-            this.listenTo(this.ui, "enter-area", this.enterArea);
-        },
-        showMyself: function () {
-            var self = this.objectModels[this.user.get("userId")];
-            if (self === undefined) return;
-            this.camera.focusTo(Victor.fromArray(self.get("pos")));
-        },
-        ignite: function () {
-            this.connection.send("area.ignite", 10);
-        },
-        enterArea: function (areaId) {
-            this.firstEnter = false;
-            this.objectViews[this.user.get("userId")].destroy("Exit");
-            this.connection.send("area.enter-area", areaId);
-        },
         requestAnimation: function () {
-            this.animationLoopId = setTimeout(
+            this.animationLoopId = window.setTimeout(
                 this.animationLoopStep,
                 1000 / settings.fps
             );
         },
         animationLoopStep: function () {
-            this.animationId = requestAnimationFrame(this.animationCallback);
+            this.animationId = window.requestAnimationFrame(
+                this.animationCallback
+            );
         },
         animationCallback: function () {
             this.requestAnimation();
@@ -230,7 +212,7 @@ define(function (require) {
             }
         },
         stopAnimationLoop: function () {
-            clearTimeout(this.animationLoopId);
+            window.clearTimeout(this.animationLoopId);
             cancelAnimationFrame(this.animationId);
         },
         animationStep: function () {
@@ -272,6 +254,7 @@ define(function (require) {
             var end = Victor.fromArray(objects[signal.target].get("pos"));
             var delta = end.subtract(start);
             var onComplete = function () { shot.remove(); };
+            //TODO: do not use tween-lite-css
             var shot = $("<div></div>")
                 .addClass("world-shot")
                 .css({

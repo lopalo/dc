@@ -43,11 +43,12 @@ define(["backbone", "json!settings.json"], function (Backbone, settings) {
                 self._ws = null;
                 onTimeout(self);
             }
-            timeoutId = setTimeout(_onTimeout, timeout);
+            timeoutId = window.setTimeout(_onTimeout, timeout);
             this._ws = ws = new WebSocket(address);
             ws.onopen = function () {
-                clearTimeout(timeoutId);
-                self._checkInputId = setTimeout(self._checkInput, checkPeriod);
+                window.clearTimeout(timeoutId);
+                self._checkInputId = window.setTimeout(self._checkInput,
+                                                            checkPeriod);
                 self.connected = true;
                 onOpen(self);
             };
@@ -56,13 +57,12 @@ define(["backbone", "json!settings.json"], function (Backbone, settings) {
             };
             ws.onclose = function () {
                 if (self._checkInputId !== null) {
-                    clearTimeout(self._checkInputId);
+                    window.clearTimeout(self._checkInputId);
                 }
                 self._ws = null;
                 self._checkInputId = null;
                 self.connected = false;
                 self.trigger("disconnection");
-                self.stopListening();
                 self.off();
                 console.log("Connection closed");
             };
@@ -78,7 +78,7 @@ define(["backbone", "json!settings.json"], function (Backbone, settings) {
                 period += inputDelay;
                 console.log("Connection input freezed");
             }
-            this._checkInputId = setTimeout(this._checkInput, period);
+            this._checkInputId = window.setTimeout(this._checkInput, period);
             while (!(_.isEmpty(inputQueue))) {
                 data = inputQueue.shift();
                 cmd = data[0];

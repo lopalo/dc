@@ -13,27 +13,37 @@ define(function (require) {
     var SelectArea;
 
     function setupUI(uiEl, ui, user, area) {
-        uiEl.find(".selectpicker").selectpicker();
-        new Button({
+        var focusButton = new Button({
             el: uiEl.find("#ui-focus-to-myself"),
             model: ui,
-            event: "focus-to-myself"
         });
-        new Button({
+        var igniteButton = new Button({
             el: uiEl.find("#ui-ignite"),
             model: ui,
-            event: "ignite"
         });
-        new SelectControlMode({el: uiEl.find("#control-mode"), model: ui});
-        new SelectArea({
+        var controlModeSelector = new SelectControlMode({
+            el: uiEl.find("#control-mode"),
+            model: ui
+        });
+        var areaSelector = new SelectArea({
             el: uiEl.find("#select-area"),
             model: ui,
             area: area,
             user: user
         });
+        uiEl.find(".selectpicker").selectpicker();
+        return {
+            focusButton: focusButton,
+            igniteButton: igniteButton,
+            controlModeSelector: controlModeSelector,
+            areaSelector: areaSelector,
+        };
     }
 
+
     UI = Backbone.Model.extend({
+        //TODO: each UI view must listen to model's "destroy" event and
+        //      then unbind from their DOM elements and do stopListening
         controlModes: ["view", "move", "shot"],
         defaults: function () {
             return {
@@ -42,55 +52,55 @@ define(function (require) {
         }
     });
 
+
     Button = Backbone.View.extend({
         events: {
             click: "click",
         },
-        initialize: function (options) {
-            this.event = options.event;
-        },
         click: function () {
-            this.model.trigger(this.event);
+            this.model.trigger("click");
         },
     });
+
 
     SelectControlMode = Backbone.View.extend({
         keyMap: [49, 50, 51],
         events: {
-            change: "changeMode",
+            change: "change",
         },
         initialize: function () {
             this.listenTo(this.model, "change:controlMode", this.render);
             _.bindAll(this, "keyDown");
-            $(document).on("keydown", this.keyDown);
+            $(window).on("keydown", this.keyDown);
             this.render();
         },
         render: function () {
             this.$el.val(this.model.get("controlMode"));
             this.$el.selectpicker("render");
         },
-        changeMode: function () {
-            this.model.set("controlMode", this.$el.val());
+        change: function () {
+            this.trigger("select", this.$el.val());
         },
         keyDown: function (e) {
             var idx = this.keyMap.indexOf(e.keyCode);
             if (idx === -1) return;
             var mode = this.model.controlModes[idx];
             if (mode === undefined) return;
-            this.model.set("controlMode", mode);
+            this.trigger("select", mode);
 
         },
         remove: function () {
             Backbone.View.prototype.remove.call(this);
-            $(document).off("keydown", this.keyDown);
+            $(window).off("keydown", this.keyDown);
         }
 
     });
 
 
     SelectArea = Backbone.View.extend({
+        //TODO: base selector class
         events: {
-            change: "changeArea",
+            change: "change",
         },
         template: _.template("<option value='<%= v %>'><%= v %></option>"),
         initialize: function (options) {
@@ -109,10 +119,11 @@ define(function (require) {
             this.$el.val(this.area.get("areaId"));
             this.$el.selectpicker("refresh");
         },
-        changeArea: function () {
-            this.model.trigger("enter-area", this.$el.val());
+        change: function () {
+            this.trigger("select", this.$el.val());
         },
     });
+
     return {
         UI: UI,
         setupUI: setupUI
