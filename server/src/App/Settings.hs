@@ -16,6 +16,7 @@ data Settings = Settings {areas :: [AreaId],
                           nodeAddress :: (String, String),
                           httpPort :: Int,
                           clientDir :: String,
+                          clientSettings :: String,
                           wsAddress :: (String, Int),
                           wsAddresses :: [(String, Int)],
                           db :: String,
@@ -30,6 +31,7 @@ instance FromJSON Settings where
              v .: "node-address" <*>
              v .: "http-port" <*>
              v .: "client-dir" <*>
+             v .: "client-settings" <*>
              v .: "ws-address" <*>
              v .: "ws-addresses" <*>
              v .: "db"
