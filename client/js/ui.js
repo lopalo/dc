@@ -8,6 +8,7 @@ define(function (require) {
 
 
     var UI;
+    var UIView;
     var Button;
     var SelectControlMode;
     var SelectArea;
@@ -42,33 +43,44 @@ define(function (require) {
 
 
     UI = Backbone.Model.extend({
-        //TODO: each UI view must listen to model's "destroy" event and
-        //      then unbind from their DOM elements and do stopListening
         controlModes: ["view", "move", "shot"],
         defaults: function () {
             return {
+                controlModes: this.controlModes,
                 controlMode: this.controlModes[1]
             };
         }
     });
 
 
-    Button = Backbone.View.extend({
+    UIView = Backbone.View.extend({
+        initialize: function () {
+            this.listenTo(this.model, "cleanup", this.destroy);
+        },
+        destroy: function () {
+            this.stopListening();
+            this.undelegateEvents();
+        }
+    });
+
+
+    Button = UIView.extend({
         events: {
             click: "click",
         },
         click: function () {
-            this.model.trigger("click");
+            this.trigger("click");
         },
     });
 
 
-    SelectControlMode = Backbone.View.extend({
+    SelectControlMode = UIView.extend({
         keyMap: [49, 50, 51],
         events: {
             change: "change",
         },
         initialize: function () {
+            SelectControlMode.__super__.initialize.call(this);
             this.listenTo(this.model, "change:controlMode", this.render);
             _.bindAll(this, "keyDown");
             $(window).on("keydown", this.keyDown);
@@ -84,13 +96,13 @@ define(function (require) {
         keyDown: function (e) {
             var idx = this.keyMap.indexOf(e.keyCode);
             if (idx === -1) return;
-            var mode = this.model.controlModes[idx];
+            var mode = this.model.get("controlModes")[idx];
             if (mode === undefined) return;
             this.trigger("select", mode);
 
         },
-        remove: function () {
-            Backbone.View.prototype.remove.call(this);
+        destroy: function () {
+            SelectControlMode.__super__.destroy.call(this);
             $(window).off("keydown", this.keyDown);
         }
 
@@ -98,12 +110,12 @@ define(function (require) {
 
 
     SelectArea = Backbone.View.extend({
-        //TODO: base selector class
         events: {
             change: "change",
         },
         template: _.template("<option value='<%= v %>'><%= v %></option>"),
         initialize: function (options) {
+            SelectArea.__super__.initialize.call(this);
             this.area = options.area;
             this.user = options.user;
             this.listenTo(this.area, "change:areaId", this.render);

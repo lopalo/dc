@@ -22,6 +22,9 @@ define(function (require) {
                                                     this);
         _.bindAll(this, "destroy");
 
+        this._cursorPos = null;
+        this._cursorPath = [];
+
     }
     Controller.prototype = Object.create(Backbone.Events);
     _.extend(Controller.prototype, {
@@ -49,17 +52,20 @@ define(function (require) {
         destroy: function () {
             this._gameEl.hide();
             this.stopListening();
-            this._models.destroyAll();
+            this._models.cleanupAll();
             this._stageController.destroy();
         },
         listenToStageBackground: function (bg) {
-            //TODO: "mouseDown", "mouseUp", "mouseMove"
+            this.listenTo(bg, "mouseDown", this._backgroundMouseDown);
+            this.listenTo(bg, "mouseUp", this._backgroundMouseUp);
+            this.listenTo(bg, "mouseMove", this._backgroundMouseMove);
         },
         listenToStageObjectView: function (view) {
             this.listenTo(view, "click", this._clickStageView);
+            //TODO: listen to "mouseenter" to show info about an object
         },
         request: function () {
-            this._connection.apply(this._connection, arguments);
+            this._connection.request.apply(this._connection, arguments);
         },
         getAreaModel: function () {
             return this._models.roModels.area;
@@ -88,7 +94,7 @@ define(function (require) {
             this._connection.send("area.enter-area", areaId);
         },
         _changeControlMode: function (mode) {
-            this._ui.set("controlMode", mode);
+            this._models.models.ui.set("controlMode", mode);
         },
         _initArea: function (data) {
             this._models.models.area.set({
@@ -100,13 +106,39 @@ define(function (require) {
             var model = this._stageController.getObjectModel(ident);
             //TODO: make a shot when
             //      appropriate control mode is chosen
-            this.connection.send("area.shoot", ident);
+            this._connection.send("area.shoot", ident);
         },
-        _moveAlongRoute: function () {
-            var positions = _.map(route, function (pos) {
-                return pos.toArray();
+        _backgroundMouseDown: function () {
+            this._cursorPos = null;
+            this._cursorPath = [];
+        },
+        _backgroundMouseMove: function (pos) {
+            pos = new Victor(pos.x, pos.y);
+            switch (this._models.models.ui.get("controlMode")) {
+                case "view":
+                    if (this._cursorPos === null) {
+                        this._cursorPos = pos;
+                    }
+                    var previousPos = this._cursorPos.clone();
+                    this._cursorPos = pos;
+                    this._stageController.moveCamera(previousPos.subtract(pos));
+                    break;
+                case "move":
+                    this._cursorPath.push(pos);
+                    break;
+            }
+
+        },
+        _backgroundMouseUp: function () {
+            if (this._models.models.ui.get("controlMode") !== "move") return;
+            var cameraPos = this._stageController.getCameraPos();
+            var positions = _.map(this._cursorPath, function (pos) {
+                return pos.add(cameraPos).toArray();
             });
-            this.connection.send("area.move-along-route", positions);
+            if (!_.isEmpty(positions)) {
+                this._connection.send("area.move-along-route", positions);
+            }
+            this._cursorPath = [];
         },
     });
     return Controller;

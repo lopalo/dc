@@ -107,23 +107,6 @@ define(function (require) {
 
 
 
-    ViewPort = Backbone.View.extend({
-        initialize: function () {
-            _.bindAll(this, "updateCamera");
-            $(window).on("resize", this.updateCamera);
-            this.updateCamera();
-        },
-        updateCamera: function () {
-            this.model.set("width", this.$el.width());
-            this.model.set("height", this.$el.height());
-        },
-        remove: function () {
-            Backbone.View.prototype.remove.call(this);
-            $(window).off("resize", this.updateCamera);
-        }
-    });
-
-
     UserView = Backbone.View.extend({
         //TODO: culling in the object layer
         width: 140, //pixels

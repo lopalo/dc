@@ -3,20 +3,27 @@ define(["underscore", "backbone"], function (_, Backbone) {
     var User;
     var Area;
 
-    function set() {
-        throw "The model is read-only";
+    function ReadOnlyProxy(model) {
+        this._model = model;
+        this.listenTo(model, "all", this._proxyEvent);
     }
-
-    function getReadOnlyProxy(model) {
-
-        roModel = model; //TODO: use backbone-proxy
-
-        //var roModel = Object.create(model);
-        //roModel.set = set;
-        //TODO: override destroy and other methods
-        return roModel;
-    }
-
+    _.extend(ReadOnlyProxy.prototype, Backbone.Events, {
+        get: function (attr) {
+            return this._model.get(attr);
+        },
+        previous: function (attr) {
+            return this._model.previous(attr);
+        },
+        set: function () {
+            throw "The model is read-only";
+        },
+        _proxyEvent: function () {
+            var args = arguments;
+            if (args[0] === "cleanup") this.stopListening();
+            args[1] = this;
+            this.trigger.apply(this, args);
+        }
+    });
 
     function ModelStore() {
         this.models = {};
@@ -26,19 +33,20 @@ define(["underscore", "backbone"], function (_, Backbone) {
         constructor: ModelStore,
         set: function (ident, model) {
             this.models[ident] = model;
-            this.roModels[ident] = getReadOnlyProxy(model);
+            this.roModels[ident] = new ReadOnlyProxy(model);
         },
         del: function (ident) {
             delete this.models[ident];
             delete this.roModels[ident];
         },
-        destroy: function (ident) {
-            this.models[ident].destroy();
+        cleanup: function (ident) {
+            this.models[ident].stopListening();
+            this.models[ident].trigger("cleanup");
             this.del(ident);
         },
-        destroyAll: function () {
-            _.each(this.models.keys(), function (ident) {
-                this.destroy(ident);
+        cleanupAll: function () {
+            _.each(_.keys(this.models), function (ident) {
+                this.cleanup(ident);
             }, this);
         }
     };
@@ -61,7 +69,8 @@ define(["underscore", "backbone"], function (_, Backbone) {
     });
 
     return {
-        getReadOnlyProxy: getReadOnlyProxy,
+        ReadOnlyProxy: ReadOnlyProxy,
+        ModelStore: ModelStore,
         User: User,
         Area: Area
     };

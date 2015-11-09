@@ -60,7 +60,6 @@ define(function (require) {
 
     function onClose(connection) {
         var error = connection.lastError || "Disconnection";
-        controller.destroy();
         $("#connect-form").show();
         $("#connect-error").html(error).show();
         $("#connect").one("click", _.partial(connect, connection));

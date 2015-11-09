@@ -5,6 +5,8 @@ define(function (require) {
     var Backbone = require("backbone");
     var Victor = require("victor");
     var TweenLite = require("tween-lite");
+    var pixi = require("pixi");
+
     var settings = require("json!settings.json").stage;
     var models = require("models");
     var stageModels = require("./models");
@@ -27,8 +29,8 @@ define(function (require) {
         this._camera = new stageModels.Camera();
         this._objectModels = new models.ModelStore();
 
-        this._renderer = new Renderer(); //TODO
-        this._stage = new Stage(); //TODO
+        this._renderer = null;
+        this._stage = null;
         this._backgroundLayer = null;
         this._midgroundLayers = [];
         this._objectLayer = null;
@@ -36,28 +38,36 @@ define(function (require) {
 
         this._signalHandler = new SignalHandler(this);
 
-        _.bindAll(this, "_animationCallback", "_interpolationStep");
-
+        _.bindAll(this, "_animationCallback",
+                  "_interpolationStep", "_resizeWindow");
     }
     StageController.prototype = Object.create(Backbone.Events);
     _.extend(StageController.prototype, {
         constructor: StageController,
         init: function () {
-            //TODO: listen to resize event of window, like ViewPort did,
-            //      and then change the camera size
+            var renderer;
+            this._renderer = renderer = new pixi.autoDetectRenderer();
+            this._stage = new pixi.Container();
+
+            renderer.view.id = "renderer";
+            renderer.autoResize = true;
+            this._viewportEl.append(renderer.view);
+            $(window).on("resize", this._resizeWindow);
+
             this._setupLayers();
             this._controller.listenToStageBackground(this._backgroundLayer);
+            this._resizeWindow();
         },
         start: function () {
             this._requestAnimation();
-            //TODO: start interpolation loop
+            this._startInterpolation();
         },
         destroy: function () {
             this.stopListening();
             this._stopLoops();
-            _.each(_.keys(this._objectModels.models),
-                   this._removeObject, this);
+            this._renderer.destroy(true);
             this._viewportEl.empty();
+            $(window).off("resize", this._resizeWindow);
         },
         dispatch: function (data) {
             var handler = $.camelCase("_handle-" + data.cmd);
@@ -68,6 +78,9 @@ define(function (require) {
             if (self === undefined) return;
             this._camera.focusTo(Victor.fromArray(self.get("pos")));
         },
+        moveCamera: function (delta) {
+            this._camera.move(delta);
+        },
         enterArea: function () {
             this._firstEnter = false;
             this._objectViews[this._controller.getUserId()].destroy("Exit");
@@ -75,8 +88,29 @@ define(function (require) {
         getObjectModel: function (id) {
             return this._objectModels.roModels[id];
         },
+        getCameraPos: function () {
+            return Victor.fromArray(this._camera.get("pos"));
+        },
+        _resizeWindow: function () {
+            var width = $(window).width();
+            var height = $(window).height();
+            this._renderer.resize(width, height);
+            this._camera.set({width: width, height: height});
+        },
         _setupLayers: function () {
-            //TODO
+            var stage = this._stage;
+            var camera = new models.ReadOnlyProxy(this._camera);
+            this._backgroundLayer = new stageViews.Background({
+                camera: camera,
+                area: this._area
+            });
+            this._backgroundLayer.createContainer(stage);
+            this._objectLayer = new stageViews.ObjectLayer({
+                camera: camera,
+                parallaxIndex: 1,
+            });
+            this._objectLayer.createContainer(stage);
+            //TODO: create midgrounds
         },
         _handleInit: function (data) {
             this._setServerTime(data.timestamp);
@@ -129,7 +163,7 @@ define(function (require) {
             this._interpolationStep();
             this._signalHandler.process(data.signals);
             excessIdents = _.difference(_.keys(objectModels), idents);
-            _.each(excessIdents, this.removeObject, this);
+            _.each(excessIdents, this._removeObject, this);
             this._disappearanceReasons = [];
         },
         _getTime: function () {
@@ -166,7 +200,7 @@ define(function (require) {
                     if (!reason && isSelf) {
                         reason = this._firstEnter ? "LogIn" : "Entry";
                     }
-                    view = new stageViews.UserView({
+                    view = new stageViews.User({
                         model: roModel,
                         reason: reason,
                         isSelf: isSelf,
@@ -177,7 +211,7 @@ define(function (require) {
             }
             this._objectViews[data.id] = view;
             this._controller.listenToStageObjectView(view);
-            //TODO: add view to the object layer
+            this._objectLayer.addView(view);
             if (isSelf) {
                 this.showMyself();
             }
@@ -188,7 +222,7 @@ define(function (require) {
             this.stopListening(view);
             this._controller.stopListening(view);
             view.destroy(reason);
-            this._objectModels.models.destroy(ident);
+            this._objectModels.cleanup(ident);
             delete this._objectViews[ident];
         },
         _getSelf: function () {
@@ -202,6 +236,7 @@ define(function (require) {
         },
         _animationCallback: function () {
             this._requestAnimation();
+            this._backgroundLayer.resize();
             this._renderer.render(this._stage);
         },
 
@@ -221,8 +256,8 @@ define(function (require) {
             }, this);
         },
         _stopLoops: function () {
-            window.clearTimeout(this._animationLoopId);
-            window.cancelAnimationFrame(this._interpolationLoopId);
+            window.cancelAnimationFrame(this._animationLoopId);
+            window.clearInterval(this._interpolationLoopId);
         },
     });
 

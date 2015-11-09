@@ -12,6 +12,7 @@ require.config({
         bootstrap: "vendors/bootstrap.min",
         "bootstrap-select": "vendors/bootstrap-select.min",
         "tween-lite": "vendors/TweenLite.min",
+        pixi: "vendors/pixi.min",
     },
     shim: {
         jquery: {

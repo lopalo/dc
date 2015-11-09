@@ -16,8 +16,8 @@ define(["underscore", "backbone", "victor"], function(_, Backbone, Victor) {
             this.set("pos", pos.subtract(shift).toArray());
         },
         move: function (delta) {
-            var pos = delta.add(Victor.fromArray(this.get("pos")));
-            this.set("pos", pos.toArray());
+            var pos = Victor.fromArray(this.get("pos"));
+            this.set("pos", pos.add(delta).toArray());
         }
     });
 
@@ -41,7 +41,7 @@ define(["underscore", "backbone", "victor"], function(_, Backbone, Victor) {
                 name: "",
                 actions: [],
             };
-            return _.extend(defaults, StageObject.prototype.defaults.call(this));
+            return _.extend(defaults, User.__super__.defaults.call(this));
         },
         applyActions: function (timestamp) {
             _.each(this.get("actions"), function(action) {
