@@ -254,7 +254,6 @@ define(function (require) {
             var end = Victor.fromArray(objects[signal.target].get("pos"));
             var delta = end.subtract(start);
             var onComplete = function () { shot.remove(); };
-            //TODO: do not use tween-lite-css
             var shot = $("<div></div>")
                 .addClass("world-shot")
                 .css({

@@ -110,7 +110,13 @@ define(function (require) {
                 parallaxIndex: 1,
             });
             this._objectLayer.createContainer(stage);
-            //TODO: create midgrounds
+            this._midgroundLayers = [
+                new stageViews.Midground({camera: camera,
+                                          parallaxIndex: 0.3}),
+            ];
+            _.each(this._midgroundLayers, function (layer) {
+                layer.createContainer(stage);
+            }, this);
         },
         _handleInit: function (data) {
             this._setServerTime(data.timestamp);

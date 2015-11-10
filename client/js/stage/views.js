@@ -63,6 +63,8 @@ define(function (require) {
         },
     });
 
+
+
     Background = StageView.extend({
         events: {
             mousedown: "_mouseDown",
@@ -112,6 +114,7 @@ define(function (require) {
         }
     });
 
+
     Layer = StageView.extend({
         initialize: function (options) {
             this._parallaxIndex = options.parallaxIndex;
@@ -131,7 +134,27 @@ define(function (require) {
 
 
     Midground = Layer.extend({
-
+        texturePath: "img/midground.png",
+        initialize: function (options) {
+            Midground.__super__.initialize.call(this, options);
+            this._camera = options.camera;
+            this.listenTo(this._camera, "change:width change:height",
+                                            this._resize);
+        },
+        _createContainer: function () {
+            var tileScale;
+            this._container = pixi.extras.TilingSprite
+                              .fromImage(this.texturePath);
+        },
+        _updatePos: function (delta) {
+            this._container.tilePosition.x -= delta.x;
+            this._container.tilePosition.y -= delta.y;
+        },
+        _resize: function () {
+            var container = this._container;
+            container.width = this._camera.get("width");
+            container.height = this._camera.get("height");
+        },
     });
 
 
@@ -162,8 +185,9 @@ define(function (require) {
             var width = model.get("width");
             var height = model.get("height");
             var name = model.get("name");
-            var sprite;
             var container;
+            var sprite;
+            var text;
 
             this._container = container = new pixi.Container();
             this._sprite = sprite = pixi.Sprite.fromImage(this.texturePath);
@@ -174,28 +198,73 @@ define(function (require) {
             sprite.anchor.x = sprite.anchor.y = 0.5;
             sprite.interactive = true;
             if (name) {
-                //TODO: fix position and size of the text
-                container.addChild(new pixi.Text(name, {fill: "white"}));
+                text = new pixi.Text(name, {fill: "white", font: "14px Arial"});
+                text.anchor.x = text.anchor.y = 0.5;
+                text.y = -height / 1.5;
+                container.addChild(text);
             }
             this._update();
+            this._appearanceEffect();
         },
         _update: function () {
             var model = this._model;
             var container = this._container;
             var pos = Victor.fromArray(model.get("pos"));
-            container.position.x = pos.x;
-            container.position.y = pos.y;
+            container.x = pos.x;
+            container.y = pos.y;
             this._sprite.rotation = this._getRotation();
         },
         _getRotation: function () {
             return (this._model.get("angle") - 90) * (Math.PI / 180);
         },
-
+        _appearanceEffect: function () {
+            this._sprite.alpha = 0;
+            TweenLite.to(this._sprite, 1, {alpha: 1});
+        },
     });
 
 
     User = StageObject.extend({
         texturePath: "img/ship.png",
+        initialize: function (options) {
+            User.__super__.initialize.call(this, options);
+            this._isSelf = options.isSelf;
+            this._appearanceReason = options.reason;
+            this._updateAllowed = true;
+
+        },
+        _update: function () {
+            if (!this._updateAllowed) return;
+            User.__super__._update.call(this);
+        },
+        _appearanceEffect: function () {
+            var self = this;
+            var model = this._model;
+            var width = model.get("width");
+            var height = model.get("height");
+            var sprite = this._sprite;
+            var onComplete = function () { self._updateAllowed = true; };
+            var rotation = this._getRotation();
+            var tween;
+            switch (this._appearanceReason) {
+                case "LogIn":
+                    this._updateAllowed = false;
+                    sprite.rotation = rotation - 2 * Math.PI;
+                    tween = TweenLite.to(sprite, 0.5, {rotation: rotation});
+                    break;
+                case "Entry":
+                    this._updateAllowed = false;
+                    sprite.width = 0.01 * width;
+                    sprite.height = 50 * height;
+                    tween = TweenLite.to(sprite, 0.5,
+                                        {width: width, height: height});
+                    break;
+                default: //Recovery
+                    User.__super__._appearanceEffect.call(this);
+                    return;
+            }
+            tween.eventCallback("onComplete", onComplete);
+        },
     });
 
 
