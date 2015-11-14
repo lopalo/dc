@@ -36,7 +36,6 @@ define(function (require) {
         },
         destroy: function () {
             this.stopListening();
-            if (this._container === null) return;
             this._undelegateEvents();
             this._container.parent.removeChild(this._container);
             this._container = null;
@@ -142,7 +141,6 @@ define(function (require) {
                                             this._resize);
         },
         _createContainer: function () {
-            var tileScale;
             this._container = pixi.extras.TilingSprite
                               .fromImage(this.texturePath);
         },
@@ -159,6 +157,15 @@ define(function (require) {
 
 
     ObjectLayer = Layer.extend({
+        //TODO: culling
+        addEffect: function (effectContainer, tween) {
+            var container = this._container;
+            var onComplete = function () {
+                container.removeChild(effectContainer);
+            };
+            container.addChildAt(effectContainer, 0);
+            tween.eventCallback("onComplete", onComplete);
+        },
         _createContainer: function () {
             this._container = new pixi.Container();
         },
@@ -166,10 +173,16 @@ define(function (require) {
             this._container.x -= delta.x;
             this._container.y -= delta.y;
         },
+
     });
 
 
     StageObject = StageView.extend({
+        events: {
+            click: "_click",
+            mouseover: "_mouseOver",
+            mouseout: "_mouseOut"
+        },
         texturePath: "",
         initialize: function (options) {
             this._model = options.model;
@@ -177,8 +190,21 @@ define(function (require) {
             this.listenTo(this._model, "change", this._update);
         },
         destroy: function (reason) {
+            var pos = Victor.fromArray(this._model.get("pos"));
+            var parent = this._container.parent;
+            var sprite = this._sprite;
+            var onComplete = function () {
+                parent.removeChild(sprite);
+            };
+            var tween;
+
+            this._sprite = null;
             StageObject.__super__.destroy.call(this);
-            //TODO: effect
+            parent.addChild(sprite);
+            sprite.x = pos.x;
+            sprite.y = pos.y;
+            tween = this._disappearanceEffect(reason, sprite);
+            tween.eventCallback("onComplete", onComplete);
         },
         _createContainer: function () {
             var model = this._model;
@@ -198,7 +224,8 @@ define(function (require) {
             sprite.anchor.x = sprite.anchor.y = 0.5;
             sprite.interactive = true;
             if (name) {
-                text = new pixi.Text(name, {fill: "white", font: "14px Arial"});
+                text = new pixi.Text(name, {fill: this._getTextColor(),
+                                            font: "14px Arial"});
                 text.anchor.x = text.anchor.y = 0.5;
                 text.y = -height / 1.5;
                 container.addChild(text);
@@ -217,10 +244,25 @@ define(function (require) {
         _getRotation: function () {
             return (this._model.get("angle") - 90) * (Math.PI / 180);
         },
+        _getTextColor: function () {
+            return "white";
+        },
         _appearanceEffect: function () {
             this._sprite.alpha = 0;
-            TweenLite.to(this._sprite, 1, {alpha: 1});
+            return TweenLite.to(this._sprite, 1, {alpha: 1});
         },
+        _disappearanceEffect: function (reason, sprite) {
+            return TweenLite.to(sprite, 1, {alpha: 0});
+        },
+        _click: function () {
+            this.trigger("click", this._model.get("id"));
+        },
+        _mouseOver: function () {
+            this.trigger("mouseOver", this._model.get("id"));
+        },
+        _mouseOut: function () {
+            this.trigger("mouseOut", this._model.get("id"));
+        }
     });
 
 
@@ -237,34 +279,79 @@ define(function (require) {
             if (!this._updateAllowed) return;
             User.__super__._update.call(this);
         },
+        _getTextColor: function () {
+            return this._isSelf ? "#8B8FBD" : "white";
+        },
         _appearanceEffect: function () {
             var self = this;
             var model = this._model;
             var width = model.get("width");
             var height = model.get("height");
             var sprite = this._sprite;
-            var onComplete = function () { self._updateAllowed = true; };
+            var onComplete = function () {
+                self._updateAllowed = true;
+                self._update();
+            };
             var rotation = this._getRotation();
+            var toProps;
             var tween;
             switch (this._appearanceReason) {
                 case "LogIn":
-                    this._updateAllowed = false;
-                    sprite.rotation = rotation - 2 * Math.PI;
-                    tween = TweenLite.to(sprite, 0.5, {rotation: rotation});
+                    sprite.width = sprite.height = 1;
+                    sprite.rotation = rotation - 4 * Math.PI;
+                    toProps = {rotation: rotation, width: width, height: height};
+                    tween = TweenLite.to(sprite, 1, toProps);
                     break;
                 case "Entry":
-                    this._updateAllowed = false;
                     sprite.width = 0.01 * width;
                     sprite.height = 50 * height;
                     tween = TweenLite.to(sprite, 0.5,
                                         {width: width, height: height});
                     break;
-                default: //Recovery
-                    User.__super__._appearanceEffect.call(this);
-                    return;
+
+                case "Recovery":
+                    tween = User.__super__._appearanceEffect.call(this);
+                    break;
+                default:
+                    tween = User.__super__._appearanceEffect.call(this);
+
             }
+            this._updateAllowed = false;
             tween.eventCallback("onComplete", onComplete);
+            return tween;
         },
+        _disappearanceEffect: function (reason, sprite) {
+            var model = this._model;
+            var width = model.get("width");
+            var height = model.get("height");
+            var rotation = this._getRotation();
+            var toProps;
+            var tween;
+            switch (reason) {
+                case "Burst":
+                    toProps = {width: 2 * width, height: 2 * height, alpha: 0};
+                    tween = TweenLite.to(sprite, 0.5, toProps);
+                    break;
+                case "Exit":
+                    toProps = {width: 0.01 * width, height: 50 * height};
+                    tween = TweenLite.to(sprite, 0.5, toProps);
+                    break;
+                case "LogOut":
+                    toProps = {
+                        rotation: rotation - 4 * Math.PI,
+                        width: 1,
+                        height: 1
+                    };
+                    tween = TweenLite.to(sprite, 1, toProps);
+                    break;
+                default:
+                    tween = User.__super__._disappearanceEffect.call(
+                        this, reason, sprite
+                    );
+            }
+            return tween;
+        }
+
     });
 
 

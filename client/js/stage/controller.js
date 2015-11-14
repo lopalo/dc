@@ -4,13 +4,13 @@ define(function (require) {
     var _ = require("underscore");
     var Backbone = require("backbone");
     var Victor = require("victor");
-    var TweenLite = require("tween-lite");
     var pixi = require("pixi");
 
     var settings = require("json!settings.json").stage;
     var models = require("models");
     var stageModels = require("./models");
     var stageViews = require("./views");
+    var SignalHandler = require("./signal-handler");
 
 
     function StageController(viewportEl, controller) {
@@ -36,10 +36,17 @@ define(function (require) {
         this._objectLayer = null;
         this._objectViews = {};
 
-        this._signalHandler = new SignalHandler(this);
+        _.bindAll(this,
+                  "_animationCallback",
+                  "_interpolationStep",
+                  "_resizeWindow",
+                  "_addEffect",
+                  "getObjectModel");
 
-        _.bindAll(this, "_animationCallback",
-                  "_interpolationStep", "_resizeWindow");
+        this._signalHandler = new SignalHandler({
+            addEffect: this._addEffect,
+            getObjectModel: this.getObjectModel
+        });
     }
     StageController.prototype = Object.create(Backbone.Events);
     _.extend(StageController.prototype, {
@@ -73,6 +80,7 @@ define(function (require) {
             var handler = $.camelCase("_handle-" + data.cmd);
             this[handler](data.body);
         },
+
         showMyself: function () {
             var self = this._getSelf();
             if (self === undefined) return;
@@ -83,7 +91,7 @@ define(function (require) {
         },
         enterArea: function () {
             this._firstEnter = false;
-            this._objectViews[this._controller.getUserId()].destroy("Exit");
+            this._removeObject(this._controller.getUserId(), "Exit");
         },
         getObjectModel: function (id) {
             return this._objectModels.roModels[id];
@@ -105,11 +113,6 @@ define(function (require) {
                 area: this._area
             });
             this._backgroundLayer.createContainer(stage);
-            this._objectLayer = new stageViews.ObjectLayer({
-                camera: camera,
-                parallaxIndex: 1,
-            });
-            this._objectLayer.createContainer(stage);
             this._midgroundLayers = [
                 new stageViews.Midground({camera: camera,
                                           parallaxIndex: 0.3}),
@@ -117,6 +120,11 @@ define(function (require) {
             _.each(this._midgroundLayers, function (layer) {
                 layer.createContainer(stage);
             }, this);
+            this._objectLayer = new stageViews.ObjectLayer({
+                camera: camera,
+                parallaxIndex: 1,
+            });
+            this._objectLayer.createContainer(stage);
         },
         _handleInit: function (data) {
             this._setServerTime(data.timestamp);
@@ -170,7 +178,7 @@ define(function (require) {
             this._signalHandler.process(data.signals);
             excessIdents = _.difference(_.keys(objectModels), idents);
             _.each(excessIdents, this._removeObject, this);
-            this._disappearanceReasons = [];
+            this._disappearanceReasons = {};
         },
         _getTime: function () {
             return window.performance.now();
@@ -222,14 +230,17 @@ define(function (require) {
                 this.showMyself();
             }
         },
-        _removeObject: function (ident) {
-            var reason = this._disappearanceReasons[ident];
+        _removeObject: function (ident, reason) {
             var view = this._objectViews[ident];
+            reason = reason || this._disappearanceReasons[ident];
             this.stopListening(view);
             this._controller.stopListening(view);
             view.destroy(reason);
             this._objectModels.cleanup(ident);
             delete this._objectViews[ident];
+        },
+        _addEffect: function (container, tween) {
+            this._objectLayer.addEffect(container, tween);
         },
         _getSelf: function () {
             return this._objectModels.models[this._controller.getUserId()];
@@ -267,40 +278,6 @@ define(function (require) {
         },
     });
 
-
-    function SignalHandler(stageController) {
-        this._stageController = stageController;
-    }
-    SignalHandler.prototype = {
-        constructor: SignalHandler,
-        process: function (signals) {
-            _.each(signals, function (signal) {
-                var handler = this["handle" + signal.tag];
-                if (!handler) return;
-                handler.call(this, signal);
-            }, this);
-            //TODO: use a public method of StageController to add sprites to
-            //      the objectLayer
-        },
-        handleShot: function (signal) {
-            var getObj = this._stageController.getObjectModel;
-            var start = Victor.fromArray(getObj(signal.shooter).get("pos"));
-            var end = Victor.fromArray(getObj(signal.target).get("pos"));
-            var delta = end.subtract(start);
-            var onComplete = function () { shot.remove(); };
-            //TODO: do not use tween-lite-css
-            return;
-            var shot = $("<div></div>")
-                .addClass("world-shot")
-                .css({
-                    transform: "rotate(" + -delta.angle() + "rad)",
-                    width: delta.length(),
-                    left: start.x,
-                    bottom: start.y,
-                })
-            TweenLite.to(shot, 2, {opacity: 0, onComplete: onComplete});
-        }
-    };
     return StageController;
 });
 

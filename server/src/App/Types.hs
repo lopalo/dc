@@ -23,6 +23,7 @@ newtype UserId = UserId String deriving (Eq, Ord, Generic, Typeable)
 instance Binary UserId
 
 instance Show UserId where
+    --TODO: delete suffix -id in all idents
     show (UserId str) = "user-id:" ++ str
 
 instance Read UserId where

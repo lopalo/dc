@@ -12,6 +12,7 @@ define(function (require) {
     var Button;
     var SelectControlMode;
     var SelectArea;
+    var ObjectInfo;
 
     function setupUI(uiEl, ui, user, area) {
         var focusButton = new Button({
@@ -47,7 +48,8 @@ define(function (require) {
         defaults: function () {
             return {
                 controlModes: this.controlModes,
-                controlMode: this.controlModes[1]
+                controlMode: this.controlModes[1],
+                displayObjectInfo: {}
             };
         }
     });
@@ -109,7 +111,7 @@ define(function (require) {
     });
 
 
-    SelectArea = Backbone.View.extend({
+    SelectArea = UIView.extend({
         events: {
             change: "change",
         },
@@ -134,6 +136,20 @@ define(function (require) {
         change: function () {
             this.trigger("select", this.$el.val());
         },
+    });
+
+
+    ObjectInfo = UIView.extend({
+        initialize: function () {
+            ObjectInfo.__super__.initialize.call(this);
+            this.listenTo(this.model, "change:displayObjectInfo", this.render);
+        },
+        render: function () {
+            var info = this.model.get("displayObjectInfo");
+            //TODO: hide if _.isEmpty(info);
+            var selector = "#" + info.type + "-info-template";
+            var html = _.template($(selector).html())(info);
+        }
     });
 
     return {

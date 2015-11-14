@@ -6,8 +6,16 @@ define(["underscore", "backbone"], function (_, Backbone) {
     function ReadOnlyProxy(model) {
         this._model = model;
         this.listenTo(model, "all", this._proxyEvent);
+        if (model.proxyMethods) {
+            _.each(model.proxyMethods, function (method) {
+                this[method] = model[method].bind(model);
+            }, this);
+        }
     }
     _.extend(ReadOnlyProxy.prototype, Backbone.Events, {
+        isInstanceOf: function (constructor) {
+            return this._model instanceof constructor;
+        },
         get: function (attr) {
             return this._model.get(attr);
         },

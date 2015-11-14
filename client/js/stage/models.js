@@ -23,6 +23,9 @@ define(["underscore", "backbone", "victor"], function(_, Backbone, Victor) {
 
 
     StageObject = Backbone.Model.extend({
+        proxyMethods: [
+            "getInfoToDisplay"
+        ],
         defaults: function () {
             return {
                 id: "",
@@ -31,6 +34,40 @@ define(["underscore", "backbone", "victor"], function(_, Backbone, Victor) {
                 width: 40,
                 angle: 0
             };
+        },
+        getInfoToDisplay: function () {
+            return {};
+        },
+        applyActions: function (timestamp) {
+            _.each(this.get("actions"),
+                   this._applyAction.bind(this, timestamp));
+        },
+        _applyAction: function (timestamp, action) {
+            switch (action.tag) {
+                case "MoveDistance":
+                    this._applyMoveDistance(timestamp, action);
+                    break;
+                default:
+                    console.log("Unknown action " + action.tag);
+            }
+        },
+        _getT: function(timestamp, a) {
+            return (timestamp - a.startTs) / (a.endTs - a.startTs);
+        },
+        _applyMoveDistance: function (timestamp, a) {
+            if (timestamp >= a.endTs) {
+                this.set("pos", a.to);
+                return;
+            }
+            var t = this._getT(timestamp, a);
+            var fromPos = Victor.fromArray(a.from);
+            var toPos = Victor.fromArray(a.to);
+            var pos = toPos
+                      .subtract(fromPos)
+                      .multiply(new Victor(t, t))
+                      .add(fromPos)
+                      .unfloat();
+            this.set("pos", pos.toArray());
         },
     });
 
@@ -43,22 +80,21 @@ define(["underscore", "backbone", "victor"], function(_, Backbone, Victor) {
             };
             return _.extend(defaults, User.__super__.defaults.call(this));
         },
-        applyActions: function (timestamp) {
-            _.each(this.get("actions"), function(action) {
-                switch (action.tag) {
-                    case "MoveRoute":
-                        this._applyMoveRoute(timestamp, action);
-                        break;
-                    case "MoveDistance":
-                        this._applyMoveDistance(timestamp, action);
-                        break;
-                    default:
-                        console.log("Unknown action " + action.tag);
-                }
-            }, this);
+        getInfoToDisplay: function () {
+            return {
+                type: "user",
+                durability: this.get("durability"),
+                speed: this.get("speed")
+            };
         },
-        _getT: function(timestamp, a) {
-            return (timestamp - a.startTs) / (a.endTs - a.startTs);
+        _applyAction: function (timestamp, action) {
+            switch (action.tag) {
+                case "MoveRoute":
+                    this._applyMoveRoute(timestamp, action);
+                    break;
+                default:
+                    User.__super__._applyAction.call(this, timestamp, action);
+            }
         },
         _applyMoveRoute: function (timestamp, a) {
             if (timestamp >= a.endTs) {
@@ -86,21 +122,6 @@ define(["underscore", "backbone", "victor"], function(_, Backbone, Victor) {
             var res = reduce(_.map(a.positions, Victor.fromArray));
             this.set(res);
         },
-        _applyMoveDistance: function (timestamp, a) {
-            if (timestamp >= a.endTs) {
-                this.set("pos", a.to);
-                return;
-            }
-            var t = this._getT(timestamp, a);
-            var fromPos = Victor.fromArray(a.from);
-            var toPos = Victor.fromArray(a.to);
-            var pos = toPos
-                      .subtract(fromPos)
-                      .multiply(new Victor(t, t))
-                      .add(fromPos)
-                      .unfloat();
-            this.set("pos", pos.toArray());
-        }
     });
     return {
         Camera: Camera,

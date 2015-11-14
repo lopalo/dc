@@ -4,11 +4,11 @@ define(function (require) {
     var _ = require("underscore");
     var Backbone = require("backbone");
     var Victor = require("victor");
-    var TweenLite = require("tween-lite");
 
     var models = require("models");
     var UI = require("ui");
     var StageController = require("stage/controller");
+    var stageModels = require("stage/models");
 
 
     function Controller(gameEl, connection) {
@@ -61,8 +61,9 @@ define(function (require) {
             this.listenTo(bg, "mouseMove", this._backgroundMouseMove);
         },
         listenToStageObjectView: function (view) {
-            this.listenTo(view, "click", this._clickStageView);
-            //TODO: listen to "mouseenter" to show info about an object
+            this.listenTo(view, "click", this._stageObjectViewClick);
+            this.listenTo(view, "mouseOver", this._stageObjectViewMouseOver);
+            this.listenTo(view, "mouseOut", this._stageObjectViewMouseOut);
         },
         request: function () {
             this._connection.request.apply(this._connection, arguments);
@@ -102,11 +103,26 @@ define(function (require) {
                 background: data.areaId + ".jpg" //FIXME
             });
         },
-        _clickStageView: function (ident) {
+        _stageObjectViewClick: function (ident) {
             var model = this._stageController.getObjectModel(ident);
-            //TODO: make a shot when
-            //      appropriate control mode is chosen
-            this._connection.send("area.shoot", ident);
+            var isUser = model.isInstanceOf(stageModels.User);
+            switch (this._models.models.ui.get("controlMode")) {
+                case "shot":
+                    if (isUser && !this.isSelf(ident)) {
+                        this._connection.send("area.shoot", ident);
+                    }
+                    break;
+            }
+        },
+        _stageObjectViewMouseOver: function (ident) {
+            var ui = this._models.models.ui;
+            var model;
+            if (ui.get("controlMode") !== "view") return;
+            model = this._stageController.getObjectModel(ident);
+            ui.set("displayObjectInfo", model.getInfoToDisplay());
+        },
+        _stageObjectViewMouseOut: function () {
+            this._models.models.ui.set("displayObjectInfo", {});
         },
         _backgroundMouseDown: function () {
             this._cursorPos = null;
