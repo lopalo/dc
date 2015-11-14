@@ -1,13 +1,13 @@
 {-# LANGUAGE DeriveGeneric #-}
 
-module App.Area.Signal where
+module Area.Signal where
 
 import GHC.Generics (Generic)
 
 import Data.Aeson (ToJSON)
 
-import App.Types (UserId)
-import App.Area.Types (ObjId)
+import Types (UserId)
+import Area.Types (ObjId)
 
 
 data AReason = LogIn | Entry | Recovery

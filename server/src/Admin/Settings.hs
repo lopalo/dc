@@ -19,4 +19,5 @@ instance FromJSON Settings where
              v .: "template-dir"
     parseJSON _ = mzero
 
+--TODO: import this settings to Settings.hs
 

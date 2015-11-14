@@ -1,5 +1,5 @@
 
-module App.Area.ClientCommands where
+module Area.ClientCommands where
 
 import qualified Data.Map.Strict as M
 import Data.List (elemIndex, maximumBy)
@@ -9,19 +9,19 @@ import Data.String.Utils (startswith)
 import Data.Lens.Strict ((^%=), (^-=))
 import Control.Distributed.Process
 
-import App.Utils (milliseconds)
-import App.Connection (Connection, sendResponse)
-import App.Types (UserId, RequestNumber)
-import qualified App.Settings as S
-import qualified App.Area.User as U
-import qualified App.User.External as UE
-import App.Area.Action (Action(..))
-import App.Area.Utils (distance, getIntervals)
-import App.Area.Types
-import App.Area.State
-import App.Area.Signal (Signal(Disappearance, Shot), DReason(Exit))
-import App.Area.External (enter)
-import App.Area.Vector (toVect, add, sub, mul, lenSqr, len, dot)
+import Utils (milliseconds)
+import Connection (Connection, sendResponse)
+import Types (UserId, RequestNumber)
+import qualified Settings as S
+import qualified Area.User as U
+import qualified User.External as UE
+import Area.Action (Action(..))
+import Area.Utils (distance, getIntervals)
+import Area.Types
+import Area.State
+import Area.Signal (Signal(Disappearance, Shot), DReason(Exit))
+import Area.External (enter)
+import Area.Vector (toVect, add, sub, mul, lenSqr, len, dot)
 
 
 type Response = Process (Value, State)

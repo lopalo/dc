@@ -1,18 +1,18 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module App.ClientCommands (inputHandler) where
+module ClientCommands (inputHandler) where
 
 
 import Control.Distributed.Process
 import Data.Aeson (Value(Null), Result(Success), fromJSON, decode)
 import Data.String.Utils (startswith)
 
-import App.Connection (Connection, sendCmd, sendResponse, InputHandler)
-import App.Area.External as A
-import App.User.User (userProcess)
-import App.Types (UserPid, AreaPid, RequestNumber)
-import App.Utils (delPrefix, logException, logDebug, evaluate)
-import qualified App.Settings as S
+import Connection (Connection, sendCmd, sendResponse, InputHandler)
+import Area.External as A
+import User.User (userProcess)
+import Types (UserPid, AreaPid, RequestNumber)
+import Utils (delPrefix, logException, logDebug, evaluate)
+import qualified Settings as S
 
 
 type Command = (String, Value, RequestNumber)

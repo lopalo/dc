@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveGeneric, DeriveDataTypeable #-}
 
-module App.Types where
+module Types where
 
 import GHC.Generics (Generic)
 import Data.Binary (Binary)
@@ -9,7 +9,7 @@ import Data.Typeable (Typeable)
 import Data.Aeson (ToJSON, toJSON, FromJSON, parseJSON)
 import Control.Distributed.Process
 
-import App.Utils (delPrefix)
+import Utils (delPrefix)
 
 
 delIdPrefix :: String -> String -> String

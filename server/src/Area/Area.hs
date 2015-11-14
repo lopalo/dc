@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module App.Area.Area (areaProcess) where
+module Area.Area (areaProcess) where
 
 import Prelude hiding ((.))
 import Control.Monad (liftM)
@@ -11,21 +11,21 @@ import Data.Aeson (object, (.=))
 import Data.Lens.Strict ((^$), (^%=))
 import Control.Distributed.Process
 
-import App.Connection (Connection, setArea)
-import App.GlobalRegistry (globalRegister)
-import App.Utils (milliseconds, safeReceive, evaluate)
-import qualified App.Settings as S
-import App.Types (UserPid(..), AreaId, AreaPid(..))
-import qualified App.User.External as UE
-import qualified App.Area.User as U
-import App.Area.Utils (sendCmd)
-import App.Area.Types
-import App.Area.State
-import App.Area.ClientCommands
-import App.Area.Signal (Signal(Appearance, Disappearance),
+import Connection (Connection, setArea)
+import GlobalRegistry (globalRegister)
+import Utils (milliseconds, safeReceive, evaluate)
+import qualified Settings as S
+import Types (UserPid(..), AreaId, AreaPid(..))
+import qualified User.External as UE
+import qualified Area.User as U
+import Area.Utils (sendCmd)
+import Area.Types
+import Area.State
+import Area.ClientCommands
+import Area.Signal (Signal(Appearance, Disappearance),
                         AReason(LogIn, Entry),
                         DReason(LogOut))
-import App.Area.Tick (handleTick, scheduleTick)
+import Area.Tick (handleTick, scheduleTick)
 
 
 

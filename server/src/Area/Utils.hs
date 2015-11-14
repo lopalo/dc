@@ -1,12 +1,12 @@
 
-module App.Area.Utils where
+module Area.Utils where
 
 import Data.Aeson (ToJSON)
 import Control.Distributed.Process
 
-import qualified App.Connection as C
-import App.Area.Types (Pos)
-import App.Area.Vector (len, sub, toVect)
+import qualified Connection as C
+import Area.Types (Pos)
+import Area.Vector (len, sub, toVect)
 
 
 distance :: Pos -> Pos -> Float

@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveGeneric, DeriveDataTypeable, OverloadedStrings #-}
 
-module App.GlobalRegistry (globalRegistryProcess,
+module GlobalRegistry (globalRegistryProcess,
                            getRegistry, globalRegister,
                            globalWhereIs, globalNSend) where
 
@@ -16,7 +16,7 @@ import Control.Distributed.Process.Serializable (Serializable)
 import Control.Distributed.Process.Extras (TagPool, getTag)
 import Control.Distributed.Process.Extras.Call (callResponse, callAt)
 
-import App.Utils (safeReceive)
+import Utils (safeReceive)
 
 
 type Registry = M.Map ProcessId String

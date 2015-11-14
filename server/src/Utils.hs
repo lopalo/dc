@@ -1,6 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module App.Utils where
+module Utils where
 
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import qualified Control.Exception as Ex
@@ -11,7 +11,7 @@ import Control.Distributed.Process
 import Database.SQLite3 (SQLError)
 import Database.SQLite.Simple (FormatError, ResultError)
 
-import App.Debug (debug)
+import Debug (debug)
 
 type Ts = Int -- time in milliseconds
 

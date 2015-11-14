@@ -10,14 +10,14 @@ import qualified Network.WebSockets as WS
 import qualified Control.Distributed.Process.Node as Node
 import Data.Yaml (ParseException, decodeFileEither)
 
-import App.GlobalRegistry (globalRegistryProcess)
-import App.Connection (acceptConnection)
-import App.ClientCommands (inputHandler)
-import App.Area.Area (areaProcess)
-import App.DB (dbProcess)
-import App.HTTPServer (httpServer)
+import GlobalRegistry (globalRegistryProcess)
+import Connection (acceptConnection)
+import ClientCommands (inputHandler)
+import Area.Area (areaProcess)
+import DB (dbProcess)
+import HTTPServer (httpServer)
 import Admin.Admin (adminServer)
-import qualified App.Settings as S
+import qualified Settings as S
 import qualified Admin.Settings as AS
 
 

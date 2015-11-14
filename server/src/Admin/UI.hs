@@ -20,6 +20,7 @@ import Heist.Interpreted
 import qualified Admin.Settings as S
 import Admin.Common (getGlobalNames, killProcessByName, getNodeStatistic)
 
+--TODO: delete this module
 
 type Heist = HeistState ActionM
 

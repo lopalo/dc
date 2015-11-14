@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveGeneric, DeriveDataTypeable, OverloadedStrings #-}
 
-module App.User.User (userProcess) where
+module User.User (userProcess) where
 
 import GHC.Generics (Generic)
 import Data.Binary (Binary)
@@ -14,15 +14,15 @@ import Data.Aeson (ToJSON, Value, object, (.=))
 import Control.Distributed.Process hiding (reconnect)
 import Control.Distributed.Process.Extras (newTagPool)
 
-import App.Utils (logInfo, logDebug, safeReceive, milliseconds, Ts)
-import App.Types (UserPid(UserPid), UserId(UserId), UserName, AreaId)
-import App.GlobalRegistry (globalRegister, globalWhereIs)
-import qualified App.Connection as C
-import qualified App.Settings as S
-import qualified App.Area.External as AE
-import qualified App.User.External as UE
-import App.DB (putUser, getUser)
-import App.User.Types
+import Utils (logInfo, logDebug, safeReceive, milliseconds, Ts)
+import Types (UserPid(UserPid), UserId(UserId), UserName, AreaId)
+import GlobalRegistry (globalRegister, globalWhereIs)
+import qualified Connection as C
+import qualified Settings as S
+import qualified Area.External as AE
+import qualified User.External as UE
+import DB (putUser, getUser)
+import User.Types
 
 
 userArea :: User -> UE.UserArea

@@ -1,16 +1,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module App.Area.User where
+module Area.User where
 
 import Data.Maybe (fromMaybe)
 
 import Data.Aeson (Value, object, (.=))
 import Data.Lens.Strict (lens, Lens, (^-=))
 
-import App.Types (UserId, UserName)
-import qualified App.User.External as UE
-import App.Area.Types (Object(..), Destroyable(..), Pos, Angle, ObjId(UId))
-import App.Area.Action (Active(..), Action(MoveRoute, Burning),
+import Types (UserId, UserName)
+import qualified User.External as UE
+import Area.Types (Object(..), Destroyable(..), Pos, Angle, ObjId(UId))
+import Area.Action (Active(..), Action(MoveRoute, Burning),
                         moveRoute, burning)
 
 

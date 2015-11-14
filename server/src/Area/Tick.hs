@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveGeneric, DeriveDataTypeable, OverloadedStrings #-}
 
-module App.Area.Tick (handleTick, scheduleTick) where
+module Area.Tick (handleTick, scheduleTick) where
 
 import GHC.Generics (Generic)
 import Data.Binary (Binary)
@@ -17,17 +17,17 @@ import Data.Lens.Strict (Lens, access, (^$), (~=), (+=), (%=))
 import Control.Distributed.Process
 import Data.Aeson (ToJSON, Value, object, (.=))
 
-import App.Utils (milliseconds, logInfo, Ts)
-import qualified App.Settings as S
-import qualified App.Connection as C
-import App.Area.User (tickClientInfo)
-import App.Area.Action (Active(applyActions))
-import App.Area.State
-import App.Area.Signal (Signal(Appearance, Disappearance),
+import Utils (milliseconds, logInfo, Ts)
+import qualified Settings as S
+import qualified Connection as C
+import Area.User (tickClientInfo)
+import Area.Action (Active(applyActions))
+import Area.State
+import Area.Signal (Signal(Appearance, Disappearance),
                         AReason(..), DReason(..))
-import App.Area.Types (Object(..), Destroyable(..), Pos(..), ObjId(UId))
-import qualified App.Area.User as U
-import qualified App.User.External as UE
+import Area.Types (Object(..), Destroyable(..), Pos(..), ObjId(UId))
+import qualified Area.User as U
+import qualified User.External as UE
 
 
 data TimeTick = TimeTick deriving (Generic, Typeable)

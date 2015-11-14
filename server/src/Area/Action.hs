@@ -1,17 +1,17 @@
 {-# LANGUAGE DeriveGeneric #-}
 
-module App.Area.Action (Active(..), Action(..),
+module Area.Action (Active(..), Action(..),
                         moveDistance, moveRoute, burning) where
 
 import GHC.Generics (Generic)
 
 import Data.Aeson (ToJSON)
 
-import App.Utils (Ts)
-import App.Area.Utils (getIntervals)
-import App.Area.Types (Pos, Angle)
-import App.Area.Vector (Vect, angle, fromVect, toVect, mul, sub, add)
-import App.Area.Signal (Signals)
+import Utils (Ts)
+import Area.Utils (getIntervals)
+import Area.Types (Pos, Angle)
+import Area.Vector (Vect, angle, fromVect, toVect, mul, sub, add)
+import Area.Signal (Signals)
 
 
 class Active a where

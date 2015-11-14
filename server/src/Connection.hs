@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveGeneric, DeriveDataTypeable #-}
 
-module App.Connection (acceptConnection, InputHandler, Connection,
+module Connection (acceptConnection, InputHandler, Connection,
                        sendCmd, sendResponse, broadcastCmd, setUser,
                        setArea, close, monitorConnection,
                        checkMonitorNotification, sendErrorAndClose) where
@@ -17,8 +17,8 @@ import Control.Distributed.Process
 import qualified Control.Distributed.Process.Node as Node
 import qualified Network.WebSockets as WS
 
-import App.Types (RequestNumber, UserPid(..), AreaPid)
-import App.Utils (evaluate, logDebug)
+import Types (RequestNumber, UserPid(..), AreaPid)
+import Utils (evaluate, logDebug)
 
 
 data Connection = Connection {output :: ProcessId, input :: ProcessId}

@@ -26,3 +26,6 @@ getNodeStats node = do
                    "monitors" .= nodeStatsMonitors stats,
                    "links" .= nodeStatsLinks stats,
                    "processes" .= nodeStatsProcesses stats]
+
+
+--TOOD: rename module

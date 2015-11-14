@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveGeneric, DeriveDataTypeable #-}
 
-module App.User.Types where
+module User.Types where
 
 import GHC.Generics (Generic)
 import Data.Binary (Binary)
@@ -12,7 +12,7 @@ import Control.Monad (liftM4)
 
 import Database.SQLite.Simple (FromRow(fromRow), ToRow(toRow), field)
 
-import App.Types (UserId(..), UserName, AreaId)
+import Types (UserId(..), UserName, AreaId)
 
 
 data User = User {userId :: !UserId,

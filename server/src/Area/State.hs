@@ -1,5 +1,5 @@
 
-module App.Area.State where
+module Area.State where
 
 import Prelude hiding ((.))
 import Control.Category ((.))
@@ -9,11 +9,11 @@ import qualified Data.Map.Strict as M
 
 import Data.Lens.Strict (lens, Lens, (^%=), (%=))
 
-import App.Settings (AreaSettings)
-import App.Connection (Connection)
-import App.Types (UserId, UserPid, AreaId)
-import qualified App.Area.User as U
-import App.Area.Signal (Signal, Signals)
+import Settings (AreaSettings)
+import Connection (Connection)
+import Types (UserId, UserPid, AreaId)
+import qualified Area.User as U
+import Area.Signal (Signal, Signals)
 
 
 

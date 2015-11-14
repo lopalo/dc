@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveGeneric, DeriveDataTypeable #-}
 
-module App.User.External(UserArea(..), SyncState(..), SwitchArea(..),
+module User.External(UserArea(..), SyncState(..), SwitchArea(..),
                          monitorUser, syncState, switchArea) where
 
 import GHC.Generics (Generic)
@@ -10,7 +10,7 @@ import Control.Monad (void)
 
 import Control.Distributed.Process
 
-import App.Types
+import Types
 
 data UserArea = UserArea {userId :: UserId,
                           name :: UserName,

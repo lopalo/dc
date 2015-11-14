@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveGeneric, DeriveDataTypeable #-}
 
-module App.Area.Types where
+module Area.Types where
 
 
 import GHC.Generics (Generic)
@@ -10,8 +10,8 @@ import Data.Typeable (Typeable)
 import Data.String.Utils (startswith)
 import Data.Aeson (ToJSON, toJSON, FromJSON, parseJSON)
 
-import App.Types (UserId(..), UserPid(..), AreaId, delIdPrefix)
-import qualified App.User.External as UE
+import Types (UserId(..), UserPid(..), AreaId, delIdPrefix)
+import qualified User.External as UE
 
 
 ----messages----

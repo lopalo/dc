@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module App.HTTPServer (httpServer) where
+module HTTPServer (httpServer) where
 
 import Data.List (stripPrefix)
 import Data.String.Utils (split)
@@ -11,7 +11,7 @@ import Network.Wai.Middleware.Static (staticPolicy, addBase, only,
                                       policy, (<|>), (>->))
 import Web.Scotty hiding (settings)
 
-import qualified App.Settings as S
+import qualified Settings as S
 
 
 httpServer :: S.Settings -> Process ()

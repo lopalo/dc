@@ -21,9 +21,6 @@ Executable dc
         base == 4.7.0.2,
         time == 1.4.2,
         mtl == 2.1.2,
-        either == 4.*,
-        text >= 0.11.0.0,
-        blaze-builder >= 0.3.0.0,
         bytestring == 0.10.4.0,
         ghc-prim == 0.3.1.0,
         data-lens == 2.10.5,
@@ -43,22 +40,21 @@ Executable dc
         direct-sqlite == 2.3.14,
         sqlite-simple == 0.4.8.0,
         scotty == 0.10.2,
-        wai-middleware-static == 0.7.0.1,
-        heist == 0.14.1.1
+        wai-middleware-static == 0.7.0.1
     Hs-Source-Dirs: src
     Other-Modules:
-        App.Settings,
-        App.Connection,
-        App.ClientCommands,
-        App.Types,
-        App.Utils,
-        App.Area.Area,
-        App.Area.Action,
-        App.Area.Event,
-        App.Area.State,
-        App.Area.Tick,
-        App.Area.Types,
-        App.Area.User,
-        App.Area.Utils
+        Settings,
+        Connection,
+        ClientCommands,
+        Types,
+        Utils,
+        Area.Area,
+        Area.Action,
+        Area.Event,
+        Area.State,
+        Area.Tick,
+        Area.Types,
+        Area.User,
+        Area.Utils
 
 

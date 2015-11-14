@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveGeneric, DeriveDataTypeable, OverloadedStrings #-}
 
-module App.DB (dbProcess, putUser, getUser) where
+module DB (dbProcess, putUser, getUser) where
 
 import GHC.Generics (Generic)
 import Data.Binary (Binary)
@@ -14,11 +14,11 @@ import Control.Distributed.Process.Extras.Call (callResponse, callAt)
 import Database.SQLite.Simple (Only(..), Connection, open,
                                close, query, execute)
 
-import App.GlobalRegistry (globalRegister, globalWhereIs, globalNSend)
-import App.Types (UserId(..))
-import App.Utils (safeReceive)
-import App.User.Types (User)
-import qualified App.Settings as S
+import GlobalRegistry (globalRegister, globalWhereIs, globalNSend)
+import Types (UserId(..))
+import Utils (safeReceive)
+import User.Types (User)
+import qualified Settings as S
 
 
 data GetUser = GetUser UserId deriving (Generic, Typeable)

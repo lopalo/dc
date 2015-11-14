@@ -1,17 +1,17 @@
 
-module App.Area.External (enter, clientCmd, reconnect) where
+module Area.External (enter, clientCmd, reconnect) where
 
 import Control.Applicative ((<$>))
 
 import Data.Aeson (Value, Result(Success), fromJSON)
 import Control.Distributed.Process hiding (reconnect)
 
-import App.Utils (evaluate)
-import App.Connection (Connection)
-import App.GlobalRegistry (globalNSend)
-import qualified App.User.External as UE
-import App.Types (UserId, UserPid(..), AreaId, AreaPid(..), RequestNumber)
-import App.Area.Types
+import Utils (evaluate)
+import Connection (Connection)
+import GlobalRegistry (globalNSend)
+import qualified User.External as UE
+import Types (UserId, UserPid(..), AreaId, AreaPid(..), RequestNumber)
+import Area.Types
 
 
 parseClientCmd :: String -> Value -> Result ClientCommand

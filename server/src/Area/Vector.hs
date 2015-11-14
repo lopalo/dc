@@ -1,8 +1,8 @@
 
-module App.Area.Vector where
+module Area.Vector where
 
 
-import App.Area.Types (Pos(Pos), Angle)
+import Area.Types (Pos(Pos), Angle)
 
 data Vect = Vect Float Float deriving (Show)
 

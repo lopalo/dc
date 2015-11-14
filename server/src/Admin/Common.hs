@@ -11,7 +11,7 @@ import Control.Distributed.Process.Extras (newTagPool)
 import Web.Scotty hiding (settings)
 
 
-import App.GlobalRegistry (getRegistry)
+import GlobalRegistry (getRegistry)
 
 
 type NameRecord = (String, String)

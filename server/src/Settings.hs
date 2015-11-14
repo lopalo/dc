@@ -1,14 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module App.Settings where
+module Settings where
 
 import Control.Applicative ((<$>), (<*>))
 import Control.Monad (mzero)
 
 import Data.Aeson (FromJSON(parseJSON), Value(Object), (.:))
 
-import App.Utils (Ts)
-import App.Types (AreaId)
+import Utils (Ts)
+import Types (AreaId)
 
 
 data Settings = Settings {areas :: [AreaId],
