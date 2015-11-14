@@ -33,12 +33,18 @@ define(function (require) {
             area: area,
             user: user
         });
+        var objectInfo = new ObjectInfo({
+            el: uiEl.find("#ui-object-info"),
+            model: ui,
+        });
+
         uiEl.find(".selectpicker").selectpicker();
         return {
             focusButton: focusButton,
             igniteButton: igniteButton,
             controlModeSelector: controlModeSelector,
             areaSelector: areaSelector,
+            objectInfo: objectInfo
         };
     }
 
@@ -145,10 +151,16 @@ define(function (require) {
             this.listenTo(this.model, "change:displayObjectInfo", this.render);
         },
         render: function () {
+            var el = this.$el;
             var info = this.model.get("displayObjectInfo");
-            //TODO: hide if _.isEmpty(info);
-            var selector = "#" + info.type + "-info-template";
-            var html = _.template($(selector).html())(info);
+            if (!_.isEmpty(info)) {
+                var selector = "#" + info.type + "-info-template";
+                var html = _.template($(selector).html())(info);
+                el.html(html);
+                el.collapse("show");
+            } else {
+                el.collapse("hide");
+            }
         }
     });
 

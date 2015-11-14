@@ -18,9 +18,14 @@
     right: 1%;
 }
 
-
 #ui-area {
     top: 3%;
     left: 1%;
 }
+
+#ui-object-info {
+    bottom: 1%;
+    right: 1%;
+}
+
 

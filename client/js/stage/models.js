@@ -83,6 +83,7 @@ define(["underscore", "backbone", "victor"], function(_, Backbone, Victor) {
         getInfoToDisplay: function () {
             return {
                 type: "user",
+                name: this.get("name"),
                 durability: this.get("durability"),
                 speed: this.get("speed")
             };

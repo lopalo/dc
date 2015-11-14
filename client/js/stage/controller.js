@@ -19,7 +19,7 @@ define(function (require) {
         this._area = controller.getAreaModel();
 
         this._serverTimeDiff = 0;
-        this._appearanceReasons = {}; //FIXME: remove old signals
+        this._appearanceReasons = {};
         this._disappearanceReasons = {};
         this._firstEnter = true;
 
@@ -90,6 +90,7 @@ define(function (require) {
             this._camera.move(delta);
         },
         enterArea: function () {
+            this._appearanceReasons = {};
             this._firstEnter = false;
             this._removeObject(this._controller.getUserId(), "Exit");
         },
