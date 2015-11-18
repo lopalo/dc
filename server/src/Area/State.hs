@@ -9,11 +9,11 @@ import qualified Data.Map.Strict as M
 
 import Data.Lens.Strict (lens, Lens, (^%=), (%=))
 
-import Settings (AreaSettings)
 import Connection (Connection)
 import Types (UserId, UserPid, AreaId)
 import qualified Area.User as U
 import Area.Signal (Signal, Signals)
+import Area.Settings (Settings)
 
 
 
@@ -30,7 +30,7 @@ type UserPids = M.Map UserId UserPid
 type UserPidToIds = M.Map UserPid UserId
 
 data State = State {areaId :: !AreaId,
-                    settings :: !AreaSettings,
+                    settings :: !Settings,
                     tickNumber :: !Int,
                     users :: !Users,
                     signalBuffer :: !Signals,

@@ -14,7 +14,7 @@ import Control.Distributed.Process
 import Connection (Connection, setArea)
 import GlobalRegistry (globalRegister)
 import Utils (milliseconds, safeReceive, evaluate)
-import qualified Settings as S
+import qualified Area.Settings as AS
 import Types (UserPid(..), AreaId, AreaPid(..))
 import qualified User.External as UE
 import qualified Area.User as U
@@ -32,7 +32,7 @@ import Area.Tick (handleTick, scheduleTick)
 handleEnter :: State -> (Enter, Connection) -> Process State
 handleEnter state (Enter ua userPid login, conn) = do
     let uid = UE.userId ua
-        enterPos = (S.enterPos . settings) state
+        enterPos = (AS.enterPos . settings) state
         user = U.User{U.userId=uid,
                       U.name=UE.name ua,
                       U.pos=uncurry Pos enterPos,
@@ -75,7 +75,7 @@ handleMonitorNotification state (ProcessMonitorNotification ref pid _) = do
 
 
 
-areaProcess :: S.AreaSettings -> AreaId -> Process ()
+areaProcess :: AS.Settings -> AreaId -> Process ()
 areaProcess aSettings aid = do
     let state = State{areaId=aid,
                       settings=aSettings,
@@ -89,7 +89,7 @@ areaProcess aSettings aid = do
                    userPids=M.empty,
                    userPidToIds=M.empty}
     globalRegister aid =<< getSelfPid
-    scheduleTick $ S.tickMilliseconds aSettings
+    scheduleTick $ AS.tickMilliseconds aSettings
     loop state
 
 

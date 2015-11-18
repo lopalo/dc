@@ -12,7 +12,7 @@ import Control.Distributed.Process
 import Utils (milliseconds)
 import Connection (Connection, sendResponse)
 import Types (UserId, RequestNumber)
-import qualified Settings as S
+import qualified Area.Settings as AS
 import qualified Area.User as U
 import qualified User.External as UE
 import Area.Action (Action(..))
@@ -47,7 +47,7 @@ handleClientRequest state (GetObjectsInfo ids, _) = do
         us = usersData $ users state
         getObj :: [Value] -> String -> [Value]
         getObj res ident
-            | "user-id:" `startswith` ident =
+            | "user:" `startswith` ident =
                 let ident' = read ident :: UserId
                 in case ident' `M.lookup` us of
                     Nothing -> res
@@ -69,7 +69,7 @@ handleClientCommand state (MoveAlongRoute route, conn) = do
     now <- liftIO milliseconds
     let uid = uidByConn conn state
         user = userByConn conn state
-        threshold = S.routeFilterThreshold $ settings state
+        threshold = AS.routeFilterThreshold $ settings state
         route' = filterRoute threshold (U.pos user : route)
         pathLength = sum $ map (uncurry distance) $ getIntervals route'
         dt = pathLength / (fromIntegral (U.speed user) / 1000)
@@ -95,7 +95,7 @@ handleClientCommand state (Ignite dmgSpeed, conn) = do
 handleClientCommand state (Shoot target, conn) =
     return $ addSig $ updUsr state
     where addSig = addSignal $ Shot (uidByConn conn state) target
-          damage = S.shotDamage $ settings state
+          damage = AS.shotDamage $ settings state
           updUsr = updateUser (U.durabilityL ^-= damage) target
 
 

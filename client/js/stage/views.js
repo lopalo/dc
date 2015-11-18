@@ -163,7 +163,7 @@ define(function (require) {
             var onComplete = function () {
                 container.removeChild(effectContainer);
             };
-            container.addChildAt(effectContainer, 0);
+            container.addChildAt(effectContainer, 0); //FIXME: it's not effecient
             tween.eventCallback("onComplete", onComplete);
         },
         _createContainer: function () {

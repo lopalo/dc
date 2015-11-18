@@ -146,7 +146,7 @@ define(function (require) {
                 console.log("Server time updated");
             }
             var objectModels = this._objectModels.models;
-            //TODO: use sets to improve time complexity
+            //FIXME: use sets to improve time complexity
             var idents = [];
             var unknownIdents = [];
             var excessIdents = [];

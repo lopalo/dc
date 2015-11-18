@@ -23,11 +23,10 @@ newtype UserId = UserId String deriving (Eq, Ord, Generic, Typeable)
 instance Binary UserId
 
 instance Show UserId where
-    --TODO: delete suffix -id in all idents
-    show (UserId str) = "user-id:" ++ str
+    show (UserId str) = "user:" ++ str
 
 instance Read UserId where
-    readsPrec _ str = [(UserId ("user-id" `delIdPrefix` str), "")]
+    readsPrec _ str = [(UserId ("user" `delIdPrefix` str), "")]
 
 instance ToJSON UserId where
     toJSON = toJSON . show
@@ -41,7 +40,7 @@ instance FromJSON UserId where
 newtype UserPid = UserPid ProcessId  deriving (Eq, Ord, Generic, Typeable)
 instance Binary UserPid
 
-type AreaId = String
+type AreaId = String --TODO: make it similar to UserId, but prefixed with "area:"
 
 newtype AreaPid = AreaPid ProcessId  deriving (Generic, Typeable)
 instance Binary AreaPid

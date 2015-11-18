@@ -20,3 +20,7 @@ area:
   broadcast-every-tick: 4
   log-every-tick: 100
   sync-every-tick: 100
+admin:
+  port: 10503
+  ui-dir: ../../admin
+

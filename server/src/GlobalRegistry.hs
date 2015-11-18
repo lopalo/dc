@@ -1,8 +1,8 @@
 {-# LANGUAGE DeriveGeneric, DeriveDataTypeable, OverloadedStrings #-}
 
 module GlobalRegistry (globalRegistryProcess,
-                           getRegistry, globalRegister,
-                           globalWhereIs, globalNSend) where
+                       getRegistry, globalRegister,
+                       globalWhereIs, globalNSend) where
 
 import GHC.Generics (Generic)
 import Data.Binary (Binary)

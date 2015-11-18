@@ -19,6 +19,7 @@ import Types (UserPid(UserPid), UserId(UserId), UserName, AreaId)
 import GlobalRegistry (globalRegister, globalWhereIs)
 import qualified Connection as C
 import qualified Settings as S
+import qualified User.Settings as US
 import qualified Area.External as AE
 import qualified User.External as UE
 import DB (putUser, getUser)
@@ -35,7 +36,7 @@ userArea usr =
 
 data State = State {user :: !User,
                     areas :: ![AreaId],
-                    settings :: !S.UserSettings,
+                    settings :: !US.Settings,
                     connection :: Maybe C.Connection,
                     disconnectTs :: Maybe Ts}
 
@@ -58,7 +59,7 @@ handleMonitorNotification state n@ProcessMonitorNotification{} = do
 
 handlePeriod :: State -> Period -> Process State
 handlePeriod state Period = do
-    let logoutMs = 1000 * S.logoutSeconds (settings state)
+    let logoutMs = 1000 * US.logoutSeconds (settings state)
         userName = name $ user state
     now <- liftIO milliseconds
     case disconnectTs state of
@@ -117,8 +118,8 @@ userProcess userName conn globalSettings = do
         newUser = User{userId=uid,
                        name=userName,
                        area=startArea,
-                       speed=S.speed uSettings,
-                       durability=S.initDurability uSettings}
+                       speed=US.speed uSettings,
+                       durability=US.initDurability uSettings}
         state = State{user=usr,
                       areas=S.areas globalSettings,
                       settings=uSettings,
@@ -130,7 +131,7 @@ userProcess userName conn globalSettings = do
     userPid <- makeSelfPid
     AE.enter areaId (userArea usr) userPid True conn
     logInfo $ "Login: " ++ userName
-    runPeriodic $ S.periodMilliseconds uSettings
+    runPeriodic $ US.periodMilliseconds uSettings
     loop state
 
 

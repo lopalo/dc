@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Admin.Common where
+module Admin.Utils where
 
 import qualified Data.Map.Strict as M
 import Control.Concurrent (newEmptyMVar, putMVar, takeMVar)

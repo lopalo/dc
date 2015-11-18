@@ -18,7 +18,7 @@ import Control.Distributed.Process
 import Data.Aeson (ToJSON, Value, object, (.=))
 
 import Utils (milliseconds, logInfo, Ts)
-import qualified Settings as S
+import qualified Area.Settings as AS
 import qualified Connection as C
 import Area.User (tickClientInfo)
 import Area.Action (Active(applyActions))
@@ -44,7 +44,7 @@ scheduleTick ms = do
 
 handleTick :: State -> TimeTick -> Process State
 handleTick state TimeTick = do
-    scheduleTick $ (S.tickMilliseconds . settings) state
+    scheduleTick $ (AS.tickMilliseconds . settings) state
     now <- liftIO milliseconds
     let tnum = tickNumber state
         (broadcastData, state') = runState (calculateTick now) state
@@ -52,8 +52,8 @@ handleTick state TimeTick = do
     case broadcastData of
         Just bd -> broadcastCmd state "tick" bd
         Nothing -> return ()
-    let logEveryTick = (S.logEveryTick . settings) state
-        syncEveryTick = (S.syncEveryTick . settings) state
+    let logEveryTick = (AS.logEveryTick . settings) state
+        syncEveryTick = (AS.syncEveryTick . settings) state
     --TODO: timers that are processed only inside ticks. Save the last time
     --of each timer in the state
     when (tnum `rem` logEveryTick == 0) $
@@ -68,7 +68,7 @@ calculateTick ts = do
     handleSignals
     tnum <- access tickNumberL
     tickNumberL += 1
-    broadcastEveryTick <- gets $ S.broadcastEveryTick . settings
+    broadcastEveryTick <- gets $ AS.broadcastEveryTick . settings
     let broadcast = tnum `rem` broadcastEveryTick == 0
     if broadcast
         then liftM Just (tickData ts)
@@ -122,7 +122,7 @@ handleSignals = do
 
 handleSignal :: Signal -> StateS Bool
 handleSignal (Disappearance (UId uid) Burst) = do
-    enterPos <- gets $ uncurry Pos . S.enterPos . settings
+    enterPos <- gets $ uncurry Pos . AS.enterPos . settings
     let resetUser u = u{U.pos=enterPos, U.durability=1, U.actions=[]}
     modify $ updateUser resetUser uid
     addSignalS $ Appearance uid Recovery

@@ -9,15 +9,11 @@ import Data.Aeson (FromJSON(parseJSON), Value(Object), (.:))
 
 
 data Settings = Settings {port :: Int,
-                          staticDir :: String,
-                          templateDir :: String}
+                          uiDir :: String}
 
 instance FromJSON Settings where
     parseJSON (Object v) = Settings <$>
              v .: "port" <*>
-             v .: "static-dir" <*>
-             v .: "template-dir"
+             v .: "ui-dir"
     parseJSON _ = mzero
-
---TODO: import this settings to Settings.hs
 

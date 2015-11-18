@@ -11,18 +11,17 @@ import Network.Wai.Middleware.Static (staticPolicy, addBase, policy, (>->))
 import Web.Scotty hiding (settings)
 
 import qualified Admin.Settings as S
-import Admin.API (apiHandlers)
+import Admin.ClusterHandlers (clusterHandlers)
 
 
 adminServer :: S.Settings -> LocalNode -> Process ()
 adminServer settings node = liftIO $ do
-    let staticPrefix = policy (stripPrefix "static/")
-        staticDir = S.staticDir settings
+    let uiPrefix = policy (stripPrefix "ui/")
+        uiDir = S.uiDir settings
     scotty (S.port settings) $ do
-        middleware $ staticPolicy (staticPrefix >-> addBase staticDir)
-        apiHandlers node
-        get "/" $ redirect "/ui"
-        --TODO: replace 'static' with 'ui', similar to HTTPServer.hs
+        middleware $ staticPolicy (uiPrefix >-> addBase uiDir)
+        clusterHandlers node
+        get "/" $ redirect "/ui/index.html"
 
 
 

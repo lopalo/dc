@@ -27,7 +27,7 @@ instance Active User where
         let (newPos, maybeAngle, action') = moveRoute action ts
             user' = user{pos=newPos, angle=fromMaybe oldAngle maybeAngle}
         in (user', action', [])
-    apply user action@Burning{} ts =
+    apply user action@Burning{} ts = --TODO: replace it with regeneration
         let (damage, action') = burning action ts
             user' = (durabilityL ^-= damage) user
         in (user', action', [])

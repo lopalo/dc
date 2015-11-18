@@ -53,13 +53,13 @@ data ObjId = UId UserId | AsteroidId String deriving (Eq, Ord)
 
 instance Show ObjId where
     show (UId uid) = show uid
-    show (AsteroidId ident) = "asteroid-id:" ++ ident
+    show (AsteroidId ident) = "asteroid:" ++ ident
 
 instance Read ObjId where
     readsPrec _ str
-        | "user-id:" `startswith` str = [(UId (read str), "")]
-        | "asteroid-id:" `startswith` str =
-            [(AsteroidId ("asteroid-id" `delIdPrefix` str), "")]
+        | "user:" `startswith` str = [(UId (read str), "")]
+        | "asteroid:" `startswith` str =
+            [(AsteroidId ("asteroid" `delIdPrefix` str), "")]
 
 instance ToJSON ObjId where
     toJSON = toJSON . show

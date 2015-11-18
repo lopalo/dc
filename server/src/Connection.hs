@@ -1,9 +1,9 @@
 {-# LANGUAGE DeriveGeneric, DeriveDataTypeable #-}
 
 module Connection (acceptConnection, InputHandler, Connection,
-                       sendCmd, sendResponse, broadcastCmd, setUser,
-                       setArea, close, monitorConnection,
-                       checkMonitorNotification, sendErrorAndClose) where
+                   sendCmd, sendResponse, broadcastCmd, setUser,
+                   setArea, close, monitorConnection,
+                   checkMonitorNotification, sendErrorAndClose) where
 
 import GHC.Generics (Generic)
 import Data.Binary (Binary)
