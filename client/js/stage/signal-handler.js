@@ -32,8 +32,8 @@ define(function (require) {
             graphics.drawRoundedRect(0, 0, delta.length(), 1, 0.8);
             graphics.endFill();
             graphics.x = start.x;
-            graphics.y = start.y;
-            graphics.rotation = delta.angle();
+            graphics.y = -start.y;
+            graphics.rotation = -delta.angle();
 
             tween = TweenLite.to(graphics, 1, {alpha: 0});
             this._addEffect(graphics, tween);

@@ -89,8 +89,8 @@ define(function(require) {
         objectType: "user",
         defaults: function () {
             var defaults = {
-                height: 80,
-                width: 40,
+                height: 40,
+                width: 80,
             };
             return _.extend(User.__super__.defaults.call(this), defaults);
         },

@@ -84,7 +84,7 @@ define(function (require) {
         showMyself: function () {
             var self = this._getSelf();
             if (self === undefined) return;
-            this._camera.focusTo(Victor.fromArray(self.get("pos")));
+            this._camera.focusTo(Victor.fromArray(self.get("pos")).invertY());
         },
         moveCamera: function (delta) {
             this._camera.move(delta);
@@ -117,6 +117,8 @@ define(function (require) {
             this._midgroundLayers = [
                 new stageViews.Midground({camera: camera,
                                           parallaxIndex: 0.3}),
+                new stageViews.Midground({camera: camera,
+                                          parallaxIndex: 0.7}),
             ];
             _.each(this._midgroundLayers, function (layer) {
                 layer.createContainer(stage);

@@ -156,7 +156,7 @@ define(function (require) {
             if (this._models.models.ui.get("controlMode") !== "move") return;
             var cameraPos = this._stageController.getCameraPos();
             var positions = _.map(this._cursorPath, function (pos) {
-                return pos.add(cameraPos).toArray();
+                return pos.add(cameraPos).invertY().toArray();
             });
             if (!_.isEmpty(positions)) {
                 this._connection.send("area.move-along-route", positions);

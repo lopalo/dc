@@ -191,7 +191,7 @@ define(function (require) {
             mouseover: "_mouseOver",
             mouseout: "_mouseOut"
         },
-        texturePath: "", //TODO: use horizontal sprites
+        texturePath: "",
         showName: true,
         initialize: function (options) {
             this._model = options.model;
@@ -211,7 +211,7 @@ define(function (require) {
             StageObject.__super__.destroy.call(this);
             parent.addChild(sprite);
             sprite.x = pos.x;
-            sprite.y = pos.y;
+            sprite.y = -pos.y;
             tween = this._disappearanceEffect(reason, sprite);
             tween.eventCallback("onComplete", onComplete);
         },
@@ -236,7 +236,7 @@ define(function (require) {
                 text = new pixi.Text(name, {fill: this._getTextColor(),
                                             font: "14px Arial"});
                 text.anchor.x = text.anchor.y = 0.5;
-                text.y = -height / 1.5;
+                text.y = -(height / 2 + 15);
                 container.addChild(text);
             }
             this._update();
@@ -247,11 +247,11 @@ define(function (require) {
             var container = this._container;
             var pos = Victor.fromArray(model.get("pos"));
             container.x = pos.x;
-            container.y = pos.y;
+            container.y = -pos.y;
             this._sprite.rotation = this._getRotation();
         },
         _getRotation: function () {
-            return (this._model.get("angle") - 90) * (Math.PI / 180); //TODO: use horizontal sprites
+            return -this._model.get("angle") * (Math.PI / 180);
         },
         _getTextColor: function () {
             return "white";
@@ -315,12 +315,11 @@ define(function (require) {
                     tween = TweenLite.to(sprite, 1, toProps);
                     break;
                 case "Entry":
-                    sprite.width = 0.01 * width;
-                    sprite.height = 50 * height;
+                    sprite.width = 50 * width;
+                    sprite.height = 0.01 * height;
                     tween = TweenLite.to(sprite, 0.5,
                                         {width: width, height: height});
                     break;
-
                 case "Recovery":
                     tween = User.__super__._appearanceEffect.call(this);
                     break;
@@ -345,7 +344,7 @@ define(function (require) {
                     tween = TweenLite.to(sprite, 0.5, toProps);
                     break;
                 case "Exit":
-                    toProps = {width: 0.01 * width, height: 50 * height};
+                    toProps = {width: 50 * width, height: 0.01 * height};
                     tween = TweenLite.to(sprite, 0.5, toProps);
                     break;
                 case "LogOut":
