@@ -1,8 +1,15 @@
 
-define(["underscore", "backbone", "victor"], function(_, Backbone, Victor) {
+define(function(require) {
+    var _ = require("underscore");
+    var Backbone = require("backbone");
+    var Victor = require("victor");
+    var utils = require("utils");
+
     var Camera;
     var StageObject;
     var User;
+    var Gate;
+    var Asteroid;
 
     Camera = Backbone.Model.extend({
         defaults: {
@@ -23,19 +30,23 @@ define(["underscore", "backbone", "victor"], function(_, Backbone, Victor) {
 
 
     StageObject = Backbone.Model.extend({
-        proxyMethods: [
-            "getInfoToDisplay"
+        objectType: "nothing",
+        proxyAttributes: [
+            "objectType",
+            "getInfoForUI"
         ],
         defaults: function () {
             return {
                 id: "",
+                name: "",
                 pos: [0, 0],
-                height: 80,
-                width: 40,
-                angle: 0
+                angle: 0,
+                height: 50,
+                width: 50,
+                actions: []
             };
         },
-        getInfoToDisplay: function () {
+        getInfoForUI: function () {
             return {};
         },
         applyActions: function (timestamp) {
@@ -46,6 +57,8 @@ define(["underscore", "backbone", "victor"], function(_, Backbone, Victor) {
             switch (action.tag) {
                 case "MoveDistance":
                     this._applyMoveDistance(timestamp, action);
+                    break;
+                case "EternalRotation":
                     break;
                 default:
                     console.log("Unknown action " + action.tag);
@@ -73,16 +86,16 @@ define(["underscore", "backbone", "victor"], function(_, Backbone, Victor) {
 
 
     User = StageObject.extend({
+        objectType: "user",
         defaults: function () {
             var defaults = {
-                name: "",
-                actions: [],
+                height: 80,
+                width: 40,
             };
-            return _.extend(defaults, User.__super__.defaults.call(this));
+            return _.extend(User.__super__.defaults.call(this), defaults);
         },
-        getInfoToDisplay: function () {
+        getInfoForUI: function () {
             return {
-                type: "user",
                 name: this.get("name"),
                 durability: this.get("durability"),
                 speed: this.get("speed")
@@ -124,8 +137,55 @@ define(["underscore", "backbone", "victor"], function(_, Backbone, Victor) {
             this.set(res);
         },
     });
+
+
+    Gate = StageObject.extend({
+        objectType: "gate",
+        defaults: function () {
+            var defaults = {
+                height: 300, //FIXME
+                width: 300,
+            };
+            return _.extend(Gate.__super__.defaults.call(this), defaults);
+        },
+        getInfoForUI: function () {
+            return {
+                name: this.get("name"),
+            };
+        },
+    });
+
+    Asteroid = StageObject.extend({
+        objectType: "asteroid",
+        defaults: function () {
+            var size = utils.randInt(70, 200);
+            var defaults = {
+                height: size, //FIXME
+                width: size,
+            };
+            return _.extend(Asteroid.__super__.defaults.call(this), defaults);
+        },
+        getInfoForUI: function () {
+            return {
+                name: this.get("name"),
+            };
+        },
+        _applyAction: function (timestamp, action) {
+            switch (action.tag) {
+                case "MoveCircularTrajectory":
+                    break;
+                default:
+                    Asteroid.__super__._applyAction.call(this,
+                                                         timestamp, action);
+            }
+        },
+    });
+
+
     return {
         Camera: Camera,
-        User: User
+        User: User,
+        Gate: Gate,
+        Asteroid: Asteroid
     };
 });

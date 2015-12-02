@@ -15,6 +15,7 @@ import Types
 data UserArea = UserArea {userId :: UserId,
                           name :: UserName,
                           speed :: Int, --units per second
+                          maxDurability :: Int,
                           durability :: Int}
                 deriving (Generic, Typeable)
 instance Binary UserArea

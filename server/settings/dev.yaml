@@ -1,5 +1,5 @@
-areas: [alpha, beta]
-start-area: alpha
+areas: ["area:alpha", "area:beta"]
+start-area: area:alpha
 node-address: [127.0.0.1, "10500"]
 http-port: 10502
 client-dir: ../../client
@@ -13,11 +13,11 @@ user:
   logout-seconds: 10
   period-milliseconds: 1000
 area:
-  enter-pos: [100, 100]
+  enter-pos: [0, 0]
   shot-damage: 10
   route-filter-threshold: 10 #units
   tick-milliseconds: 50
-  broadcast-every-tick: 4
+  broadcast-every-tick: 1 # 4
   log-every-tick: 100
   sync-every-tick: 100
 admin:

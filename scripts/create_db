@@ -1,0 +1,63 @@
+#!/usr/bin/python
+
+import sys
+import sqlite3
+
+
+CREATE_USER = """
+    CREATE TABLE user (
+        id TEXT,
+        name TEXT,
+        area TEXT,
+        speed INTEGER,
+        max_durability INTEGER,
+        durability INTEGER,
+        PRIMARY KEY (id)
+    );
+"""
+
+CREATE_GATE = """
+    CREATE TABLE gate (
+        area TEXT,
+        id TEXT,
+        name TEXT,
+        x INTEGER,
+        y INTEGER,
+        angle REAL,
+        actions TEXT,
+        PRIMARY KEY (id)
+    );
+    CREATE INDEX gate_area_idx ON gate (area);
+"""
+
+CREATE_ASTEROID = """
+    CREATE TABLE asteroid (
+        area TEXT,
+        id TEXT,
+        name TEXT,
+        x INTEGER,
+        y INTEGER,
+        angle REAL,
+        max_durability INTEGER,
+        durability INTEGER,
+        actions TEXT,
+        PRIMARY KEY (id)
+    );
+    CREATE INDEX asteroid_area_idx ON gate (area);
+"""
+
+
+
+
+def main():
+    db_name = sys.argv[1]
+    conn = sqlite3.connect(db_name)
+    cur = conn.cursor()
+    cur.executescript(CREATE_USER)
+    cur.executescript(CREATE_GATE)
+    cur.executescript(CREATE_ASTEROID)
+
+
+
+if __name__ == "__main__":
+    main()

@@ -18,7 +18,7 @@ import Control.Distributed.Process.Extras.Call (callResponse, callAt)
 
 import Utils (safeReceive)
 
-
+--TODO: use Data.Trie for fetching by prefix
 type Registry = M.Map ProcessId String
 
 

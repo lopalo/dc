@@ -10,21 +10,23 @@ import qualified Data.Map.Strict as M
 import Data.Aeson (object, (.=))
 import Data.Lens.Strict ((^$), (^%=))
 import Control.Distributed.Process
+import Control.Distributed.Process.Extras (newTagPool)
 
 import Connection (Connection, setArea)
 import GlobalRegistry (globalRegister)
-import Utils (milliseconds, safeReceive, evaluate)
+import DB (getAreaObjects)
+import Utils (milliseconds, safeReceive, evaluate, logError)
 import qualified Area.Settings as AS
 import Types (UserPid(..), AreaId, AreaPid(..))
 import qualified User.External as UE
-import qualified Area.User as U
+import qualified Area.Objects.User as U
 import Area.Utils (sendCmd)
 import Area.Types
 import Area.State
 import Area.ClientCommands
 import Area.Signal (Signal(Appearance, Disappearance),
-                        AReason(LogIn, Entry),
-                        DReason(LogOut))
+                    AReason(LogIn, Entry),
+                    DReason(LogOut))
 import Area.Tick (handleTick, scheduleTick)
 
 
@@ -38,6 +40,7 @@ handleEnter state (Enter ua userPid login, conn) = do
                       U.pos=uncurry Pos enterPos,
                       U.angle=0,
                       U.speed=UE.speed ua,
+                      U.maxDurability=UE.maxDurability ua,
                       U.durability=UE.durability ua,
                       U.actions=[]}
         addUsr = usersL ^%= addUser uid conn userPid user
@@ -77,10 +80,22 @@ handleMonitorNotification state (ProcessMonitorNotification ref pid _) = do
 
 areaProcess :: AS.Settings -> AreaId -> Process ()
 areaProcess aSettings aid = do
+    globalRegister (show aid) =<< getSelfPid
+    res <- getAreaObjects aid =<< newTagPool
+    objects <- case res of
+        Just objects -> return objects
+        Nothing -> do
+            logError $ "Cannot load " ++ show aid
+            terminate
+            return ([], [])
+    now <- liftIO milliseconds
     let state = State{areaId=aid,
                       settings=aSettings,
                       tickNumber=0,
+                      previousTs=now,
                       users=us,
+                      gates=fromList $ fst objects,
+                      asteroids=fromList $ snd objects,
                       signalBuffer=[],
                       signalsForBroadcast=[]}
         us = Users{connections=M.empty,
@@ -88,7 +103,8 @@ areaProcess aSettings aid = do
                    connToIds=M.empty,
                    userPids=M.empty,
                    userPidToIds=M.empty}
-    globalRegister aid =<< getSelfPid
+        fromList :: Object o => [o] -> M.Map ObjId o
+        fromList = M.fromList . map (\o -> (objId o, o))
     scheduleTick $ AS.tickMilliseconds aSettings
     loop state
 

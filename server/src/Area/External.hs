@@ -19,13 +19,13 @@ parseClientCmd "echo" body = Echo <$> fromJSON body
 parseClientCmd "enter-area" body = EnterArea <$> fromJSON body
 parseClientCmd "get-objects-info" body = GetObjectsInfo <$> fromJSON body
 parseClientCmd "move-along-route" body = MoveAlongRoute <$> fromJSON body
-parseClientCmd "ignite" body = Ignite <$> fromJSON body
+parseClientCmd "recover" body = Recover <$> fromJSON body
 parseClientCmd "shoot" body = Shoot <$> fromJSON body
 
 
 enter :: AreaId -> UE.UserArea -> UserPid -> Bool -> Connection -> Process ()
 enter aid userArea userPid login conn =
-    globalNSend aid (Enter userArea userPid login, conn)
+    globalNSend (show aid) (Enter userArea userPid login, conn)
 
 
 clientCmd :: AreaPid -> String -> Value -> RequestNumber ->
@@ -40,5 +40,5 @@ clientCmd (AreaPid pid) cmd body req conn = do
 
 reconnect :: AreaId -> UserId -> Connection -> Process ()
 reconnect areaId userId conn =
-    globalNSend areaId (Reconnection userId, conn)
+    globalNSend (show areaId) (Reconnection userId, conn)
 

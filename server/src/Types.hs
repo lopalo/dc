@@ -5,6 +5,7 @@ module Types where
 import GHC.Generics (Generic)
 import Data.Binary (Binary)
 import Data.Typeable (Typeable)
+import Control.Applicative ((<$>))
 
 import Data.Aeson (ToJSON, toJSON, FromJSON, parseJSON)
 import Control.Distributed.Process
@@ -32,15 +33,28 @@ instance ToJSON UserId where
     toJSON = toJSON . show
 
 instance FromJSON UserId where
-    parseJSON val = do
-        str <- parseJSON val
-        return (read str)
+    parseJSON val = read <$> parseJSON val
 
 
 newtype UserPid = UserPid ProcessId  deriving (Eq, Ord, Generic, Typeable)
 instance Binary UserPid
 
-type AreaId = String --TODO: make it similar to UserId, but prefixed with "area:"
+
+newtype AreaId = AreaId String deriving (Eq, Ord, Generic, Typeable)
+instance Binary AreaId
+
+instance Show AreaId where
+    show (AreaId str) = "area:" ++ str
+
+instance Read AreaId where
+    readsPrec _ str = [(AreaId ("area" `delIdPrefix` str), "")]
+
+instance ToJSON AreaId where
+    toJSON = toJSON . show
+
+instance FromJSON AreaId where
+    parseJSON val = read <$> parseJSON val
+
 
 newtype AreaPid = AreaPid ProcessId  deriving (Generic, Typeable)
 instance Binary AreaPid

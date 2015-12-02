@@ -1,0 +1,99 @@
+#!/usr/bin/python
+
+import sys
+import random
+import sqlite3
+import json
+from math import pi, cos, sin
+
+
+ASTEROID_COUNT = 15
+ASTEROID_DURABILITY = 1000
+ASTEROID_ROTATION_SPEED = -15, 15
+ASTEROID_FIELD_RADIUS = 300, 1500
+ASTEROID_FIELD_POSITION = 100, 230
+ASTEROID_TRAJECTORY_PROBABILITY = 0.3
+
+GATE_POSITION = 100, 230
+GATE_ROTATION_SPEED = 20
+
+
+INSERT_GATE = """
+    INSERT INTO gate (area, id, name, x, y, angle, actions)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+"""
+
+INSERT_ASTEROID = """
+    INSERT INTO asteroid (area, id, name, x, y, angle,
+                          max_durability, durability, actions)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+"""
+
+def get_counter():
+    c = [0]
+    def counter():
+        c[0] += 1
+        return c[0]
+    return counter
+
+def insert_gate(cur, area_id, counter):
+    ident = "{}:{}".format(area_id, counter())
+    pos = GATE_POSITION
+    rotation = {'rotSpeed': GATE_ROTATION_SPEED,
+                'tag': "EternalRotation"}
+    params = (area_id,
+              ident,
+              "gate",
+              pos[0],
+              pos[1],
+              random.randint(0, 360),
+              json.dumps([rotation]))
+    cur.execute(INSERT_GATE, params)
+
+def insert_asteroids(cur, area_id, counter):
+    c_pos = ASTEROID_FIELD_POSITION
+    params_list = []
+    for _ in xrange(ASTEROID_COUNT):
+        ident = "{}:{}".format(area_id, counter())
+        len_ = random.uniform(*ASTEROID_FIELD_RADIUS)
+        angle = random.uniform(-pi, pi)
+        pos = c_pos[0] + len_ * cos(angle), c_pos[1] + len_ * sin(angle)
+
+        rotation = {'rotSpeed': random.randint(*ASTEROID_ROTATION_SPEED),
+                    'tag': "EternalRotation"}
+        trajectory = {'center': pos,
+                      'radius': max(ASTEROID_FIELD_RADIUS),
+                      'rotSpeed': random.randint(*ASTEROID_ROTATION_SPEED),
+                      'curAngle': random.randint(0, 360),
+                      'tag': "MoveCircularTrajectory"}
+        actions = []
+        actions.append(rotation)
+        if random.random() < ASTEROID_TRAJECTORY_PROBABILITY:
+            actions.append(trajectory)
+        params_list.append((area_id,
+                            ident,
+                            "asteroid",
+                            int(pos[0]),
+                            int(pos[1]),
+                            random.randint(0, 360),
+                            ASTEROID_DURABILITY,
+                            ASTEROID_DURABILITY,
+                            json.dumps(actions)))
+    cur.executemany(INSERT_ASTEROID, params_list)
+
+
+def main():
+    db_name = sys.argv[1]
+    area_id = sys.argv[2]
+    conn = sqlite3.connect(db_name)
+    cur = conn.cursor()
+    counter = get_counter()
+    insert_gate(cur, area_id, counter)
+    insert_asteroids(cur, area_id, counter)
+    conn.commit()
+
+
+
+if __name__ == "__main__":
+    main()
+

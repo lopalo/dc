@@ -20,13 +20,12 @@ import Data.Aeson (ToJSON, Value, object, (.=))
 import Utils (milliseconds, logInfo, Ts)
 import qualified Area.Settings as AS
 import qualified Connection as C
-import Area.User (tickClientInfo)
-import Area.Action (Active(applyActions))
+import Area.Action (Active(applyActions), Time(..))
 import Area.State
 import Area.Signal (Signal(Appearance, Disappearance),
                         AReason(..), DReason(..))
 import Area.Types (Object(..), Destroyable(..), Pos(..), ObjId(UId))
-import qualified Area.User as U
+import qualified Area.Objects.User as U
 import qualified User.External as UE
 
 
@@ -57,7 +56,7 @@ handleTick state TimeTick = do
     --TODO: timers that are processed only inside ticks. Save the last time
     --of each timer in the state
     when (tnum `rem` logEveryTick == 0) $
-        logInfo $ printf "Tick %d of the area '%s'" tnum aid
+        logInfo $ printf "Tick %d of the '%s'" tnum $ show aid
     when (tnum `rem` syncEveryTick == 0) (syncUsers state)
     return state'
 
@@ -76,6 +75,8 @@ calculateTick ts = do
 
 handleActions :: Ts -> StateS ()
 handleActions ts = do
+    pts <- gets previousTs
+    modify $ \s -> s{previousTs=ts}
     let handleActive :: (Ord a, Active b) => Lens State (M.Map a b) -> StateS ()
         handleActive lens = do
             actives <- access lens
@@ -87,13 +88,15 @@ handleActions ts = do
             signalsL ~= signals'
             return ()
         handle ident active (res, signals) =
-            let (active', newSignals) = applyActions ts active
+            let (active', newSignals) = applyActions time active
                 res' = M.insert ident active' res
             --TODO: use Writer monad with Set as Monoid;
             --      use foldM, toAscList, fromAscList
             in (res', newSignals ++ signals)
+        time = Time{timestamp=ts, timeDelta=ts - pts}
     handleActive $ usersL >>> usersDataL
-    --TODO: update other active objects
+    handleActive gatesL
+    handleActive asteroidsL
 
 checkDurability :: StateS ()
 checkDurability =
@@ -102,7 +105,7 @@ checkDurability =
         usersL' = usersL >>> usersDataL
         check :: Destroyable b => b -> StateS ()
         check obj =
-            when (objDurability obj <= 0) $
+            when (getDurability obj <= 0) $
                 addSignalS $ Disappearance (objId obj) Burst
 
 
@@ -116,18 +119,20 @@ handleSignals = do
     return ()
     where
         handle res signal = do
-            sendSignal <- handleSignal signal
-            return $ if sendSignal then signal : res else res
+            maybeSendSignal <- handleSignal signal
+            return $ case maybeSendSignal of
+                Nothing -> res
+                Just signal' -> signal' : res
 
 
-handleSignal :: Signal -> StateS Bool
-handleSignal (Disappearance (UId uid) Burst) = do
+handleSignal :: Signal -> StateS (Maybe Signal)
+handleSignal signal@(Disappearance (UId uid) Burst) = do
     enterPos <- gets $ uncurry Pos . AS.enterPos . settings
     let resetUser u = u{U.pos=enterPos, U.durability=1, U.actions=[]}
     modify $ updateUser resetUser uid
     addSignalS $ Appearance uid Recovery
-    return True
-handleSignal _ = return True
+    return $ Just signal
+handleSignal signal = return $ Just signal
 
 
 tickData :: Ts -> StateS Value
@@ -136,11 +141,16 @@ tickData ts = do
     signals <- access signalsForBroadcastL
     signalsForBroadcastL ~= []
     usd <- gets $ usersData . users
+    gs <- gets gates
+    as <- gets asteroids
     let res = object ["areaId" .= aid,
-                      "objects" .= usersInfo,
+                      "objects" .= objects,
                       "signals" .= signals,
                       "timestamp" .= ts]
         usersInfo = map tickClientInfo $ M.elems usd
+        gatesInfo = map tickClientInfo $ M.elems gs
+        asteroidsInfo = map tickClientInfo $ M.elems as
+        objects = usersInfo ++ gatesInfo ++ asteroidsInfo
     return res
 
 

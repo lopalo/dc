@@ -203,6 +203,12 @@ define(function (require) {
                 case "User":
                     model = new stageModels.User(data);
                     break;
+                case "Gate":
+                    model = new stageModels.Gate(data);
+                    break;
+                case "Asteroid":
+                    model = new stageModels.Asteroid(data);
+                    break;
                 default:
                     throw "No model for type " + data.tag;
             }
@@ -221,6 +227,12 @@ define(function (require) {
                         isSelf: isSelf,
                     });
                     break;
+                case "Gate":
+                    view = new stageViews.Gate({model: roModel});
+                    break;
+                case "Asteroid":
+                    view = new stageViews.Asteroid({model: roModel});
+                    break;
                 default:
                     throw "No view for type " + data.tag;
             }
@@ -233,9 +245,11 @@ define(function (require) {
         },
         _removeObject: function (ident, reason) {
             var view = this._objectViews[ident];
+            var roModel = this.getObjectModel(ident);
             reason = reason || this._disappearanceReasons[ident];
             this.stopListening(view);
             this._controller.stopListening(view);
+            this._controller.stopListening(roModel);
             view.destroy(reason);
             this._objectModels.cleanup(ident);
             delete this._objectViews[ident];

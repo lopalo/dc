@@ -10,8 +10,12 @@ import qualified Data.Map.Strict as M
 import Data.Lens.Strict (lens, Lens, (^%=), (%=))
 
 import Connection (Connection)
+import Utils (Ts)
 import Types (UserId, UserPid, AreaId)
-import qualified Area.User as U
+import Area.Types (ObjId)
+import qualified Area.Objects.User as U
+import qualified Area.Objects.Gate as G
+import qualified Area.Objects.Asteroid as A
 import Area.Signal (Signal, Signals)
 import Area.Settings (Settings)
 
@@ -29,10 +33,16 @@ type ConnToIds = M.Map Connection UserId
 type UserPids = M.Map UserId UserPid
 type UserPidToIds = M.Map UserPid UserId
 
+type Gates = M.Map ObjId G.Gate
+type Asteroids = M.Map ObjId A.Asteroid
+
 data State = State {areaId :: !AreaId,
                     settings :: !Settings,
                     tickNumber :: !Int,
+                    previousTs :: !Ts,
                     users :: !Users,
+                    gates :: !Gates,
+                    asteroids :: !Asteroids,
                     signalBuffer :: !Signals,
                     signalsForBroadcast :: !Signals}
 
@@ -61,15 +71,6 @@ userPidToIdsL :: Lens Users UserPidToIds
 userPidToIdsL = lens userPidToIds (\v us -> us{userPidToIds=v})
 
 
-signalsL :: Lens State Signals
-signalsL = lens signalBuffer (\v s -> s{signalBuffer=v})
-
-signalsForBroadcastL :: Lens State Signals
-signalsForBroadcastL = lens signalsForBroadcast
-                            (\v s -> s{signalsForBroadcast=v})
-
-
-
 addUser :: UserId -> Connection -> UserPid -> U.User -> Users -> Users
 addUser uid conn userPid user = (usersDataL ^%= M.insert uid user)
                               . (connToIdsL ^%= M.insert conn uid)
@@ -91,6 +92,22 @@ deleteUser uid us = fun us
               . (connToIdsL ^%= M.delete conn)
               . (userPidsL ^%= M.delete uid)
               . (userPidToIdsL ^%= M.delete pid)
+
+
+gatesL :: Lens State Gates
+gatesL = lens gates (\v s -> s{gates=v})
+
+
+asteroidsL :: Lens State Asteroids
+asteroidsL = lens asteroids (\v s -> s{asteroids=v})
+
+
+signalsL :: Lens State Signals
+signalsL = lens signalBuffer (\v s -> s{signalBuffer=v})
+
+signalsForBroadcastL :: Lens State Signals
+signalsForBroadcastL = lens signalsForBroadcast
+                            (\v s -> s{signalsForBroadcast=v})
 
 
 addSignal :: Signal -> State -> State

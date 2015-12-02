@@ -6,9 +6,11 @@ define(["underscore", "backbone"], function (_, Backbone) {
     function ReadOnlyProxy(model) {
         this._model = model;
         this.listenTo(model, "all", this._proxyEvent);
-        if (model.proxyMethods) {
-            _.each(model.proxyMethods, function (method) {
-                this[method] = model[method].bind(model);
+        if (model.proxyAttributes) {
+            _.each(model.proxyAttributes, function (method) {
+                var attr = model[method];
+                if (_.isFunction(attr)) attr = attr.bind(model);
+                this[method] = attr;
             }, this);
         }
     }

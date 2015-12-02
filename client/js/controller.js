@@ -1,6 +1,5 @@
 
 define(function (require) {
-    var $ = require("jquery");
     var _ = require("underscore");
     var Backbone = require("backbone");
     var Victor = require("victor");
@@ -24,6 +23,7 @@ define(function (require) {
 
         this._cursorPos = null;
         this._cursorPath = [];
+        this._selectedStageObjectId = null;
 
     }
     Controller.prototype = Object.create(Backbone.Events);
@@ -56,12 +56,14 @@ define(function (require) {
             this._stageController.destroy();
         },
         listenToStageBackground: function (bg) {
+            this.listenTo(bg, "click", this._backgroundClick);
             this.listenTo(bg, "mouseDown", this._backgroundMouseDown);
             this.listenTo(bg, "mouseUp", this._backgroundMouseUp);
             this.listenTo(bg, "mouseMove", this._backgroundMouseMove);
         },
         listenToStageObjectView: function (view) {
             this.listenTo(view, "click", this._stageObjectViewClick);
+            this.listenTo(view, "mouseUp", this._stageObjectViewMouseUp);
             this.listenTo(view, "mouseOver", this._stageObjectViewMouseOver);
             this.listenTo(view, "mouseOut", this._stageObjectViewMouseOut);
         },
@@ -79,7 +81,7 @@ define(function (require) {
         },
         _listenToUI: function (uiViews) {
             this.listenTo(uiViews.focusButton, "click", this._showMyself);
-            this.listenTo(uiViews.igniteButton, "click", this._ignite);
+            this.listenTo(uiViews.recoverButton, "click", this._recover);
             this.listenTo(uiViews.areaSelector, "select", this._enterArea);
             this.listenTo(uiViews.controlModeSelector, "select",
                                         this._changeControlMode);
@@ -87,8 +89,8 @@ define(function (require) {
         _showMyself: function () {
             this._stageController.showMyself();
         },
-        _ignite: function () {
-            this._connection.send("area.ignite", 10);
+        _recover: function () {
+            this._connection.send("area.recover", 1);
         },
         _enterArea: function (areaId) {
             this._stageController.enterArea();
@@ -100,29 +102,34 @@ define(function (require) {
         _initArea: function (data) {
             this._models.models.area.set({
                 areaId: data.areaId,
-                background: data.areaId + ".jpg" //FIXME
+                background: data.areaId.replace("area:", "") + ".jpg" //FIXME
             });
         },
         _stageObjectViewClick: function (ident) {
+            var ui = this._models.models.ui;
             var model = this._stageController.getObjectModel(ident);
             var isUser = model.isInstanceOf(stageModels.User);
-            switch (this._models.models.ui.get("controlMode")) {
+            switch (ui.get("controlMode")) {
                 case "shot":
                     if (isUser && !this.isSelf(ident)) {
                         this._connection.send("area.shoot", ident);
                     }
                     break;
+                case "view":
+                    this._selectStageObject(ident);
+                    break;
             }
         },
+        _stageObjectViewMouseUp: function (ident) {
+        },
         _stageObjectViewMouseOver: function (ident) {
-            var ui = this._models.models.ui;
-            var model;
-            if (ui.get("controlMode") !== "view") return;
-            model = this._stageController.getObjectModel(ident);
-            ui.set("displayObjectInfo", model.getInfoToDisplay());
+            this._cursorPos = null;
         },
         _stageObjectViewMouseOut: function () {
-            this._models.models.ui.set("displayObjectInfo", {});
+        },
+        _backgroundClick: function () {
+            this._unselectStageObject();
+
         },
         _backgroundMouseDown: function () {
             this._cursorPos = null;
@@ -156,6 +163,28 @@ define(function (require) {
             }
             this._cursorPath = [];
         },
+        _selectStageObject: function (ident) {
+            var model = this._stageController.getObjectModel(ident);
+            var ui = this._models.models.ui;
+            this._unselectStageObject();
+            ui.set("selectedObjectType", model.objectType);
+            ui.set("selectedObjectInfo", model.getInfoForUI());
+            this.listenTo(model, "change", this._selectedStageObjectChanged);
+            this._selectedStageObjectId = ident;
+        },
+        _selectedStageObjectChanged: function (model) {
+            var ui = this._models.models.ui;
+            ui.set("selectedObjectInfo", model.getInfoForUI());
+        },
+        _unselectStageObject: function () {
+            var ident = this._selectedStageObjectId;
+            var model = this._stageController.getObjectModel(ident);
+            var ui = this._models.models.ui;
+            ui.set("selectedObjectType", "nothing");
+            ui.set("selectedObjectInfo", {});
+            this.stopListening(model, "change");
+            this._selectedStageObjectId = null;
+        }
     });
     return Controller;
 });

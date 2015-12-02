@@ -3,14 +3,9 @@
     position: absolute;
 }
 
-#ui-focus-to-myself {
-    bottom: 3%;
+#ui-object-context {
+    top: 3%;
     left: 1%;
-}
-
-#ui-ignite {
-    bottom: 3%;
-    left: 6%;
 }
 
 #ui-control-mode {
@@ -18,14 +13,13 @@
     right: 1%;
 }
 
-#ui-area {
+#ui-control-mode-context{
     top: 3%;
     left: 1%;
 }
 
-#ui-object-info {
-    bottom: 1%;
-    right: 1%;
+#ui-common {
+    bottom: 3%;
+    left: 1%;
 }
-
 

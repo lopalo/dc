@@ -31,6 +31,7 @@ userArea usr =
     UE.UserArea{UE.userId=userId usr,
                 UE.name=name usr,
                 UE.speed=speed usr,
+                UE.maxDurability=maxDurability usr,
                 UE.durability=durability usr}
 
 
@@ -93,7 +94,7 @@ handleSwitchArea state (UE.SwitchArea newAreaId) = do
         conn = connection state
         oldAreaId = area usr
         usr' = usr{area=newAreaId}
-    maybeOldAreaPid <- globalWhereIs oldAreaId
+    maybeOldAreaPid <- globalWhereIs $ show oldAreaId
     case maybeOldAreaPid of
         Just pid -> unlink pid
         Nothing -> return () -- a link exception will be received later
@@ -115,11 +116,13 @@ userProcess userName conn globalSettings = do
         uSettings = S.user globalSettings
         usr = fromMaybe newUser res
         areaId = area usr
+        maxDurability = US.initDurability uSettings
         newUser = User{userId=uid,
                        name=userName,
                        area=startArea,
                        speed=US.speed uSettings,
-                       durability=US.initDurability uSettings}
+                       maxDurability=maxDurability,
+                       durability=maxDurability}
         state = State{user=usr,
                       areas=S.areas globalSettings,
                       settings=uSettings,
@@ -164,7 +167,7 @@ reconnect pid conn = send pid (Reconnection conn)
 
 tryToLinkToArea :: AreaId -> Maybe C.Connection -> Process ()
 tryToLinkToArea areaId maybeConn = do
-    maybeAreaPid <- globalWhereIs areaId
+    maybeAreaPid <- globalWhereIs $ show areaId
     case maybeAreaPid of
         Nothing -> do
             case maybeConn of

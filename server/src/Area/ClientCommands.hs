@@ -13,9 +13,9 @@ import Utils (milliseconds)
 import Connection (Connection, sendResponse)
 import Types (UserId, RequestNumber)
 import qualified Area.Settings as AS
-import qualified Area.User as U
+import qualified Area.Objects.User as U
 import qualified User.External as UE
-import Area.Action (Action(..))
+import Area.Action (Action(..), actionsL, moveAction)
 import Area.Utils (distance, getIntervals)
 import Area.Types
 import Area.State
@@ -39,19 +39,25 @@ handleClientReq state ((a, conn), req) = do
 
 handleClientRequest :: State -> (ClientCommand, Connection) -> Response
 handleClientRequest state (Echo txt, _) = do
-    let resp = areaId state ++ " echo: " ++ txt
+    let resp = show (areaId state) ++ " echo: " ++ txt
     response resp state
 
 handleClientRequest state (GetObjectsInfo ids, _) = do
     let objects = foldl getObj [] ids
         us = usersData $ users state
-        getObj :: [Value] -> String -> [Value]
-        getObj res ident
-            | "user:" `startswith` ident =
-                let ident' = read ident :: UserId
-                in case ident' `M.lookup` us of
-                    Nothing -> res
-                    Just user -> U.initClientInfo user : res
+        gs = gates state
+        as = asteroids state
+        getObj :: [Value] -> ObjId -> [Value]
+        getObj res objId =
+            let get ident objs =
+                    case ident `M.lookup` objs of
+                        Nothing -> res
+                        Just obj -> initClientInfo obj : res
+            in
+                case objId of
+                    (UId uid) -> get uid us
+                    gid@(GateId _) -> get gid gs
+                    aid@(AsteroidId _) -> get aid as
     response objects state
 
 
@@ -78,25 +84,24 @@ handleClientCommand state (MoveAlongRoute route, conn) = do
         action = MoveRoute{startTs=now,
                            endTs=now + round dt,
                            positions=route'}
-        replace MoveRoute{} = True
-        replace Rotation{} = True
-        replace _ = False
-        updActions = replaceUserAction uid replace action
+        updActions = replaceUserAction uid moveAction action
     return $ updActions state
 
 
-handleClientCommand state (Ignite dmgSpeed, conn) = do
+handleClientCommand state (Recover recSpeed, conn) = do
     now <- liftIO milliseconds
     let uid = uidByConn conn state
-        action = Burning{previousTs=now,
-                         damageSpeed=dmgSpeed}
-    return $ addUserAction uid action state
+        action = Recovery{durabilityAccum=0,
+                          recoverySpeed=recSpeed}
+        replace Recovery{} = True
+        replace _ = False
+    return $ replaceUserAction uid replace action state
 
 handleClientCommand state (Shoot target, conn) =
     return $ addSig $ updUsr state
     where addSig = addSignal $ Shot (uidByConn conn state) target
           damage = AS.shotDamage $ settings state
-          updUsr = updateUser (U.durabilityL ^-= damage) target
+          updUsr = updateUser (durabilityL ^-= damage) target
 
 
 userByConn :: Connection -> State -> U.User
@@ -107,7 +112,7 @@ uidByConn conn state = (connToIds . users) state M.! conn
 
 
 updateUserActions :: ([Action] -> [Action]) -> UserId -> State -> State
-updateUserActions f = updateUser (U.actionsL ^%= f)
+updateUserActions f = updateUser (actionsL ^%= f)
 
 addUserAction :: UserId -> Action -> State -> State
 addUserAction uid action = updateUserActions (action :) uid

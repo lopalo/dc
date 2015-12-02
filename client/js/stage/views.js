@@ -13,6 +13,9 @@ define(function (require) {
     var Midground;
     var StageObject;
     var User;
+    var Gate;
+    var Asteroid;
+
 
     function StageView(options) {
         this.cid = _.uniqueId('view');
@@ -66,6 +69,7 @@ define(function (require) {
 
     Background = StageView.extend({
         events: {
+            click: "_click",
             mousedown: "_mouseDown",
             mouseup: "_mouseUp",
             mousemove: "_mouseMove"
@@ -101,15 +105,18 @@ define(function (require) {
             this._container.texture = pixi.Texture.fromImage(bg);
             this.resize();
         },
+        _click: function () {
+            this.trigger("click");
+        },
         _mouseDown: function () {
             this.trigger("mouseDown");
         },
         _mouseUp: function () {
             this.trigger("mouseUp");
         },
-        _mouseMove: function (data) {
-            if (data.data.originalEvent.which !== 1) return;
-            this.trigger("mouseMove", Victor.fromObject(data.data.global));
+        _mouseMove: function (ev) {
+            if (ev.data.originalEvent.which !== 1) return;
+            this.trigger("mouseMove", Victor.fromObject(ev.data.global));
         }
     });
 
@@ -180,10 +187,12 @@ define(function (require) {
     StageObject = StageView.extend({
         events: {
             click: "_click",
+            mouseup: "_mouseUp",
             mouseover: "_mouseOver",
             mouseout: "_mouseOut"
         },
-        texturePath: "",
+        texturePath: "", //TODO: use horizontal sprites
+        showName: true,
         initialize: function (options) {
             this._model = options.model;
             this._sprite = null;
@@ -223,7 +232,7 @@ define(function (require) {
             sprite.height = height;
             sprite.anchor.x = sprite.anchor.y = 0.5;
             sprite.interactive = true;
-            if (name) {
+            if (name && this.showName) {
                 text = new pixi.Text(name, {fill: this._getTextColor(),
                                             font: "14px Arial"});
                 text.anchor.x = text.anchor.y = 0.5;
@@ -242,7 +251,7 @@ define(function (require) {
             this._sprite.rotation = this._getRotation();
         },
         _getRotation: function () {
-            return (this._model.get("angle") - 90) * (Math.PI / 180);
+            return (this._model.get("angle") - 90) * (Math.PI / 180); //TODO: use horizontal sprites
         },
         _getTextColor: function () {
             return "white";
@@ -256,6 +265,9 @@ define(function (require) {
         },
         _click: function () {
             this.trigger("click", this._model.get("id"));
+        },
+        _mouseUp: function () {
+            this.trigger("mouseUp", this._model.get("id"));
         },
         _mouseOver: function () {
             this.trigger("mouseOver", this._model.get("id"));
@@ -354,13 +366,23 @@ define(function (require) {
 
     });
 
+    Gate = StageObject.extend({
+        texturePath: "img/gate.png",
+    });
+
+    Asteroid = StageObject.extend({
+        texturePath: "img/asteroid.png",
+        showName: false
+    });
 
 
     return {
         Background: Background,
         Midground: Midground,
         ObjectLayer: ObjectLayer,
-        User: User
+        User: User,
+        Gate: Gate,
+        Asteroid: Asteroid
     };
 
 });

@@ -10,6 +10,9 @@ data Vect = Vect Float Float deriving (Show)
 degrees :: Float -> Float
 degrees = (/ pi) . (* 180)
 
+radians :: Float -> Float
+radians = (pi *) . (/ 180)
+
 
 add :: Vect -> Vect -> Vect
 add(Vect x y) (Vect x' y') = Vect (x + x') (y + y')
@@ -41,3 +44,9 @@ toVect (Pos x y) = Vect (fromIntegral x) (fromIntegral y)
 fromVect :: Vect -> Pos
 fromVect (Vect x y) = Pos (round x) (round y)
 
+fromLenAndAngle :: Float -> Angle -> Vect
+fromLenAndAngle length degr =
+    let rad = radians degr
+        x = length * cos rad
+        y = length * sin rad
+    in Vect x y

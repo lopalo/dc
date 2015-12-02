@@ -19,8 +19,8 @@ define(function (require) {
             el: uiEl.find("#ui-focus-to-myself"),
             model: ui,
         });
-        var igniteButton = new Button({
-            el: uiEl.find("#ui-ignite"),
+        var recoverButton = new Button({
+            el: uiEl.find("#ui-recover"),
             model: ui,
         });
         var controlModeSelector = new SelectControlMode({
@@ -41,7 +41,7 @@ define(function (require) {
         uiEl.find(".selectpicker").selectpicker();
         return {
             focusButton: focusButton,
-            igniteButton: igniteButton,
+            recoverButton: recoverButton,
             controlModeSelector: controlModeSelector,
             areaSelector: areaSelector,
             objectInfo: objectInfo
@@ -55,7 +55,8 @@ define(function (require) {
             return {
                 controlModes: this.controlModes,
                 controlMode: this.controlModes[1],
-                displayObjectInfo: {}
+                selectedObjectType: "nothing",
+                selectedObjectInfo: {}
             };
         }
     });
@@ -121,20 +122,30 @@ define(function (require) {
         events: {
             change: "change",
         },
-        template: _.template("<option value='<%= v %>'><%= v %></option>"),
+        template: _.template("<option value='<%= v %>'><%= n %></option>"),
         initialize: function (options) {
             SelectArea.__super__.initialize.call(this);
             this.area = options.area;
             this.user = options.user;
             this.listenTo(this.area, "change:areaId", this.render);
             this.listenTo(this.user, "change:areas", this.render);
+            this.listenTo(this.model, "change:selectedObjectType", this.render);
             this.render();
         },
         render: function () {
             var el = this.$el;
+            if (this.model.get("selectedObjectType") === "gate") {
+                el.parent().show();
+            } else {
+                el.parent().hide();
+                return;
+            }
             el.empty();
-            _.each(this.user.get("areas"), function (areaId) {
-                el.append(this.template({v: areaId}));
+            _.each(this.user.get("areas"), function (aid) {
+                el.append(this.template({
+                    v: aid,
+                    n: aid.replace("area:", "")
+                }));
             }, this);
             this.$el.val(this.area.get("areaId"));
             this.$el.selectpicker("refresh");
@@ -148,18 +159,20 @@ define(function (require) {
     ObjectInfo = UIView.extend({
         initialize: function () {
             ObjectInfo.__super__.initialize.call(this);
-            this.listenTo(this.model, "change:displayObjectInfo", this.render);
+            this.listenTo(this.model, "change:selectedObjectInfo", this.render);
         },
         render: function () {
             var el = this.$el;
-            var info = this.model.get("displayObjectInfo");
+            var type = this.model.get("selectedObjectType");
+            var info = this.model.get("selectedObjectInfo");
             if (!_.isEmpty(info)) {
-                var selector = "#" + info.type + "-info-template";
-                var html = _.template($(selector).html())(info);
-                el.html(html);
-                el.collapse("show");
+                var tmpl = $("#" + type + "-info-template");
+                if (tmpl) {
+                    el.html(_.template(tmpl.html())(info));
+                    el.show();
+                }
             } else {
-                el.collapse("hide");
+                el.hide();
             }
         }
     });

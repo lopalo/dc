@@ -8,7 +8,8 @@ import Data.Binary (Binary)
 import Data.Typeable (Typeable)
 
 import Data.String.Utils (startswith)
-import Data.Aeson (ToJSON, toJSON, FromJSON, parseJSON)
+import Data.Aeson (Value, ToJSON, toJSON, FromJSON, parseJSON)
+import Data.Lens.Strict (Lens, lens)
 
 import Types (UserId(..), UserPid(..), AreaId, delIdPrefix)
 import qualified User.External as UE
@@ -23,10 +24,10 @@ data Enter = Enter !UE.UserArea UserPid Bool deriving (Generic, Typeable)
 instance Binary Enter
 
 data ClientCommand = Echo !String
-                   | GetObjectsInfo ![String]
+                   | GetObjectsInfo ![ObjId]
                    | EnterArea !AreaId
                    | MoveAlongRoute ![Pos]
-                   | Ignite !Float
+                   | Recover !Float
                    | Shoot !UserId
                    deriving (Generic, Typeable)
 instance Binary ClientCommand
@@ -49,15 +50,21 @@ instance FromJSON Pos where
 type Angle = Float --degrees
 
 
-data ObjId = UId UserId | AsteroidId String deriving (Eq, Ord)
+data ObjId = UId UserId
+           | GateId String
+           | AsteroidId String
+           deriving (Eq, Ord, Generic, Typeable)
+instance Binary ObjId
 
 instance Show ObjId where
     show (UId uid) = show uid
+    show (GateId ident) = "gate:" ++ ident
     show (AsteroidId ident) = "asteroid:" ++ ident
 
 instance Read ObjId where
     readsPrec _ str
         | "user:" `startswith` str = [(UId (read str), "")]
+        | "gate:" `startswith` str = [(GateId ("gate" `delIdPrefix` str), "")]
         | "asteroid:" `startswith` str =
             [(AsteroidId ("asteroid" `delIdPrefix` str), "")]
 
@@ -73,6 +80,36 @@ instance FromJSON ObjId where
 class Object o where
     objId :: o -> ObjId
 
+    --TODO: size
+    getPos :: o -> Pos
+    setPos :: Pos -> o -> o
+
+    getAngle :: o -> Angle
+    setAngle :: Angle -> o -> o
+
+    initClientInfo :: o -> Value
+
+    tickClientInfo :: o -> Value
+
+    posL :: Lens o Pos
+    posL = lens getPos setPos
+
+    angleL :: Lens o Angle
+    angleL = lens getAngle setAngle
+
 
 class Object o => Destroyable o where
-    objDurability :: o -> Int
+
+    getMaxDurability :: o -> Int
+    setMaxDurability :: Int -> o -> o
+
+    getDurability :: o -> Int
+    setDurability :: Int -> o -> o
+
+    durabilityL :: Lens o Int
+    durabilityL = lens getDurability setDurability
+
+
+class Object o => Collidable o --TODO: implement
+
+
