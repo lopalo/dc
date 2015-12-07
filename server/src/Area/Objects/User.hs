@@ -5,13 +5,14 @@ module Area.Objects.User where
 import Data.Maybe (fromMaybe)
 
 import Data.Aeson (Value, object, (.=))
-import Data.Lens.Strict ((^+=), (^%=))
+import Data.Lens.Strict (Lens, lens, (^+=), (^%=))
 
-import Types (UserId, UserName)
+import Types (UserId, UserName, Size(Size))
 import qualified User.External as UE
 import Area.Types (Object(..), Destroyable(..), Pos, Angle, ObjId(UId))
 import Area.Action (Active(..), Action(MoveRoute, Recovery),
                     moveRoute, recovery, publicAction)
+import Area.Collision (Collidable(collider), Collider(Circular))
 
 
 data User = User {userId :: !UserId,
@@ -21,7 +22,11 @@ data User = User {userId :: !UserId,
                   speed :: !Int, --units per second
                   maxDurability :: !Int,
                   durability :: !Int,
-                  actions :: ![Action]}
+                  actions :: ![Action],
+                  size :: !Size,
+                  kills :: !Int,
+                  deaths :: !Int,
+                  lastAttacker :: Maybe UserId}
 
 
 instance Object User where
@@ -42,14 +47,19 @@ instance Object User where
                 "durability" .= durability user,
                 "speed" .= speed user,
                 "angle" .= angle user,
-                "pos" .= pos user]
+                "pos" .= pos user,
+                "size" .= size user,
+                "kills" .= kills user,
+                "deaths" .= deaths user]
 
     tickClientInfo user =
         object ["id" .= userId user,
                 "pos" .= pos user,
                 "angle" .= angle user,
                 "durability" .= durability user,
-                "actions" .= filter publicAction (actions user)]
+                "actions" .= filter publicAction (actions user),
+                "kills" .= kills user,
+                "deaths" .= deaths user]
 
 
 
@@ -73,13 +83,29 @@ instance Destroyable User where
     setDurability d user = user{durability=d}
 
 
+instance Collidable User where
+
+    collider user = Circular (objId user) (getPos user) radius
+        where Size w h = size user
+              radius = (w + h) `quot` 4
+
+
+killsL :: Lens User Int
+killsL = lens kills (\v s -> s{kills=v})
+
+deathsL :: Lens User Int
+deathsL = lens deaths (\v s -> s{deaths=v})
+
 userArea :: User -> UE.UserArea
 userArea user =
     UE.UserArea{UE.userId=userId user,
                 UE.name=name user,
                 UE.speed=speed user,
                 UE.maxDurability=maxDurability user,
-                UE.durability=durability user}
+                UE.durability=durability user,
+                UE.size=size user,
+                UE.kills=kills user,
+                UE.deaths=deaths user}
 
 
 

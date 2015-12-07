@@ -59,3 +59,15 @@ instance FromJSON AreaId where
 newtype AreaPid = AreaPid ProcessId  deriving (Generic, Typeable)
 instance Binary AreaPid
 
+
+data Size = Size !Int !Int deriving (Generic, Typeable, Eq, Show)
+instance Binary Size
+
+instance ToJSON Size where
+    toJSON (Size w h) = toJSON (w, h)
+
+instance FromJSON Size where
+    parseJSON val = do
+        (w, h) <- parseJSON val
+        return (Size w h)
+

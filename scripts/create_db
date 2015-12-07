@@ -12,6 +12,10 @@ CREATE_USER = """
         speed INTEGER,
         max_durability INTEGER,
         durability INTEGER,
+        width INTEGER,
+        height INTEGER,
+        kills INTEGER,
+        deaths INTEGER,
         PRIMARY KEY (id)
     );
 """
@@ -25,9 +29,11 @@ CREATE_GATE = """
         y INTEGER,
         angle REAL,
         actions TEXT,
-        PRIMARY KEY (id)
+        width INTEGER,
+        height INTEGER,
+
+        PRIMARY KEY (id, area)
     );
-    CREATE INDEX gate_area_idx ON gate (area);
 """
 
 CREATE_ASTEROID = """
@@ -41,9 +47,11 @@ CREATE_ASTEROID = """
         max_durability INTEGER,
         durability INTEGER,
         actions TEXT,
-        PRIMARY KEY (id)
+        width INTEGER,
+        height INTEGER,
+
+        PRIMARY KEY (id, area)
     );
-    CREATE INDEX asteroid_area_idx ON gate (area);
 """
 
 

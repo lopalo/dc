@@ -8,7 +8,8 @@ ws-address: &ws-address-1 [<host>, 10501]
 ws-addresses: [*ws-address-1]
 db: ../dbs/dev.db
 user:
-  speed: 60 #units per second
+  size: [80, 40]
+  speed: 300 # 60 #units per second
   init-durability: 100
   logout-seconds: 10
   period-milliseconds: 1000

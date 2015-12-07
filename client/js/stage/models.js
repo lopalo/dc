@@ -41,8 +41,7 @@ define(function(require) {
                 name: "",
                 pos: [0, 0],
                 angle: 0,
-                height: 50,
-                width: 50,
+                size: [50, 50],
                 actions: []
             };
         },
@@ -87,19 +86,25 @@ define(function(require) {
 
     User = StageObject.extend({
         objectType: "user",
+
+
         defaults: function () {
             var defaults = {
-                height: 40,
-                width: 80,
+                speed: 0,
+                kills: 0,
+                deaths: 0,
+                "max-durability": 0,
+                durability: 0,
             };
             return _.extend(User.__super__.defaults.call(this), defaults);
         },
         getInfoForUI: function () {
-            return {
-                name: this.get("name"),
-                durability: this.get("durability"),
-                speed: this.get("speed")
-            };
+            var names = ["name", "speed", "kills", "deaths"];
+            var info = _.pick(this.attributes, names);
+            info.durability = [this.get("durability"),
+                               this.get("max-durability")];
+            return info;
+
         },
         _applyAction: function (timestamp, action) {
             switch (action.tag) {
@@ -141,13 +146,6 @@ define(function(require) {
 
     Gate = StageObject.extend({
         objectType: "gate",
-        defaults: function () {
-            var defaults = {
-                height: 300, //FIXME
-                width: 300,
-            };
-            return _.extend(Gate.__super__.defaults.call(this), defaults);
-        },
         getInfoForUI: function () {
             return {
                 name: this.get("name"),
@@ -158,16 +156,18 @@ define(function(require) {
     Asteroid = StageObject.extend({
         objectType: "asteroid",
         defaults: function () {
-            var size = utils.randInt(70, 200);
             var defaults = {
-                height: size, //FIXME
-                width: size,
+                "max-durability": 0,
+                durability: 0,
             };
             return _.extend(Asteroid.__super__.defaults.call(this), defaults);
         },
+
         getInfoForUI: function () {
             return {
                 name: this.get("name"),
+                durability: [this.get("durability"),
+                             this.get("max-durability")]
             };
         },
         _applyAction: function (timestamp, action) {

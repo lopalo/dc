@@ -7,12 +7,13 @@ import Data.Binary (Binary)
 import Data.Typeable (Typeable)
 
 import Control.Applicative ((<$>), (<*>))
-import Data.Text.Lazy.Encoding (encodeUtf8)
+import Data.Text.Lazy.Encoding (encodeUtf8, decodeUtf8)
 
 import Database.SQLite.Simple (FromRow(fromRow), ToRow(toRow), field)
 import Database.SQLite.Simple.Internal (RowParser)
 import Data.Aeson (Value, encode, decode, object, (.=))
 
+import Types (Size(Size))
 import Area.Types (Object(..), Destroyable(..), Pos(Pos), Angle, ObjId(GateId))
 import Area.Action (Active(..), Action(EternalRotation), eternalRotation)
 
@@ -21,7 +22,8 @@ data Gate = Gate {ident :: !ObjId,
                   name :: !String,
                   pos :: !Pos,
                   angle :: !Angle,
-                  actions :: ![Action]}
+                  actions :: ![Action],
+                  size :: !Size}
             deriving (Generic, Typeable)
 instance Binary Gate
 
@@ -34,17 +36,20 @@ instance FromRow Gate where
         pos <- Pos <$> field <*> field
         angle <- field
         Just actions <- decode . encodeUtf8 <$> field
+        size <- Size <$> field <*> field
         return Gate{ident=ident,
                     name=name,
                     pos=pos,
                     angle=angle,
-                    actions=actions}
+                    actions=actions,
+                    size=size}
 
 instance ToRow Gate where
-    toRow g = toRow (id, name g, x, y, angle g, actions_)
+    toRow g = toRow (id, name g, x, y, angle g, actions_, w, h)
         where GateId id = ident g
               Pos x y = pos g
-              actions_ = encode $ actions g
+              Size w h = size g
+              actions_ = decodeUtf8 $ encode $ actions g
 
 
 
@@ -63,7 +68,8 @@ instance Object Gate where
                 "tag" .= ("Gate" :: String),
                 "name" .= name gate,
                 "angle" .= angle gate,
-                "pos" .= pos gate]
+                "pos" .= pos gate,
+                "size" .= size gate]
 
     tickClientInfo gate =
         object ["id" .= ident gate,
@@ -78,4 +84,5 @@ instance Active Gate where
     getActions = actions
 
     setActions as gate = gate{actions=as}
+
 

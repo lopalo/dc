@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveGeneric, DeriveDataTypeable, OverloadedStrings #-}
 
-module DB (dbProcess, putUser, getUser, getAreaObjects) where
+module DB (dbProcess, putUser, getUser, getAreaObjects, putAreaObjects) where
 
 import GHC.Generics (Generic)
 import Data.Binary (Binary)
@@ -88,16 +88,17 @@ handlePutUser conn (PutUser user) = do
     liftIO $ execute conn q user
     return ()
     where
-        q = "INSERT OR REPLACE INTO user VALUES (?, ?, ?, ?, ?, ?)"
+        q = "INSERT OR REPLACE INTO user VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 
 
 handlePutAreaObjects :: Connection -> PutAreaObjects -> Process ()
-handlePutAreaObjects conn (PutAreaObjects (AreaId area) objects) = do
+handlePutAreaObjects conn (PutAreaObjects (AreaId area) objects) =
     liftIO $ withTransaction conn transaction
     where
-        gateQ = "INSERT OR REPLACE INTO gate VALUES (?, ?, ?, ?, ?, ?, ?)"
-        asteroidQ = "INSERT OR REPLACE INTO asteroid \
-                    \ (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        gateQ = "INSERT OR REPLACE INTO gate VALUES \
+                 \ (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        asteroidQ = "INSERT OR REPLACE INTO asteroid VALUES \
+                     \ (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         addArea :: ToRow a => a -> [SQLData]
         addArea = ([toField area] ++) . toRow
         (gates, asteroids) = objects

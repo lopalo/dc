@@ -17,6 +17,7 @@ import qualified Area.Objects.User as U
 import qualified Area.Objects.Gate as G
 import qualified Area.Objects.Asteroid as A
 import Area.Signal (Signal, Signals)
+import Area.Collision (Collider, Colliders)
 import Area.Settings (Settings)
 
 
@@ -43,6 +44,7 @@ data State = State {areaId :: !AreaId,
                     users :: !Users,
                     gates :: !Gates,
                     asteroids :: !Asteroids,
+                    colliders :: !Colliders,
                     signalBuffer :: !Signals,
                     signalsForBroadcast :: !Signals}
 
@@ -72,26 +74,36 @@ userPidToIdsL = lens userPidToIds (\v us -> us{userPidToIds=v})
 
 
 addUser :: UserId -> Connection -> UserPid -> U.User -> Users -> Users
-addUser uid conn userPid user = (usersDataL ^%= M.insert uid user)
-                              . (connToIdsL ^%= M.insert conn uid)
-                              . (connectionsL ^%= M.insert uid conn)
-                              . (userPidsL ^%= M.insert uid userPid)
-                              . (userPidToIdsL ^%= M.insert userPid uid)
+addUser uid conn userPid user us = foldr ($) us fs
+    where fs = [usersDataL ^%= M.insert uid user,
+                connToIdsL ^%= M.insert conn uid,
+                connectionsL ^%= M.insert uid conn,
+                userPidsL ^%= M.insert uid userPid,
+                userPidToIdsL ^%= M.insert userPid uid]
 
 
-updateUser :: (U.User -> U.User) -> UserId -> State -> State
-updateUser f uid = usersDataL . usersL ^%= M.adjust f uid
+modifyUser :: UserId -> (U.User -> U.User) -> State -> State
+modifyUser uid f = usersDataL . usersL ^%= M.adjust f uid
 
+userField :: UserId -> (U.User -> a) -> State -> Maybe a
+userField uid f = fmap f . M.lookup uid . usersData . users
 
 deleteUser :: UserId -> Users -> Users
-deleteUser uid us = fun us
+deleteUser uid us = foldr ($) us fs
     where conn = connections us M.! uid
           pid = userPids us M.! uid
-          fun = (usersDataL ^%= M.delete uid)
-              . (connectionsL ^%= M.delete uid)
-              . (connToIdsL ^%= M.delete conn)
-              . (userPidsL ^%= M.delete uid)
-              . (userPidToIdsL ^%= M.delete pid)
+          fs = [usersDataL ^%= M.delete uid,
+                connectionsL ^%= M.delete uid,
+                connToIdsL ^%= M.delete conn,
+                userPidsL ^%= M.delete uid,
+                userPidToIdsL ^%= M.delete pid]
+
+
+modifyAsteroid :: ObjId -> (A.Asteroid -> A.Asteroid) -> State -> State
+modifyAsteroid uid f = asteroidsL ^%= M.adjust f uid
+
+asteroidField :: ObjId -> (A.Asteroid -> a) -> State -> Maybe a
+asteroidField uid f = fmap f . M.lookup uid . asteroids
 
 
 gatesL :: Lens State Gates
@@ -100,6 +112,9 @@ gatesL = lens gates (\v s -> s{gates=v})
 
 asteroidsL :: Lens State Asteroids
 asteroidsL = lens asteroids (\v s -> s{asteroids=v})
+
+collidersL :: Lens State Colliders
+collidersL = lens colliders (\v s -> s{colliders=v})
 
 
 signalsL :: Lens State Signals

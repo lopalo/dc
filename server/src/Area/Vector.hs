@@ -50,3 +50,25 @@ fromLenAndAngle length degr =
         x = length * cos rad
         y = length * sin rad
     in Vect x y
+
+
+projectionToSegment :: Pos -> Pos -> Pos -> Vect
+projectionToSegment start end point =
+    let p = toVect point
+        s = toVect start
+        e = toVect end
+        sp = p `sub` s
+        se = e `sub` s
+    in case sp `dot` se / lenSqr se of
+            t | start == end -> s
+              | t < 0 -> s
+              | t > 1 -> e
+              | otherwise -> se `mul` t `add` s
+
+
+distanceToSegment :: Pos -> Pos -> Pos -> Float
+distanceToSegment start end point =
+    let p = toVect point
+        v = projectionToSegment start end point `sub` p
+    in len v
+

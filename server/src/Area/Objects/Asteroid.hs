@@ -7,17 +7,19 @@ import Data.Binary (Binary)
 import Data.Typeable (Typeable)
 
 import Control.Applicative ((<$>), (<*>))
-import Data.Text.Lazy.Encoding (encodeUtf8)
+import Data.Text.Lazy.Encoding (encodeUtf8, decodeUtf8)
 
 import Database.SQLite.Simple (FromRow(fromRow), ToRow(toRow), field)
 import Database.SQLite.Simple.Internal (RowParser)
 import Data.Aeson (Value, encode, decode, object, (.=))
 
+import Types (Size(Size))
 import Area.Types (Object(..), Destroyable(..),
                    Pos(Pos), Angle, ObjId(AsteroidId))
 import Area.Action (Active(..),
                     Action(EternalRotation, MoveCircularTrajectory),
                     eternalRotation, moveCircularTrajectory, publicAction)
+import Area.Collision (Collidable(collider), Collider(Circular))
 
 
 data Asteroid = Asteroid {ident :: !ObjId,
@@ -26,7 +28,8 @@ data Asteroid = Asteroid {ident :: !ObjId,
                           angle :: !Angle,
                           maxDurability :: !Int,
                           durability :: !Int,
-                          actions :: ![Action]}
+                          actions :: ![Action],
+                          size :: !Size}
                 deriving (Generic, Typeable)
 instance Binary Asteroid
 
@@ -41,19 +44,31 @@ instance FromRow Asteroid where
         maxDurability <- field
         durability <- field
         Just actions <- decode . encodeUtf8 <$> field
+        size <- Size <$> field <*> field
         return Asteroid{ident=ident,
                         name=name,
                         pos=pos,
                         angle=angle,
                         maxDurability=maxDurability,
                         durability=durability,
-                        actions=actions}
+                        actions=actions,
+                        size=size}
 
 instance ToRow Asteroid where
-    toRow g = toRow (id, name g, x, y, angle g, actions_)
-        where AsteroidId id = ident g
-              Pos x y = pos g
-              actions_ = encode $ actions g
+    toRow ast = toRow (id,
+                       name ast,
+                       x,
+                       y,
+                       angle ast,
+                       maxDurability ast,
+                       durability ast,
+                       actions_,
+                       w,
+                       h)
+        where AsteroidId id = ident ast
+              Pos x y = pos ast
+              Size w h = size ast
+              actions_ = decodeUtf8 $ encode $ actions ast
 
 
 instance Object Asteroid where
@@ -73,14 +88,15 @@ instance Object Asteroid where
                 "max-durability" .= maxDurability ast,
                 "durability" .= durability ast,
                 "angle" .= angle ast,
-                "pos" .= pos ast]
+                "pos" .= pos ast,
+                "actions" .= filter publicAction (actions ast),
+                "size" .= size ast]
 
     tickClientInfo ast =
         object ["id" .= ident ast,
                 "pos" .= pos ast,
                 "angle" .= angle ast,
-                "durability" .= durability ast,
-                "actions" .= filter publicAction (actions ast)]
+                "durability" .= durability ast]
 
 
 instance Active Asteroid where
@@ -95,3 +111,17 @@ instance Active Asteroid where
 
     setActions as ast = ast{actions=as}
 
+
+instance Destroyable Asteroid where
+
+    getMaxDurability = maxDurability
+    setMaxDurability d ast = ast{maxDurability=d}
+
+    getDurability = durability
+    setDurability d ast = ast{durability=d}
+
+
+instance Collidable Asteroid where
+
+    collider ast = Circular (objId ast) (getPos ast) (quot d 2)
+        where Size d _ = size ast

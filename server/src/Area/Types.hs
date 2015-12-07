@@ -28,7 +28,7 @@ data ClientCommand = Echo !String
                    | EnterArea !AreaId
                    | MoveAlongRoute ![Pos]
                    | Recover !Float
-                   | Shoot !UserId
+                   | Shoot !Pos
                    deriving (Generic, Typeable)
 instance Binary ClientCommand
 
@@ -80,7 +80,6 @@ instance FromJSON ObjId where
 class Object o where
     objId :: o -> ObjId
 
-    --TODO: size
     getPos :: o -> Pos
     setPos :: Pos -> o -> o
 
@@ -108,8 +107,5 @@ class Object o => Destroyable o where
 
     durabilityL :: Lens o Int
     durabilityL = lens getDurability setDurability
-
-
-class Object o => Collidable o --TODO: implement
 
 

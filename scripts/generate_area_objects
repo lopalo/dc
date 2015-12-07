@@ -8,7 +8,8 @@ from math import pi, cos, sin
 
 
 ASTEROID_COUNT = 15
-ASTEROID_DURABILITY = 1000
+ASTEROID_SIZE = 70, 200
+ASTEROID_DURABILITY = (1000, 30000)
 ASTEROID_ROTATION_SPEED = -15, 15
 ASTEROID_FIELD_RADIUS = 300, 1500
 ASTEROID_FIELD_POSITION = 100, 230
@@ -16,17 +17,18 @@ ASTEROID_TRAJECTORY_PROBABILITY = 0.3
 
 GATE_POSITION = 100, 230
 GATE_ROTATION_SPEED = 20
+GATE_SIZE = 300
 
 
 INSERT_GATE = """
-    INSERT INTO gate (area, id, name, x, y, angle, actions)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO gate (area, id, name, x, y, angle, actions, width, height)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 """
 
 INSERT_ASTEROID = """
     INSERT INTO asteroid (area, id, name, x, y, angle,
-                          max_durability, durability, actions)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                          max_durability, durability, actions, width, height)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 """
 
 def get_counter():
@@ -37,27 +39,29 @@ def get_counter():
     return counter
 
 def insert_gate(cur, area_id, counter):
-    ident = "{}:{}".format(area_id, counter())
     pos = GATE_POSITION
     rotation = {'rotSpeed': GATE_ROTATION_SPEED,
                 'tag': "EternalRotation"}
     params = (area_id,
-              ident,
+              counter(),
               "gate",
               pos[0],
               pos[1],
               random.randint(0, 360),
-              json.dumps([rotation]))
+              json.dumps([rotation]),
+              GATE_SIZE,
+              GATE_SIZE)
     cur.execute(INSERT_GATE, params)
 
 def insert_asteroids(cur, area_id, counter):
     c_pos = ASTEROID_FIELD_POSITION
     params_list = []
     for _ in xrange(ASTEROID_COUNT):
-        ident = "{}:{}".format(area_id, counter())
         len_ = random.uniform(*ASTEROID_FIELD_RADIUS)
         angle = random.uniform(-pi, pi)
         pos = c_pos[0] + len_ * cos(angle), c_pos[1] + len_ * sin(angle)
+        size = random.randint(*ASTEROID_SIZE)
+        durability = random.randint(*ASTEROID_DURABILITY)
 
         rotation = {'rotSpeed': random.randint(*ASTEROID_ROTATION_SPEED),
                     'tag': "EternalRotation"}
@@ -71,14 +75,16 @@ def insert_asteroids(cur, area_id, counter):
         if random.random() < ASTEROID_TRAJECTORY_PROBABILITY:
             actions.append(trajectory)
         params_list.append((area_id,
-                            ident,
+                            counter(),
                             "asteroid",
                             int(pos[0]),
                             int(pos[1]),
                             random.randint(0, 360),
-                            ASTEROID_DURABILITY,
-                            ASTEROID_DURABILITY,
-                            json.dumps(actions)))
+                            durability,
+                            durability,
+                            json.dumps(actions),
+                            size,
+                            size))
     cur.executemany(INSERT_ASTEROID, params_list)
 
 

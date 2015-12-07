@@ -28,6 +28,7 @@ import Area.Signal (Signal(Appearance, Disappearance),
                     AReason(LogIn, Entry),
                     DReason(LogOut))
 import Area.Tick (handleTick, scheduleTick)
+import Area.Collision (emptyColliders)
 
 
 
@@ -42,7 +43,12 @@ handleEnter state (Enter ua userPid login, conn) = do
                       U.speed=UE.speed ua,
                       U.maxDurability=UE.maxDurability ua,
                       U.durability=UE.durability ua,
-                      U.actions=[]}
+                      U.actions=[],
+                      U.size=UE.size ua,
+                      U.kills=UE.kills ua,
+                      U.deaths=UE.deaths ua,
+                      U.lastAttacker=Nothing}
+        --TODO delete old user with the same uid if it exists
         addUsr = usersL ^%= addUser uid conn userPid user
         reason = if login then LogIn else Entry
         addSig = addSignal $ Appearance uid reason
@@ -96,6 +102,7 @@ areaProcess aSettings aid = do
                       users=us,
                       gates=fromList $ fst objects,
                       asteroids=fromList $ snd objects,
+                      colliders=emptyColliders,
                       signalBuffer=[],
                       signalsForBroadcast=[]}
         us = Users{connections=M.empty,

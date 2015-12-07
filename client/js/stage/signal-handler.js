@@ -20,9 +20,8 @@ define(function (require) {
 
         },
         handleShot: function (signal) {
-            var getObj = this._getObjectModel;
-            var start = Victor.fromArray(getObj(signal.shooter).get("pos"));
-            var end = Victor.fromArray(getObj(signal.target).get("pos"));
+            var start = Victor.fromArray(signal.shooterPos);
+            var end = Victor.fromArray(signal.targetPos);
             var delta = end.subtract(start);
             var tween;
 

@@ -107,13 +107,8 @@ define(function (require) {
         },
         _stageObjectViewClick: function (ident) {
             var ui = this._models.models.ui;
-            var model = this._stageController.getObjectModel(ident);
-            var isUser = model.isInstanceOf(stageModels.User);
             switch (ui.get("controlMode")) {
                 case "shot":
-                    if (isUser && !this.isSelf(ident)) {
-                        this._connection.send("area.shoot", ident);
-                    }
                     break;
                 case "view":
                     this._selectStageObject(ident);
@@ -127,8 +122,16 @@ define(function (require) {
         },
         _stageObjectViewMouseOut: function () {
         },
-        _backgroundClick: function () {
+        _backgroundClick: function (pos) {
             this._unselectStageObject();
+            var cameraPos = this._stageController.getCameraPos();
+            pos.add(cameraPos).invertY();
+            switch (this._models.models.ui.get("controlMode")) {
+                case "shot":
+                    //TODO: send direction instead
+                    this._connection.send("area.shoot", pos.toArray());
+                    break;
+            }
 
         },
         _backgroundMouseDown: function () {

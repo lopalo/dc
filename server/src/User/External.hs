@@ -16,7 +16,10 @@ data UserArea = UserArea {userId :: UserId,
                           name :: UserName,
                           speed :: Int, --units per second
                           maxDurability :: Int,
-                          durability :: Int}
+                          durability :: Int,
+                          size :: !Size,
+                          kills :: !Int,
+                          deaths :: !Int}
                 deriving (Generic, Typeable)
 instance Binary UserArea
 

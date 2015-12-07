@@ -32,7 +32,10 @@ userArea usr =
                 UE.name=name usr,
                 UE.speed=speed usr,
                 UE.maxDurability=maxDurability usr,
-                UE.durability=durability usr}
+                UE.durability=durability usr,
+                UE.size=size usr,
+                UE.kills=kills usr,
+                UE.deaths=deaths usr}
 
 
 data State = State {user :: !User,
@@ -82,7 +85,9 @@ handleReconnection state (Reconnection conn) = do
 handleSyncState :: State -> UE.SyncState -> Process State
 handleSyncState state (UE.SyncState ua) = do
     let usr = user state
-        usr' = usr{durability=UE.durability ua}
+        usr' = usr{durability=UE.durability ua,
+                   kills=UE.kills ua,
+                   deaths=UE.deaths ua}
     putUser usr'
     logDebug $ printf "User '%s' synchronized" $ show $ userId usr'
     return state{user=usr'}
@@ -116,19 +121,23 @@ userProcess userName conn globalSettings = do
         uSettings = S.user globalSettings
         usr = fromMaybe newUser res
         areaId = area usr
-        maxDurability = US.initDurability uSettings
+        maxDur = US.initDurability uSettings
+        mConn = Just conn
         newUser = User{userId=uid,
                        name=userName,
                        area=startArea,
                        speed=US.speed uSettings,
-                       maxDurability=maxDurability,
-                       durability=maxDurability}
+                       maxDurability=maxDur,
+                       durability=maxDur,
+                       size=US.size uSettings,
+                       kills=0,
+                       deaths=0}
         state = State{user=usr,
                       areas=S.areas globalSettings,
                       settings=uSettings,
-                      connection=Just conn,
+                      connection=mConn,
                       disconnectTs=Nothing}
-    tryToLinkToArea areaId (Just conn)
+    tryToLinkToArea areaId mConn
     putUser usr
     initConnection conn state
     userPid <- makeSelfPid

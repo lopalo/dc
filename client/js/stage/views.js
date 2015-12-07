@@ -105,8 +105,8 @@ define(function (require) {
             this._container.texture = pixi.Texture.fromImage(bg);
             this.resize();
         },
-        _click: function () {
-            this.trigger("click");
+        _click: function (ev) {
+            this.trigger("click", Victor.fromObject(ev.data.global));
         },
         _mouseDown: function () {
             this.trigger("mouseDown");
@@ -217,8 +217,7 @@ define(function (require) {
         },
         _createContainer: function () {
             var model = this._model;
-            var width = model.get("width");
-            var height = model.get("height");
+            var size = model.get("size");
             var name = model.get("name");
             var container;
             var sprite;
@@ -228,15 +227,15 @@ define(function (require) {
             this._sprite = sprite = pixi.Sprite.fromImage(this.texturePath);
             this._containerForListening = sprite;
             container.addChild(sprite);
-            sprite.width = width;
-            sprite.height = height;
+            sprite.width = size[0];
+            sprite.height = size[1];
             sprite.anchor.x = sprite.anchor.y = 0.5;
             sprite.interactive = true;
             if (name && this.showName) {
                 text = new pixi.Text(name, {fill: this._getTextColor(),
                                             font: "14px Arial"});
                 text.anchor.x = text.anchor.y = 0.5;
-                text.y = -(height / 2 + 15);
+                text.y = -(_.max(size) / 2 + 15);
                 container.addChild(text);
             }
             this._update();
@@ -296,9 +295,9 @@ define(function (require) {
         },
         _appearanceEffect: function () {
             var self = this;
-            var model = this._model;
-            var width = model.get("width");
-            var height = model.get("height");
+            var size = this._model.get("size");
+            var width = size[0];
+            var height = size[1];
             var sprite = this._sprite;
             var onComplete = function () {
                 self._updateAllowed = true;
@@ -332,14 +331,14 @@ define(function (require) {
             return tween;
         },
         _disappearanceEffect: function (reason, sprite) {
-            var model = this._model;
-            var width = model.get("width");
-            var height = model.get("height");
+            var size = this._model.get("size");
+            var width = size[0];
+            var height = size[1];
             var rotation = this._getRotation();
             var toProps;
             var tween;
             switch (reason) {
-                case "Burst":
+                case "Destruction":
                     toProps = {width: 2 * width, height: 2 * height, alpha: 0};
                     tween = TweenLite.to(sprite, 0.5, toProps);
                     break;

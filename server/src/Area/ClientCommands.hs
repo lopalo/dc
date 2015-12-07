@@ -3,6 +3,7 @@ module Area.ClientCommands where
 
 import qualified Data.Map.Strict as M
 import Data.List (elemIndex, maximumBy)
+import qualified Data.Set as Set
 
 import Data.Aeson (ToJSON, Value, toJSON)
 import Data.String.Utils (startswith)
@@ -21,7 +22,8 @@ import Area.Types
 import Area.State
 import Area.Signal (Signal(Disappearance, Shot), DReason(Exit))
 import Area.External (enter)
-import Area.Vector (toVect, add, sub, mul, lenSqr, len, dot)
+import Area.Vector (toVect, add, sub, mul, lenSqr, len, dot, distanceToSegment)
+import Area.Collision (Collision(Collision), rayCollision)
 
 
 type Response = Process (Value, State)
@@ -97,11 +99,40 @@ handleClientCommand state (Recover recSpeed, conn) = do
         replace _ = False
     return $ replaceUserAction uid replace action state
 
-handleClientCommand state (Shoot target, conn) =
-    return $ addSig $ updUsr state
-    where addSig = addSignal $ Shot (uidByConn conn state) target
-          damage = AS.shotDamage $ settings state
-          updUsr = updateUser (durabilityL ^-= damage) target
+handleClientCommand state (Shoot targetPos, conn) = do
+    let shooterId = uidByConn conn state
+    return $ case userField shooterId U.pos state of
+        Just shooterPos -> do
+            let ray = rayCollision (UId shooterId) shooterPos targetPos
+
+                addSig pos = addSignal $ Shot shooterPos pos
+                damage = AS.shotDamage $ settings state
+
+                dmgTarget (UId uid) =
+                    modifyUser uid $ durabilityL ^-= damage
+                dmgTarget aid@AsteroidId{} =
+                    modifyAsteroid aid $ durabilityL ^-= damage
+                dmgTarget _ = id
+
+                updTargetAttacker (UId uid) =
+                    modifyUser uid $ \u -> u{U.lastAttacker=Just shooterId}
+                updTargetAttacker _ = id
+
+                replace Recovery{} = True
+                replace _ = False
+                updTargetActions (UId uid) = cancelUserAction uid replace
+                updTargetActions _ = id
+
+            case ray $ colliders state of
+                Just (Collision _ targetId targetPos') ->
+                    let fs = [dmgTarget targetId,
+                              updTargetAttacker targetId,
+                              updTargetActions targetId,
+                              addSig targetPos']
+                    in foldr ($) state fs
+                Nothing -> addSig targetPos state
+        Nothing -> state
+
 
 
 userByConn :: Connection -> State -> U.User
@@ -111,14 +142,14 @@ uidByConn :: Connection -> State -> UserId
 uidByConn conn state = (connToIds . users) state M.! conn
 
 
-updateUserActions :: ([Action] -> [Action]) -> UserId -> State -> State
-updateUserActions f = updateUser (actionsL ^%= f)
+modifyUserActions :: UserId -> ([Action] -> [Action]) -> State -> State
+modifyUserActions uid f = modifyUser uid (actionsL ^%= f)
 
 addUserAction :: UserId -> Action -> State -> State
-addUserAction uid action = updateUserActions (action :) uid
+addUserAction uid action = modifyUserActions uid (action :)
 
 cancelUserAction :: UserId -> (Action -> Bool) -> State -> State
-cancelUserAction uid f = updateUserActions (filter (not . f)) uid
+cancelUserAction uid f = modifyUserActions uid (filter (not . f))
 
 replaceUserAction :: UserId -> (Action -> Bool) -> Action -> State -> State
 replaceUserAction uid f action = addUserAction uid action
@@ -126,7 +157,7 @@ replaceUserAction uid f action = addUserAction uid action
 
 
 filterRoute :: Float -> [Pos] -> [Pos]
---Ramer–Douglas–Peucker algorithm
+--Ramer-Douglas-Peucker algorithm
 filterRoute threshold = filterRoute'
     where
         filterRoute' [] = []
@@ -148,16 +179,5 @@ filterRoute threshold = filterRoute'
                     else left' ++ right'
         comp a b = fst a `compare` fst b
         distToSegment start end point =
-            let p = toVect point
-                s = toVect start
-                e = toVect end
-                sp = p `sub` s
-                se = e `sub` s
-                ep = p `sub` e
-                v = case sp `dot` se / lenSqr se of
-                    t | start == end -> sp
-                      | t < 0 -> sp
-                      | t > 1 -> ep
-                      | otherwise -> se `mul` t `add` s `sub` p
-            in (len v, point)
+            (distanceToSegment start end point, point)
 
