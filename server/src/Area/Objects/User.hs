@@ -96,6 +96,9 @@ killsL = lens kills (\v s -> s{kills=v})
 deathsL :: Lens User Int
 deathsL = lens deaths (\v s -> s{deaths=v})
 
+lastAttackerL :: Lens User (Maybe UserId)
+lastAttackerL = lens lastAttacker (\v s -> s{lastAttacker=v})
+
 userArea :: User -> UE.UserArea
 userArea user =
     UE.UserArea{UE.userId=userId user,

@@ -7,7 +7,8 @@ import Control.Monad (void)
 import qualified Control.Monad.State.Strict as S
 import qualified Data.Map.Strict as M
 
-import Data.Lens.Strict (lens, Lens, (^%=), (%=))
+import Data.Lens.Strict (Lens, lens, mapLens, (^%=), (%=))
+import Data.Lens.Partial.Common (PartialLens, totalLens, justLens)
 
 import Connection (Connection)
 import Utils (Ts)
@@ -82,12 +83,6 @@ addUser uid conn userPid user us = foldr ($) us fs
                 userPidToIdsL ^%= M.insert userPid uid]
 
 
-modifyUser :: UserId -> (U.User -> U.User) -> State -> State
-modifyUser uid f = usersDataL . usersL ^%= M.adjust f uid
-
-userField :: UserId -> (U.User -> a) -> State -> Maybe a
-userField uid f = fmap f . M.lookup uid . usersData . users
-
 deleteUser :: UserId -> Users -> Users
 deleteUser uid us = foldr ($) us fs
     where conn = connections us M.! uid
@@ -99,11 +94,18 @@ deleteUser uid us = foldr ($) us fs
                 userPidToIdsL ^%= M.delete pid]
 
 
-modifyAsteroid :: ObjId -> (A.Asteroid -> A.Asteroid) -> State -> State
-modifyAsteroid uid f = asteroidsL ^%= M.adjust f uid
+userPL :: UserId -> PartialLens State U.User
+userPL = (`objectPL` usersDataL . usersL)
 
-asteroidField :: ObjId -> (A.Asteroid -> a) -> State -> Maybe a
-asteroidField uid f = fmap f . M.lookup uid . asteroids
+userFieldPL :: UserId -> Lens U.User a -> PartialLens State a
+userFieldPL uid = objFieldPL uid (usersDataL . usersL)
+
+
+asteroidPL :: ObjId -> PartialLens State A.Asteroid
+asteroidPL = (`objectPL` asteroidsL)
+
+asteroidFieldPL :: ObjId -> Lens A.Asteroid a -> PartialLens State a
+asteroidFieldPL aid = objFieldPL aid asteroidsL
 
 
 gatesL :: Lens State Gates
@@ -112,6 +114,14 @@ gatesL = lens gates (\v s -> s{gates=v})
 
 asteroidsL :: Lens State Asteroids
 asteroidsL = lens asteroids (\v s -> s{asteroids=v})
+
+objectPL :: Ord k => k -> Lens State (M.Map k v) -> PartialLens State v
+objectPL uid l = justLens . totalLens (mapLens uid . l)
+
+objFieldPL :: Ord k => k -> Lens State (M.Map k v) ->
+                  Lens v a -> PartialLens State a
+objFieldPL uid l l' = totalLens l' . objectPL uid l
+
 
 collidersL :: Lens State Colliders
 collidersL = lens colliders (\v s -> s{colliders=v})

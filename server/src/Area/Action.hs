@@ -11,6 +11,9 @@ import Data.Typeable (Typeable)
 
 import Data.Maybe (fromMaybe)
 import Data.Fixed (mod', divMod')
+import Data.Set (Set)
+import Control.Monad (foldM)
+import Control.Monad.Writer (Writer)
 
 import Data.Aeson (ToJSON, FromJSON)
 import Data.Lens.Strict (Lens, lens, (^+=), (^%=))
@@ -20,12 +23,14 @@ import Area.Utils (getIntervals)
 import Area.Types
 import Area.Vector (Vect, angle, fromVect, toVect,
                     fromLenAndAngle, mul, sub, add)
-import Area.Signal (Signals)
+import Area.Signal (Signal)
 
+
+type SignalW = Writer (Set Signal)
 
 class Active a where
 
-    apply :: a -> Action -> Time -> (a, Maybe Action, Signals)
+    apply :: a -> Action -> Time -> SignalW (a, Maybe Action)
 
     getActions :: a -> [Action]
 
@@ -35,20 +40,17 @@ class Active a where
     actionsL = lens getActions setActions
 
 
-    applyActions :: Time -> a -> (a, Signals)
-    applyActions time active =
+    applyActions :: Time -> a -> SignalW a
+    applyActions time active = do
         let actions = getActions active
-            res = foldr handleActions (active, [], []) actions
-            (active', actions', signals) = res
-        in (setActions actions' active', signals)
+        (active', actions') <- foldM handleActions (active, []) actions
+        return $ setActions actions' active'
         where
-            handleActions action (act, actions, signals) =
-                let (act', maybeAction, newSignals) = apply act action time
-                    --TODO: use Writer monad
-                    signals' = newSignals ++ signals
-                in case maybeAction of
-                    Nothing -> (act', actions, signals')
-                    Just action'-> (act', action' : actions, signals')
+            handleActions (act, actions) action = do
+                (act', maybeAction) <- apply act action time
+                return $ case maybeAction of
+                    Nothing -> (act', actions)
+                    Just action'-> (act', action' : actions)
 
 
 data Time = Time {timestamp :: Ts, timeDelta :: Ts}
@@ -82,7 +84,7 @@ instance FromJSON Action
 
 type T = Float -- in the interval [0, 1]
 type ObjectHandler = forall o. Object o =>
-                     o -> Action -> Time -> (o, Maybe Action, Signals)
+                     o -> Action -> Time -> SignalW (o, Maybe Action)
 
 
 publicAction :: Action -> Bool
@@ -102,8 +104,8 @@ moveAction MoveRoute{} = True
 moveAction _ = False
 
 
-recovery :: Destroyable d => d -> Action -> Time -> (d, Maybe Action, Signals)
-recovery obj action time =
+recovery :: Destroyable d => d -> Action -> Time -> SignalW (d, Maybe Action)
+recovery obj action time = do
     let Recovery{recoverySpeed=speed, durabilityAccum=accum} = action
         accum' = secondsDelta time * speed + accum
         (durabilityDelta, accum'') = accum' `divMod'` 1
@@ -114,48 +116,48 @@ recovery obj action time =
         maybeAction = if getDurability obj' < maxDur
             then Just action'
             else Nothing
-    in (obj', maybeAction, [])
+    return (obj', maybeAction)
 
 
 moveDistance :: ObjectHandler
-moveDistance obj action Time{timestamp=ts} =
-    let (pos, maybeAction) = if ts >= endTs action
+moveDistance obj action Time{timestamp=ts} = do
+    let t = getT action ts
+        startPoint = toVect $ fromPos action
+        endPoint = toVect $ toPos action
+        point = middlePoint t startPoint endPoint
+        (pos, maybeAction) = if ts >= endTs action
             then (toPos action, Nothing)
-            else let t = getT action ts
-                     startPoint = toVect $ fromPos action
-                     endPoint = toVect $ toPos action
-                     point = middlePoint t startPoint endPoint
-                 in (fromVect point, Just action)
-    in (setPos pos obj, maybeAction, [])
+            else (fromVect point, Just action)
+    return (setPos pos obj, maybeAction)
 
 
 eternalRotation :: ObjectHandler
-eternalRotation obj action@EternalRotation{rotSpeed=speed} time =
+eternalRotation obj action@EternalRotation{rotSpeed=speed} time = do
     let angle = getAngle obj
         angleDelta = speed * secondsDelta time
         angle' = (angle + angleDelta) `mod'` 360
-    in (setAngle angle' obj, Just action, [])
+    return (setAngle angle' obj, Just action)
 
 
 moveCircularTrajectory :: ObjectHandler
-moveCircularTrajectory obj action time =
+moveCircularTrajectory obj action time = do
     let angleDelta = rotSpeed action * secondsDelta time
         newAngle = (curAngle action + angleDelta) `mod'` 360
         action' = action{curAngle=newAngle}
         rotVect = fromLenAndAngle (fromIntegral (radius action)) newAngle
         pos = fromVect $ toVect (center action) `add` rotVect
-    in (setPos pos obj, Just action', [])
+    return (setPos pos obj, Just action')
 
 
 moveRoute :: ObjectHandler
-moveRoute obj action Time{timestamp=ts} =
-    let (pos, maybeAngle, maybeAction) = if ts >= endTs action
+moveRoute obj action Time{timestamp=ts} = do
+    let (pos, ang) = reduce $ map toVect $ positions action
+        (pos', maybeAngle, maybeAction) = if ts >= endTs action
             then (endPos, Nothing, Nothing)
-            else let (pos, ang) = reduce $ map toVect $ positions action
-                 in (pos, Just ang, Just action)
-        obj' = setPos pos obj
+            else (pos, Just ang, Just action)
+        obj' = setPos pos' obj
         obj'' = setAngle (fromMaybe (getAngle obj') maybeAngle) obj'
-    in (obj'', maybeAction, [])
+    return (obj'', maybeAction)
     where
         endPos = last $ positions action
         t = getT action ts

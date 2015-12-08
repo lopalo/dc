@@ -6,7 +6,9 @@ import GHC.Generics (Generic)
 import Data.Binary (Binary)
 import Data.Typeable (Typeable)
 import Prelude hiding ((.))
+import Control.Applicative ((<$>))
 import Control.Monad (foldM, liftM, when, unless, void)
+import Control.Monad.Writer (runWriter)
 import Control.Category ((>>>), (.))
 import Control.Monad.State.Strict (runState, gets, modify)
 import Control.Concurrent (threadDelay)
@@ -14,7 +16,8 @@ import qualified Data.Map.Strict as M
 import qualified Data.Set as Set
 import Text.Printf (printf)
 
-import Data.Lens.Strict (access, (^$), (~=), (+=), (%=), (^+=), (^-=))
+import Data.Lens.Strict (access, (^$), (~=), (+=), (%=))
+import Data.Lens.Partial.Common (getPL, (^%=), (^-=), (^+=))
 import Control.Distributed.Process
 import Data.Aeson (ToJSON, Value, object, (.=))
 
@@ -94,11 +97,9 @@ handleActions ts = do
             signalsL ~= signals'
             return ()
         handle ident active (res, signals) =
-            let (active', newSignals) = applyActions time active
+            let (active', newSignals) = runWriter $ applyActions time active
                 res' = M.insert ident active' res
-            --TODO: use Writer monad with Set as Monoid;
-            --      use foldM, toAscList, fromAscList
-            in (res', newSignals ++ signals)
+            in (res', Set.toAscList newSignals ++ signals)
         time = Time{timestamp=ts, timeDelta=ts - pts}
     handleActive $ usersL >>> usersDataL
     handleActive gatesL
@@ -118,31 +119,30 @@ handleCollisions = do
     mapM_ handleCollision $ Set.toAscList collisions
     return ()
     where
-        addColliders lens = M.elems `liftM` access lens >>= mapM_ addColl
+        addColliders lens = M.elems <$> access lens >>= mapM_ addColl
         addColl obj = collidersL %= addCollider obj
 
 handleCollision :: Collision -> StateS()
 handleCollision collision =
     case collisionPair collision of
         (UId uid, aid@AsteroidId{}) ->
-            decreaseDurability (userField uid) (modifyUser uid)
-                               (asteroidField aid) (modifyAsteroid aid)
+            decreaseDurability (userFieldPL uid) (asteroidFieldPL aid)
         (aid@AsteroidId{}, aid'@AsteroidId{}) ->
-            decreaseDurability (asteroidField aid) (modifyAsteroid aid)
-                               (asteroidField aid') (modifyAsteroid aid')
+            decreaseDurability (asteroidFieldPL aid) (asteroidFieldPL aid')
         (UId uid, UId uid') ->
-            decreaseDurability (userField uid) (modifyUser uid)
-                               (userField uid') (modifyUser uid')
+            decreaseDurability (userFieldPL uid) (userFieldPL uid')
         _ -> return ()
     where
-        decreaseDurability getObj modObj getObj' modObj' = do
-            mDurabiility <- gets $ getObj getDurability
-            mDurabiility' <- gets $ getObj' getDurability
+        decreaseDurability l l' = do
+            let durLens = l durabilityL
+                durLens' = l' durabilityL
+            mDurabiility <- gets $ getPL durLens
+            mDurabiility' <- gets $ getPL durLens'
             case (mDurabiility, mDurabiility') of
                 (Just dur, Just dur') -> do
                     let dur'' = min dur dur'
-                    modify $ modObj $ durabilityL ^-= dur''
-                    modify $ modObj' $ durabilityL ^-= dur''
+                    modify $ durLens ^-= dur''
+                    modify $ durLens' ^-= dur''
                 _ -> return ()
 
 
@@ -151,7 +151,7 @@ checkDurability = do
     checkObjects $ usersL >>> usersDataL
     checkObjects asteroidsL
     where
-        checkObjects lens = M.elems `liftM` access lens >>= mapM_ check
+        checkObjects lens = M.elems <$> access lens >>= mapM_ check
         check obj =
             when (getDurability obj <= 0) $
                 addSignalS $ Disappearance (objId obj) Destruction
@@ -176,17 +176,17 @@ handleSignals = do
 handleSignal :: Signal -> StateS (Maybe Signal)
 handleSignal signal@(Disappearance (UId uid) Destruction) = do
     enterPos <- gets $ uncurry Pos . AS.enterPos . settings
-    mAttacker <- gets $ userField uid U.lastAttacker
+    mAttacker <- gets $  getPL $ userFieldPL uid U.lastAttackerL
     let resetUser u = u{U.pos=enterPos,
                         U.durability=1,
                         U.actions=[],
                         U.deaths=U.deaths u + 1,
                         U.lastAttacker=Nothing}
-    modify $ modifyUser uid resetUser
+    modify $ userPL uid ^%= resetUser
     addSignalS $ Appearance uid Recovery
     case mAttacker of
         Just (Just attackerId) ->
-            modify $ modifyUser attackerId $ U.killsL ^+= 1
+            modify $ userFieldPL attackerId U.killsL ^+= 1
         _ -> return ()
     return $ Just signal
 handleSignal signal@(Disappearance aid@(AsteroidId _) Destruction) = do

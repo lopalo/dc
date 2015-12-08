@@ -7,7 +7,8 @@ import qualified Data.Set as Set
 
 import Data.Aeson (ToJSON, Value, toJSON)
 import Data.String.Utils (startswith)
-import Data.Lens.Strict ((^%=), (^-=))
+import Data.Lens.Strict (modL)
+import Data.Lens.Partial.Common ((^.), (^%=), (^-=))
 import Control.Distributed.Process
 
 import Utils (milliseconds)
@@ -67,7 +68,7 @@ handleClientCommand :: State -> (ClientCommand, Connection) -> Process State
 handleClientCommand state (EnterArea aid, conn) = do
     let user@U.User{U.userId=uid} = conn `userByConn` state
         userPid = (userPids . users) state M.! uid
-        delUser = usersL ^%= deleteUser uid
+        delUser = usersL `modL` deleteUser uid
         addSig = addSignal $ Disappearance (UId uid) Exit
     UE.switchArea userPid aid
     enter aid (U.userArea user) userPid False conn
@@ -91,7 +92,6 @@ handleClientCommand state (MoveAlongRoute route, conn) = do
 
 
 handleClientCommand state (Recover recSpeed, conn) = do
-    now <- liftIO milliseconds
     let uid = uidByConn conn state
         action = Recovery{durabilityAccum=0,
                           recoverySpeed=recSpeed}
@@ -101,7 +101,7 @@ handleClientCommand state (Recover recSpeed, conn) = do
 
 handleClientCommand state (Shoot targetPos, conn) = do
     let shooterId = uidByConn conn state
-    return $ case userField shooterId U.pos state of
+    return $ case state ^. userFieldPL shooterId posL of
         Just shooterPos -> do
             let ray = rayCollision (UId shooterId) shooterPos targetPos
 
@@ -109,13 +109,13 @@ handleClientCommand state (Shoot targetPos, conn) = do
                 damage = AS.shotDamage $ settings state
 
                 dmgTarget (UId uid) =
-                    modifyUser uid $ durabilityL ^-= damage
+                    userFieldPL uid durabilityL ^-= damage
                 dmgTarget aid@AsteroidId{} =
-                    modifyAsteroid aid $ durabilityL ^-= damage
+                    asteroidFieldPL aid durabilityL ^-= damage
                 dmgTarget _ = id
 
                 updTargetAttacker (UId uid) =
-                    modifyUser uid $ \u -> u{U.lastAttacker=Just shooterId}
+                    userPL uid ^%= \u -> u{U.lastAttacker=Just shooterId}
                 updTargetAttacker _ = id
 
                 replace Recovery{} = True
@@ -143,7 +143,7 @@ uidByConn conn state = (connToIds . users) state M.! conn
 
 
 modifyUserActions :: UserId -> ([Action] -> [Action]) -> State -> State
-modifyUserActions uid f = modifyUser uid (actionsL ^%= f)
+modifyUserActions uid f = userFieldPL uid actionsL ^%= f
 
 addUserAction :: UserId -> Action -> State -> State
 addUserAction uid action = modifyUserActions uid (action :)

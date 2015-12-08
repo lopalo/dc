@@ -11,13 +11,13 @@ import Area.Types (ObjId, Pos)
 
 
 data AReason = LogIn | Entry | Recovery
-               deriving (Generic)
+               deriving (Generic, Eq, Ord)
 
 instance ToJSON AReason
 
 
 data DReason = LogOut | Exit | Destruction
-               deriving (Generic)
+               deriving (Generic, Eq, Ord)
 
 instance ToJSON DReason
 
@@ -28,7 +28,7 @@ data Signal = Appearance {userId :: UserId,
                              dReason :: DReason}
             | Shot {shooterPos :: Pos,
                     targetPos :: Pos}
-            deriving (Generic)
+            deriving (Generic, Eq, Ord)
 
 instance ToJSON Signal
 

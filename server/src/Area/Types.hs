@@ -35,7 +35,7 @@ instance Binary ClientCommand
 --------
 
 
-data Pos = Pos !Int !Int deriving (Generic, Typeable, Eq, Show)
+data Pos = Pos !Int !Int deriving (Generic, Typeable, Eq, Ord, Show)
 instance Binary Pos
 
 instance ToJSON Pos where
