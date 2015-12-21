@@ -21,8 +21,8 @@ import Data.Lens.Strict (Lens, lens, (^+=), (^%=))
 import Utils (Ts)
 import Area.Utils (getIntervals)
 import Area.Types
-import Area.Vector (Vect, angle, fromVect, toVect,
-                    fromLenAndAngle, mul, sub, add)
+import Area.Vector (Vect, angle, toPos, fromPos,
+                    fromPolar, mul, sub, add)
 import Area.Signal (Signal)
 
 
@@ -58,8 +58,8 @@ data Time = Time {timestamp :: Ts, timeDelta :: Ts}
 
 data Action = MoveDistance {startTs :: Ts,
                             endTs :: Ts,
-                            fromPos :: Pos,
-                            toPos :: Pos}
+                            startPos :: Pos,
+                            endPos :: Pos}
             | Rotation {startTs :: Ts,
                         endTs :: Ts,
                         from :: Angle,
@@ -122,12 +122,12 @@ recovery obj action time = do
 moveDistance :: ObjectHandler
 moveDistance obj action Time{timestamp=ts} = do
     let t = getT action ts
-        startPoint = toVect $ fromPos action
-        endPoint = toVect $ toPos action
+        startPoint = fromPos $ startPos action
+        endPoint = fromPos $ endPos action
         point = middlePoint t startPoint endPoint
         (pos, maybeAction) = if ts >= endTs action
-            then (toPos action, Nothing)
-            else (fromVect point, Just action)
+            then (endPos action, Nothing)
+            else (toPos point, Just action)
     return (setPos pos obj, maybeAction)
 
 
@@ -144,14 +144,14 @@ moveCircularTrajectory obj action time = do
     let angleDelta = rotSpeed action * secondsDelta time
         newAngle = (curAngle action + angleDelta) `mod'` 360
         action' = action{curAngle=newAngle}
-        rotVect = fromLenAndAngle (fromIntegral (radius action)) newAngle
-        pos = fromVect $ toVect (center action) `add` rotVect
+        rotVect = fromPolar (fromIntegral (radius action)) newAngle
+        pos = toPos $ fromPos (center action) `add` rotVect
     return (setPos pos obj, Just action')
 
 
 moveRoute :: ObjectHandler
 moveRoute obj action Time{timestamp=ts} = do
-    let (pos, ang) = reduce $ map toVect $ positions action
+    let (pos, ang) = reduce $ map fromPos $ positions action
         (pos', maybeAngle, maybeAction) = if ts >= endTs action
             then (endPos, Nothing, Nothing)
             else (pos, Just ang, Just action)
@@ -164,7 +164,7 @@ moveRoute obj action Time{timestamp=ts} = do
         --De Casteljau's algorithm
         reduce :: [Vect] -> (Pos, Angle)
         reduce [point, point'] =
-            let pos = fromVect $ middlePoint t point point'
+            let pos = toPos $ middlePoint t point point'
                 ang = angle $ point' `sub` point
             in (pos, ang)
         reduce points =

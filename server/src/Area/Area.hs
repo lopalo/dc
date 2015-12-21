@@ -21,6 +21,7 @@ import Types (UserPid(..), AreaId, AreaPid(..))
 import qualified User.External as UE
 import qualified Area.Objects.User as U
 import Area.Utils (sendCmd)
+import Area.Misc (spawnUser)
 import Area.Types
 import Area.State
 import Area.ClientCommands
@@ -35,10 +36,9 @@ import Area.Collision (emptyColliders)
 handleEnter :: State -> (Enter, Connection) -> Process State
 handleEnter state (Enter ua userPid login, conn) = do
     let uid = UE.userId ua
-        enterPos = (AS.enterPos . settings) state
         user = U.User{U.userId=uid,
                       U.name=UE.name ua,
-                      U.pos=uncurry Pos enterPos,
+                      U.pos=Pos 0 0,
                       U.angle=0,
                       U.speed=UE.speed ua,
                       U.maxDurability=UE.maxDurability ua,
@@ -48,15 +48,17 @@ handleEnter state (Enter ua userPid login, conn) = do
                       U.kills=UE.kills ua,
                       U.deaths=UE.deaths ua,
                       U.lastAttacker=Nothing}
-        --TODO delete old user with the same uid if it exists
-        addUsr = usersL ^%= addUser uid conn userPid user
+        insUsr = usersL ^%= insertUser uid conn userPid user
         reason = if login then LogIn else Entry
         addSig = addSignal $ Appearance uid reason
-        state' = addSig $ addUsr state
-    UE.monitorUser userPid
-    initConnection conn state'
-    UE.syncState userPid $ U.userArea user
-    return state'
+        state' = addSig $ spawnUser uid $ insUsr state
+    if uid `M.member` userPids (users state)
+        then return state
+        else do
+            UE.monitorUser userPid
+            initConnection conn state'
+            UE.syncState userPid $ U.userArea user
+            return state'
 
 handleReconnection :: State -> (Reconnection, Connection) -> Process State
 handleReconnection state (Reconnection uid, conn) = do

@@ -38,25 +38,25 @@ angle (Vect x y) = degrees $ atan2 y x
 dot :: Vect -> Vect -> Float
 dot (Vect x y) (Vect x' y') = x * x' + y * y'
 
-toVect :: Pos -> Vect
-toVect (Pos x y) = Vect (fromIntegral x) (fromIntegral y)
+fromPos :: Pos -> Vect
+fromPos (Pos x y) = Vect (fromIntegral x) (fromIntegral y)
 
-fromVect :: Vect -> Pos
-fromVect (Vect x y) = Pos (round x) (round y)
+toPos :: Vect -> Pos
+toPos (Vect x y) = Pos (round x) (round y)
 
-fromLenAndAngle :: Float -> Angle -> Vect
-fromLenAndAngle length degr =
+fromPolar :: Float -> Angle -> Vect
+fromPolar radius degr =
     let rad = radians degr
-        x = length * cos rad
-        y = length * sin rad
+        x = radius * cos rad
+        y = radius * sin rad
     in Vect x y
 
 
 projectionToSegment :: Pos -> Pos -> Pos -> Vect
 projectionToSegment start end point =
-    let p = toVect point
-        s = toVect start
-        e = toVect end
+    let p = fromPos point
+        s = fromPos start
+        e = fromPos end
         sp = p `sub` s
         se = e `sub` s
     in case sp `dot` se / lenSqr se of
@@ -68,7 +68,7 @@ projectionToSegment start end point =
 
 distanceToSegment :: Pos -> Pos -> Pos -> Float
 distanceToSegment start end point =
-    let p = toVect point
+    let p = fromPos point
         v = projectionToSegment start end point `sub` p
     in len v
 

@@ -11,8 +11,9 @@ import Utils (Ts)
 
 
 data Settings =
-    Settings {enterPos :: (Int, Int),
+    Settings {gateFieldRadius :: Float,
               shotDamage :: Int,
+              shotDistance :: Float,
               routeFilterThreshold :: Float,
               tickMilliseconds :: Ts,
               broadcastEveryTick :: Int,
@@ -21,8 +22,9 @@ data Settings =
 
 instance FromJSON Settings where
     parseJSON (Object v) = Settings <$>
-                           v .: "enter-pos" <*>
+                           v .: "gate-field-radius" <*>
                            v .: "shot-damage" <*>
+                           v .: "shot-distance" <*>
                            v .: "route-filter-threshold" <*>
                            v .: "tick-milliseconds" <*>
                            v .: "broadcast-every-tick" <*>

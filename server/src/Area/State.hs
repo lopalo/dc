@@ -74,8 +74,8 @@ userPidToIdsL :: Lens Users UserPidToIds
 userPidToIdsL = lens userPidToIds (\v us -> us{userPidToIds=v})
 
 
-addUser :: UserId -> Connection -> UserPid -> U.User -> Users -> Users
-addUser uid conn userPid user us = foldr ($) us fs
+insertUser :: UserId -> Connection -> UserPid -> U.User -> Users -> Users
+insertUser uid conn userPid user us = foldr ($) us fs
     where fs = [usersDataL ^%= M.insert uid user,
                 connToIdsL ^%= M.insert conn uid,
                 connectionsL ^%= M.insert uid conn,

@@ -60,7 +60,8 @@ newtype AreaPid = AreaPid ProcessId  deriving (Generic, Typeable)
 instance Binary AreaPid
 
 
-data Size = Size !Int !Int deriving (Generic, Typeable, Eq, Show)
+data Size = Size {width :: !Int, height :: !Int}
+            deriving (Generic, Typeable, Eq, Show)
 instance Binary Size
 
 instance ToJSON Size where

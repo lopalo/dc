@@ -13,7 +13,7 @@ import Database.SQLite.Simple (FromRow(fromRow), ToRow(toRow), field)
 import Database.SQLite.Simple.Internal (RowParser)
 import Data.Aeson (Value, encode, decode, object, (.=))
 
-import Types (Size(Size))
+import Types (Size(Size), width)
 import Area.Types (Object(..), Destroyable(..),
                    Pos(Pos), Angle, ObjId(AsteroidId))
 import Area.Action (Active(..),
@@ -124,4 +124,4 @@ instance Destroyable Asteroid where
 instance Collidable Asteroid where
 
     collider ast = Circular (objId ast) (getPos ast) (quot d 2)
-        where Size d _ = size ast
+        where d = width $ size ast

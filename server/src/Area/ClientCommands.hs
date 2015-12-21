@@ -23,7 +23,8 @@ import Area.Types
 import Area.State
 import Area.Signal (Signal(Disappearance, Shot), DReason(Exit))
 import Area.External (enter)
-import Area.Vector (toVect, add, sub, mul, lenSqr, len, dot, distanceToSegment)
+import Area.Vector (fromPolar, toPos, fromPos, add, sub,
+                    mul, lenSqr, len, angle, dot, distanceToSegment)
 import Area.Collision (Collision(Collision), rayCollision)
 
 
@@ -78,12 +79,16 @@ handleClientCommand state (MoveAlongRoute route, conn) = do
     now <- liftIO milliseconds
     let uid = uidByConn conn state
         user = userByConn conn state
+        pos = U.pos user
+        speed = U.speed user
+
+        moveV = fromPolar (fromIntegral speed) (U.angle user)
+        pos' = toPos $ fromPos pos `add` moveV
+
         threshold = AS.routeFilterThreshold $ settings state
-        route' = filterRoute threshold (U.pos user : route)
+        route' = filterRoute threshold (pos : pos' : route)
         pathLength = sum $ map (uncurry distance) $ getIntervals route'
-        dt = pathLength / (fromIntegral (U.speed user) / 1000)
-        --TODO: if it's moving, consider current direction;
-        --      otherwise rotate it before moving along the route
+        dt = pathLength / (fromIntegral speed / 1000)
         action = MoveRoute{startTs=now,
                            endTs=now + round dt,
                            positions=route'}
@@ -103,10 +108,16 @@ handleClientCommand state (Shoot targetPos, conn) = do
     let shooterId = uidByConn conn state
     return $ case state ^. userFieldPL shooterId posL of
         Just shooterPos -> do
-            let ray = rayCollision (UId shooterId) shooterPos targetPos
+            let sett = settings state
+
+                rayDist = AS.shotDistance sett
+                rayAngle = angle $ fromPos targetPos `sub` fromPos shooterPos
+                rayV = fromPolar rayDist rayAngle
+                targetPos' = toPos $ fromPos shooterPos `add` rayV
+                ray = rayCollision (UId shooterId) shooterPos targetPos'
 
                 addSig pos = addSignal $ Shot shooterPos pos
-                damage = AS.shotDamage $ settings state
+                damage = AS.shotDamage sett
 
                 dmgTarget (UId uid) =
                     userFieldPL uid durabilityL ^-= damage
@@ -124,13 +135,13 @@ handleClientCommand state (Shoot targetPos, conn) = do
                 updTargetActions _ = id
 
             case ray $ colliders state of
-                Just (Collision _ targetId targetPos') ->
+                Just (Collision _ targetId targetPos'') ->
                     let fs = [dmgTarget targetId,
                               updTargetAttacker targetId,
                               updTargetActions targetId,
-                              addSig targetPos']
+                              addSig targetPos'']
                     in foldr ($) state fs
-                Nothing -> addSig targetPos state
+                Nothing -> addSig targetPos' state
         Nothing -> state
 
 

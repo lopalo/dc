@@ -31,6 +31,7 @@ import Area.Collision (Collision, emptyColliders, addCollider,
                        findCollisions, collisionPair)
 import Area.Signal (Signal(Appearance, Disappearance),
                     AReason(..), DReason(..))
+import Area.Misc (spawnUser)
 import Area.Types (Object(..), Destroyable(..), Pos(..), ObjId(..))
 import qualified Area.Objects.User as U
 import qualified User.External as UE
@@ -175,14 +176,13 @@ handleSignals = do
 
 handleSignal :: Signal -> StateS (Maybe Signal)
 handleSignal signal@(Disappearance (UId uid) Destruction) = do
-    enterPos <- gets $ uncurry Pos . AS.enterPos . settings
     mAttacker <- gets $  getPL $ userFieldPL uid U.lastAttackerL
-    let resetUser u = u{U.pos=enterPos,
-                        U.durability=1,
+    let resetUser u = u{U.durability=1,
                         U.actions=[],
                         U.deaths=U.deaths u + 1,
                         U.lastAttacker=Nothing}
     modify $ userPL uid ^%= resetUser
+    modify $ spawnUser uid
     addSignalS $ Appearance uid Recovery
     case mAttacker of
         Just (Just attackerId) ->

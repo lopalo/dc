@@ -15,8 +15,11 @@ Executable dc
         -threaded
         -rtsopts
         -with-rtsopts=-N
+        -Wall --enable warnings
     Build-Depends:
         SHA == 1.6.4,
+        random >= 1.0.0.0,
+        hashable >= 1.0.0,
         aeson == 0.7.0.6,
         base == 4.7.0.2,
         time == 1.4.2,

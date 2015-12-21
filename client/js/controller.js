@@ -128,7 +128,6 @@ define(function (require) {
             pos.add(cameraPos).invertY();
             switch (this._models.models.ui.get("controlMode")) {
                 case "shot":
-                    //TODO: send direction instead
                     this._connection.send("area.shoot", pos.toArray());
                     break;
             }

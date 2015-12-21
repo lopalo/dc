@@ -14,8 +14,9 @@ user:
   logout-seconds: 10
   period-milliseconds: 1000
 area:
-  enter-pos: [0, 0]
+  gate-field-radius: 700
   shot-damage: 10
+  shot-distance: 1200
   route-filter-threshold: 10 #units
   tick-milliseconds: 50
   broadcast-every-tick: 1 # 4

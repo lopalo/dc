@@ -6,11 +6,11 @@ import Control.Distributed.Process
 
 import qualified Connection as C
 import Area.Types (Pos)
-import Area.Vector (len, sub, toVect)
+import Area.Vector (len, sub, fromPos)
 
 
 distance :: Pos -> Pos -> Float
-distance pos pos' = len $ toVect pos' `sub` toVect pos
+distance pos pos' = len $ fromPos pos' `sub` fromPos pos
 
 getIntervals :: [a] -> [(a, a)]
 getIntervals (val:values) = f val values

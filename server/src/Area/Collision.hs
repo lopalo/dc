@@ -65,22 +65,22 @@ checkCollision :: Collider -> Collider -> Maybe Pos
 checkCollision c c'
     | c == c' = Nothing
 checkCollision c@Circular{} c'@Circular{} =
-    let posV = toVect $ position c
-        posV' = toVect $ position c'
+    let posV = fromPos $ position c
+        posV' = fromPos $ position c'
         radius' = fromIntegral . radius
     in
         if len (posV `sub` posV') <= radius' c + radius' c'
-            then Just $ fromVect $ posV `add` posV' `divide` 2
+            then Just $ toPos $ posV `add` posV' `divide` 2
             else Nothing
 checkCollision c@Segment{} c'@Circular{} =
     let start = startPosition c
         end = endPosition c
         point = position c'
         projection = projectionToSegment start end point
-        distance = len $ projection `sub` toVect point
+        distance = len $ projection `sub` fromPos point
     in
         if distance <= fromIntegral (radius c')
-            then Just $ fromVect projection
+            then Just $ toPos projection
             else Nothing
 
 
@@ -100,9 +100,9 @@ findCollisions coll = Set.foldl check Set.empty
 rayCollision :: ObjId -> Pos -> Pos -> Colliders -> Maybe Collision
 rayCollision ident start end colliders =
     let collisions = findCollisions (Segment ident start end) colliders
-        startV = toVect start
+        startV = fromPos start
         comp a b = dist a `compare` dist b
-        dist (Collision _ _ p) = len (toVect p `sub` startV)
+        dist (Collision _ _ p) = len (fromPos p `sub` startV)
         nearest = minimumBy comp $ Set.toAscList collisions
     in
         if not $ Set.null collisions
