@@ -28,8 +28,8 @@ enter aid userArea userPid login conn =
     globalNSend (show aid) (Enter userArea userPid login, conn)
 
 
-clientCmd :: AreaPid -> String -> Value -> RequestNumber ->
-             Connection -> Process ()
+clientCmd ::
+    AreaPid -> String -> Value -> RequestNumber -> Connection -> Process ()
 clientCmd (AreaPid pid) cmd body req conn = do
     let Success parsed = parseClientCmd cmd body
     evaluate parsed

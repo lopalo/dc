@@ -15,13 +15,18 @@ class Object o => Collidable o where
     collider :: o -> Collider
 
 
-data Collider = Circular {objId :: ObjId,
-                          position :: Pos,
-                          radius :: Int}
-              | Segment {objId :: ObjId,
-                         startPosition :: Pos,
-                         endPosition :: Pos}
-              | Point {objId :: ObjId, position :: Pos}
+data Collider
+    = Circular {
+        objId :: ObjId,
+        position :: Pos,
+        radius :: Int
+        }
+    | Segment {
+        objId :: ObjId,
+        startPosition :: Pos,
+        endPosition :: Pos
+        }
+    | Point {objId :: ObjId, position :: Pos}
 
 instance Eq Collider where
 
@@ -40,7 +45,6 @@ instance Eq Collision where
 
     c == c' = collisionPair c == collisionPair c'
 
-
 instance Ord Collision where
 
     c <= c' = collisionPair c <= collisionPair c'
@@ -49,13 +53,17 @@ instance ToJSON Collision where
 
     toJSON _ = toJSON ""
 
+
 type Collisions = Set.Set Collision
+
 
 emptyColliders :: Colliders
 emptyColliders = Set.empty
 
+
 addCollider :: Collidable c => c -> Colliders -> Colliders
 addCollider obj = Set.insert (collider obj)
+
 
 collisionPair :: Collision -> (ObjId, ObjId)
 collisionPair (Collision ident ident' _) = (ident, ident')

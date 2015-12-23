@@ -7,7 +7,7 @@ import Data.Binary (Binary)
 import Data.Typeable (Typeable)
 import Prelude hiding ((.))
 import Control.Applicative ((<$>))
-import Control.Monad (foldM, liftM, when, unless, void)
+import Control.Monad (foldM, liftM, when)
 import Control.Monad.Writer (runWriter)
 import Control.Category ((>>>), (.))
 import Control.Monad.State.Strict (runState, gets, modify)
@@ -27,12 +27,16 @@ import qualified Connection as C
 import qualified Area.Settings as AS
 import Area.Action (Active(applyActions), Time(..))
 import Area.State
-import Area.Collision (Collision, emptyColliders, addCollider,
-                       findCollisions, collisionPair)
-import Area.Signal (Signal(Appearance, Disappearance),
-                    AReason(..), DReason(..))
+import Area.Collision (
+    Collision, emptyColliders, addCollider,
+    findCollisions, collisionPair
+    )
+import Area.Signal (
+    Signal(Appearance, Disappearance),
+    AReason(..), DReason(..)
+    )
 import Area.Misc (spawnUser)
-import Area.Types (Object(..), Destroyable(..), Pos(..), ObjId(..))
+import Area.Types (Object(..), Destroyable(..), ObjId(..))
 import qualified Area.Objects.User as U
 import qualified User.External as UE
 
@@ -70,6 +74,7 @@ handleTick state TimeTick = do
         saveObjects state
     return state'
 
+
 calculateTick :: Ts -> StateS (Maybe Value)
 calculateTick ts = do
     handleActions ts
@@ -84,16 +89,18 @@ calculateTick ts = do
         then liftM Just (tickData ts)
         else return Nothing
 
+
 handleActions :: Ts -> StateS ()
 handleActions ts = do
     pts <- gets previousTs
     modify $ \s -> s{previousTs=ts}
-    let handleActive lens = do
+    let
+        handleActive lens = do
             actives <- access lens
             signals <- access signalsL
-            let (actives', signals') = M.foldrWithKey handle
-                                                      (M.empty, signals)
-                                                      actives
+            let
+                (actives', signals') =
+                    M.foldrWithKey handle (M.empty, signals) actives
             lens ~= actives'
             signalsL ~= signals'
             return ()
@@ -112,16 +119,18 @@ handleCollisions = do
     collidersL ~= emptyColliders
     addColliders $ usersL >>> usersDataL
     addColliders asteroidsL
-    colliders <- access collidersL
-    let find collisions collider =
-            let collisions' = findCollisions collider colliders
+    colliders_ <- access collidersL
+    let
+        find collisions collider =
+            let collisions' = findCollisions collider colliders_
             in Set.union collisions collisions'
-        collisions = Set.foldl find Set.empty colliders
-    mapM_ handleCollision $ Set.toAscList collisions
+        collisions'' = Set.foldl find Set.empty colliders_
+    mapM_ handleCollision $ Set.toAscList collisions''
     return ()
     where
         addColliders lens = M.elems <$> access lens >>= mapM_ addColl
         addColl obj = collidersL %= addCollider obj
+
 
 handleCollision :: Collision -> StateS()
 handleCollision collision =
@@ -158,7 +167,6 @@ checkDurability = do
                 addSignalS $ Disappearance (objId obj) Destruction
 
 
-
 handleSignals :: StateS ()
 handleSignals = do
     signals <- access signalsL
@@ -169,18 +177,22 @@ handleSignals = do
     where
         handle res signal = do
             maybeSendSignal <- handleSignal signal
-            return $ case maybeSendSignal of
-                Nothing -> res
-                Just signal' -> signal' : res
+            return $
+                case maybeSendSignal of
+                    Nothing -> res
+                    Just signal' -> signal' : res
 
 
 handleSignal :: Signal -> StateS (Maybe Signal)
 handleSignal signal@(Disappearance (UId uid) Destruction) = do
     mAttacker <- gets $  getPL $ userFieldPL uid U.lastAttackerL
-    let resetUser u = u{U.durability=1,
-                        U.actions=[],
-                        U.deaths=U.deaths u + 1,
-                        U.lastAttacker=Nothing}
+    let
+        resetUser u = u{
+            U.durability=1,
+            U.actions=[],
+            U.deaths=U.deaths u + 1,
+            U.lastAttacker=Nothing
+            }
     modify $ userPL uid ^%= resetUser
     modify $ spawnUser uid
     addSignalS $ Appearance uid Recovery
@@ -204,10 +216,13 @@ tickData ts = do
     usd <- gets $ usersData . users
     gs <- gets gates
     as <- gets asteroids
-    let res = object ["areaId" .= aid,
-                      "objects" .= objects,
-                      "signals" .= signals,
-                      "timestamp" .= ts]
+    let
+        res = object [
+            "areaId" .= aid,
+            "objects" .= objects,
+            "signals" .= signals,
+            "timestamp" .= ts
+            ]
         usersInfo = map tickClientInfo $ M.elems usd
         gatesInfo = map tickClientInfo $ M.elems gs
         asteroidsInfo = map tickClientInfo $ M.elems as
@@ -218,20 +233,21 @@ tickData ts = do
 syncUsers :: State -> Process ()
 syncUsers state = mapM_ sync us
     where
-        sync usr = let pid = uPids M.! U.userId usr
-                   in UE.syncState pid $ U.userArea usr
+        sync usr =
+            let pid = uPids M.! U.userId usr
+            in UE.syncState pid $ U.userArea usr
         uPids = userPidsL . usersL ^$ state
         us = M.elems $ usersDataL . usersL ^$ state
 
 
 saveObjects :: State -> Process ()
-saveObjects state =
-    putAreaObjects (areaId state) objs
+saveObjects state = putAreaObjects (areaId state) objs
     where
         objs = (M.elems $ gates state, M.elems $ asteroids state)
 
 
 broadcastCmd :: ToJSON a => State -> String -> a -> Process ()
 broadcastCmd state cmd = C.broadcastCmd (M.elems cs) ("area." ++ cmd)
-    where cs = connectionsL . usersL ^$ state
+    where
+        cs = connectionsL . usersL ^$ state
 

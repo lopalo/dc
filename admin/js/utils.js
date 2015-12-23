@@ -3,13 +3,13 @@ define(["mithril"], function (m) {
 
     var POLLING_INTERVAL = 1000;
 
-    function extend (target, source) {
+    function extend(target, source) {
         Object.keys(source).map(function (k) {
             target[k] = source[k];
         });
     }
 
-    function urlEncoded (xhr) {
+    function urlEncoded(xhr) {
         xhr.setRequestHeader(
             "Content-type",
             "application/x-www-form-urlencoded"

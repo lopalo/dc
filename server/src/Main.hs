@@ -37,26 +37,26 @@ startServices node settings = do
 
 
 wsServer :: S.Settings -> Node.LocalNode -> Process ()
-wsServer settings node = liftIO $ do
-    let (wsHost, wsPort) = S.wsAddress settings
-        accept = acceptConnection node $ inputHandler settings
-        wsHost' = if wsHost == "<host>" then "0.0.0.0" else wsHost
-    WS.runServer wsHost' wsPort accept
+wsServer settings node =
+    liftIO $ do
+        let (wsHost, wsPort) = S.wsAddress settings
+            accept = acceptConnection node $ inputHandler settings
+            wsHost' = if wsHost == "<host>" then "0.0.0.0" else wsHost
+        WS.runServer wsHost' wsPort accept
 
 
 main :: IO ()
 main = do
     (settingsPath:args) <- getArgs
-    res <- decodeFileEither settingsPath
-                :: IO (Either ParseException S.Settings)
+    res <-
+        decodeFileEither settingsPath
+        :: IO (Either ParseException S.Settings)
     case res of
         Left err -> print err
         Right settings -> do
             let (nHost, nPort) = S.nodeAddress settings
-            Right transport <- createTransport
-                               nHost
-                               nPort
-                               defaultTCPParameters
+            Right transport <-
+                createTransport nHost nPort defaultTCPParameters
             node <- Node.newLocalNode transport Node.initRemoteTable
             Node.runProcess node $ startServices node settings
             forever $ threadDelay 1000000

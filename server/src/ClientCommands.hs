@@ -17,12 +17,14 @@ import qualified Settings as S
 
 type Command = (String, Value, RequestNumber)
 
+
 delPathPrefix :: String -> String -> String
 delPathPrefix = delPrefix "."
 
-commandHandler :: S.Settings -> String -> Value -> RequestNumber ->
-                  Connection -> Maybe UserPid -> Maybe AreaPid ->
-                  Process ()
+
+commandHandler ::
+    S.Settings -> String -> Value -> RequestNumber ->
+    Connection -> Maybe UserPid -> Maybe AreaPid -> Process ()
 --NOTE: strict evaluation of parsed data is required to catch a parse error!!!
 --NOTE: 0 means no request
 commandHandler _ "echo" body req conn _ _ = do

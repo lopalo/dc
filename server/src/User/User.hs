@@ -28,38 +28,47 @@ import User.Types
 
 userArea :: User -> UE.UserArea
 userArea usr =
-    UE.UserArea{UE.userId=userId usr,
-                UE.name=name usr,
-                UE.speed=speed usr,
-                UE.maxDurability=maxDurability usr,
-                UE.durability=durability usr,
-                UE.size=size usr,
-                UE.kills=kills usr,
-                UE.deaths=deaths usr}
+    UE.UserArea{
+        UE.userId=userId usr,
+        UE.name=name usr,
+        UE.speed=speed usr,
+        UE.maxDurability=maxDurability usr,
+        UE.durability=durability usr,
+        UE.size=size usr,
+        UE.kills=kills usr,
+        UE.deaths=deaths usr
+        }
 
 
-data State = State {user :: !User,
-                    areas :: ![AreaId],
-                    settings :: !US.Settings,
-                    connection :: Maybe C.Connection,
-                    disconnectTs :: Maybe Ts}
+data State = State {
+    user :: !User,
+    areas :: ![AreaId],
+    settings :: !US.Settings,
+    connection :: Maybe C.Connection,
+    disconnectTs :: Maybe Ts
+    }
 
 
 data Period = Period deriving (Generic, Typeable)
+
 instance Binary Period
 
+
 data Reconnection = Reconnection C.Connection deriving (Generic, Typeable)
+
 instance Binary Reconnection
 
 
-handleMonitorNotification :: State -> ProcessMonitorNotification
-                             -> Process State
+handleMonitorNotification ::
+    State -> ProcessMonitorNotification -> Process State
 handleMonitorNotification state n@ProcessMonitorNotification{} = do
     let Just conn = connection state
     now <- liftIO milliseconds
-    return $ if C.checkMonitorNotification conn n
-                then state{connection=Nothing, disconnectTs=Just now}
-                else state
+    return $
+        if C.checkMonitorNotification conn n
+            then state{connection=Nothing, disconnectTs=Just now}
+            else state
+
 
 handlePeriod :: State -> Period -> Process State
 handlePeriod state Period = do
@@ -70,6 +79,7 @@ handlePeriod state Period = do
         Just ts -> when (now - ts > logoutMs) $ logout userName
         Nothing -> return ()
     return state
+
 
 handleReconnection :: State -> Reconnection -> Process State
 handleReconnection state (Reconnection conn) = do
@@ -82,12 +92,15 @@ handleReconnection state (Reconnection conn) = do
     return state{connection=Just conn, disconnectTs=Nothing}
     where usr = user state
 
+
 handleSyncState :: State -> UE.SyncState -> Process State
 handleSyncState state (UE.SyncState ua) = do
     let usr = user state
-        usr' = usr{durability=UE.durability ua,
-                   kills=UE.kills ua,
-                   deaths=UE.deaths ua}
+        usr' = usr{
+            durability=UE.durability ua,
+            kills=UE.kills ua,
+            deaths=UE.deaths ua
+            }
     putUser usr'
     logDebug $ printf "User '%s' synchronized" $ show $ userId usr'
     return state{user=usr'}
@@ -106,6 +119,7 @@ handleSwitchArea state (UE.SwitchArea newAreaId) = do
     tryToLinkToArea newAreaId conn
     return state{user=usr'}
 
+
 userProcess :: UserName -> C.Connection -> S.Settings -> Process ()
 userProcess userName conn globalSettings = do
     let uid = UserId userName
@@ -123,20 +137,24 @@ userProcess userName conn globalSettings = do
         areaId = area usr
         maxDur = US.initDurability uSettings
         mConn = Just conn
-        newUser = User{userId=uid,
-                       name=userName,
-                       area=startArea,
-                       speed=US.speed uSettings,
-                       maxDurability=maxDur,
-                       durability=maxDur,
-                       size=US.size uSettings,
-                       kills=0,
-                       deaths=0}
-        state = State{user=usr,
-                      areas=S.areas globalSettings,
-                      settings=uSettings,
-                      connection=mConn,
-                      disconnectTs=Nothing}
+        newUser = User{
+            userId=uid,
+            name=userName,
+            area=startArea,
+            speed=US.speed uSettings,
+            maxDurability=maxDur,
+            durability=maxDur,
+            size=US.size uSettings,
+            kills=0,
+            deaths=0
+            }
+        state = State{
+            user=usr,
+            areas=S.areas globalSettings,
+            settings=uSettings,
+            connection=mConn,
+            disconnectTs=Nothing
+            }
     tryToLinkToArea areaId mConn
     putUser usr
     initConnection conn state
@@ -152,12 +170,15 @@ loop state = safeReceive handlers state >>= loop
     where
         prepare h = match (h state)
         --NOTE: handlers are matched by a type
-        handlers = [prepare handlePeriod,
-                    prepare handleSyncState,
-                    prepare handleSwitchArea,
-                    prepare handleMonitorNotification,
-                    prepare handleReconnection,
-                    matchUnknown (return state)]
+        handlers = [
+            prepare handlePeriod,
+            prepare handleSyncState,
+            prepare handleSwitchArea,
+            prepare handleMonitorNotification,
+            prepare handleReconnection,
+            matchUnknown (return state)
+            ]
+
 
 logout :: UserName -> Process ()
 logout userName = do
@@ -165,14 +186,18 @@ logout userName = do
     selfPid <- getSelfPid
     exit selfPid ("logout" :: String)
 
+
 sendCmd :: ToJSON a => C.Connection -> String -> a -> Process ()
 sendCmd conn cmd = C.sendCmd conn ("user." ++ cmd)
+
 
 makeSelfPid :: Process UserPid
 makeSelfPid = fmap UserPid getSelfPid
 
+
 reconnect :: ProcessId -> C.Connection -> Process ()
 reconnect pid conn = send pid (Reconnection conn)
+
 
 tryToLinkToArea :: AreaId -> Maybe C.Connection -> Process ()
 tryToLinkToArea areaId maybeConn = do
@@ -186,26 +211,32 @@ tryToLinkToArea areaId maybeConn = do
         Just areaPid ->
             link areaPid
 
+
 initConnection :: C.Connection -> State -> Process ()
 initConnection conn state = do
     C.monitorConnection conn
     makeSelfPid >>= C.setUser conn
     sendCmd conn "init" $ initClientInfo state
 
+
 initClientInfo :: State -> Value
 initClientInfo state =
-    object ["userId" .= userId usr,
-            "name" .= name usr,
-            "areas" .= areas state]
+    object [
+        "userId" .= userId usr,
+        "name" .= name usr,
+        "areas" .= areas state
+        ]
     where usr = user state
+
 
 runPeriodic :: Ts -> Process ProcessId
 runPeriodic ms = do
     selfPid <- getSelfPid
     let time = ms * 1000
-        period = forever $ do
-            liftIO $ threadDelay time
-            send selfPid Period
+        period =
+            forever $ do
+                liftIO $ threadDelay time
+                send selfPid Period
     spawnLocal $ link selfPid >> period
 
 

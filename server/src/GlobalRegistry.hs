@@ -1,8 +1,10 @@
 {-# LANGUAGE DeriveGeneric, DeriveDataTypeable, OverloadedStrings #-}
 
-module GlobalRegistry (globalRegistryProcess,
-                       getRegistry, globalRegister,
-                       globalWhereIs, globalNSend) where
+module GlobalRegistry (
+    globalRegistryProcess,
+    getRegistry, globalRegister,
+    globalWhereIs, globalNSend
+    ) where
 
 import GHC.Generics (Generic)
 import Data.Binary (Binary)
@@ -23,15 +25,18 @@ type Registry = M.Map ProcessId String
 
 
 data Register = Register String ProcessId deriving (Generic, Typeable)
+
 instance Binary Register
 
 
 data GetRegistry = GetRegistry deriving (Generic, Typeable)
+
 instance Binary GetRegistry
 
 
 globalRegistryServiceName :: String
 globalRegistryServiceName = "globalRegistry"
+
 
 globalRegistryProcess :: Process ()
 globalRegistryProcess = do
@@ -45,9 +50,11 @@ loop registry = safeReceive handlers registry >>= loop
     where
         prepare h = match (h registry)
         prepareCall h = callResponse (h registry)
-        handlers = [prepare handleRegister,
-                    prepare handleMonitorNotification,
-                    prepareCall handleGetRegistry]
+        handlers = [
+            prepare handleRegister,
+            prepare handleMonitorNotification,
+            prepareCall handleGetRegistry
+            ]
 
 
 handleRegister :: Registry -> Register -> Process Registry
@@ -56,14 +63,14 @@ handleRegister registry (Register name pid) = do
     return $ M.insert pid name registry
 
 
-handleMonitorNotification :: Registry -> ProcessMonitorNotification
-                             -> Process Registry
+handleMonitorNotification ::
+    Registry -> ProcessMonitorNotification -> Process Registry
 handleMonitorNotification registry (ProcessMonitorNotification _ pid _) =
     return $ M.delete pid registry
 
 
-handleGetRegistry :: Registry -> GetRegistry
-                     -> Process (Maybe Registry, Registry)
+handleGetRegistry
+    :: Registry -> GetRegistry -> Process (Maybe Registry, Registry)
 handleGetRegistry registry GetRegistry = return (Just registry, registry)
 
 
@@ -76,18 +83,22 @@ getRegistry tagPool = do
     res <- callAt pid GetRegistry tag
     return $ fromMaybe Nothing res
 
+
 globalRegister :: String -> ProcessId -> Process ()
 globalRegister name pid = do
     register name pid
     nsend globalRegistryServiceName $ Register name pid
 
+
 globalWhereIs :: String -> Process (Maybe ProcessId)
 globalWhereIs = whereis
 
+
 globalNSend :: Serializable a => String -> a -> Process ()
-globalNSend name payload = void $ spawnLocal $ do
-    maybePid <- globalWhereIs name
-    case maybePid of
-        Just pid -> send pid payload
-        Nothing -> return ()
+globalNSend name payload =
+    void $ spawnLocal $ do
+        maybePid <- globalWhereIs name
+        case maybePid of
+            Just pid -> send pid payload
+            Nothing -> return ()
 

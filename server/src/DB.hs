@@ -11,9 +11,11 @@ import Data.Maybe (fromMaybe)
 import Control.Distributed.Process
 import Control.Distributed.Process.Extras (TagPool, getTag)
 import Control.Distributed.Process.Extras.Call (callResponse, callAt)
-import Database.SQLite.Simple (ToRow, SQLData, Only(..), Connection,
-                               open, close, query, execute, toRow,
-                               withTransaction)
+import Database.SQLite.Simple (
+    ToRow, SQLData, Only(..), Connection,
+    open, close, query, execute, toRow,
+    withTransaction
+    )
 import Database.SQLite.Simple.ToField (toField)
 
 import GlobalRegistry (globalRegister, globalWhereIs, globalNSend)
@@ -28,24 +30,30 @@ import qualified Settings as S
 type AreaObjects = ([Gate], [Asteroid])
 
 data GetUser = GetUser UserId deriving (Generic, Typeable)
+
 instance Binary GetUser
 
 
 data PutUser = PutUser User deriving (Generic, Typeable)
+
 instance Binary PutUser
 
 
 data GetAreaObjects = GetAreaObjects AreaId deriving (Generic, Typeable)
+
 instance Binary GetAreaObjects
 
 
-data PutAreaObjects = PutAreaObjects AreaId AreaObjects
-                      deriving (Generic, Typeable)
+data PutAreaObjects =
+    PutAreaObjects AreaId AreaObjects
+    deriving (Generic, Typeable)
+
 instance Binary PutAreaObjects
 
 
 dbServiceName :: String
 dbServiceName = "db"
+
 
 dbProcess :: S.Settings -> Process ()
 dbProcess settings = do
@@ -60,10 +68,13 @@ loop conn = forever $ safeReceive handlers ()
     where
         prepare h = match (h conn)
         prepareCall h = callResponse (h conn)
-        handlers = [prepare handlePutUser,
-                    prepare handlePutAreaObjects,
-                    prepareCall handleGetUser,
-                    prepareCall handleGetAreaObjects]
+        handlers = [
+            prepare handlePutUser,
+            prepare handlePutAreaObjects,
+            prepareCall handleGetUser,
+            prepareCall handleGetAreaObjects
+            ]
+
 
 handleGetUser :: Connection -> GetUser -> Process (Maybe User, ())
 handleGetUser conn (GetUser (UserId uid)) = do
@@ -73,14 +84,13 @@ handleGetUser conn (GetUser (UserId uid)) = do
         [] -> return (Nothing, ())
 
 
-handleGetAreaObjects :: Connection -> GetAreaObjects
-                        -> Process (AreaObjects, ())
+handleGetAreaObjects ::
+    Connection -> GetAreaObjects -> Process (AreaObjects, ())
 handleGetAreaObjects conn (GetAreaObjects (AreaId aid)) = do
     gates <- liftIO $ query conn "SELECT * FROM gate WHERE area = ?" (Only aid)
-    asteroids <- liftIO $ query conn "SELECT * FROM asteroid WHERE area = ?"
-                                                                (Only aid)
+    asteroids <-
+        liftIO $ query conn "SELECT * FROM asteroid WHERE area = ?" (Only aid)
     return ((gates, asteroids), ())
-
 
 
 handlePutUser :: Connection -> PutUser -> Process ()
@@ -95,10 +105,12 @@ handlePutAreaObjects :: Connection -> PutAreaObjects -> Process ()
 handlePutAreaObjects conn (PutAreaObjects (AreaId area) objects) =
     liftIO $ withTransaction conn transaction
     where
-        gateQ = "INSERT OR REPLACE INTO gate VALUES \
-                 \ (?, ?, ?, ?, ?, ?, ?, ?, ?)"
-        asteroidQ = "INSERT OR REPLACE INTO asteroid VALUES \
-                     \ (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        gateQ =
+            "INSERT OR REPLACE INTO gate VALUES \
+             \ (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        asteroidQ =
+            "INSERT OR REPLACE INTO asteroid VALUES \
+             \ (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         addArea :: ToRow a => a -> [SQLData]
         addArea = ([toField area] ++) . toRow
         (gates, asteroids) = objects
@@ -116,8 +128,10 @@ getUser uid tagPool = do
     res <- callAt pid (GetUser uid) tag
     return $ fromMaybe Nothing res
 
+
 putUser :: User -> Process ()
 putUser user = globalNSend dbServiceName $ PutUser user
+
 
 getAreaObjects :: AreaId -> TagPool -> Process (Maybe AreaObjects)
 getAreaObjects aid tagPool = do

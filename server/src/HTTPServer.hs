@@ -7,8 +7,9 @@ import Data.String.Utils (split)
 import Data.Text.Lazy (unpack)
 
 import Control.Distributed.Process (Process, liftIO)
-import Network.Wai.Middleware.Static (staticPolicy, addBase, only,
-                                      policy, (<|>), (>->))
+import Network.Wai.Middleware.Static (
+    staticPolicy, addBase, only, policy, (<|>), (>->)
+    )
 import Web.Scotty hiding (settings)
 
 import qualified Settings as S
@@ -20,9 +21,8 @@ httpServer settings = liftIO $ do
     let clientPrefix = policy (stripPrefix "client/")
         clientDir = S.clientDir settings
         clientPolicy = clientPrefix >-> addBase clientDir
-        settingsPolicy = only [("client/js/settings.json",
-                                S.clientSettings settings)]
-
+        settingsPolicy =
+            only [("client/js/settings.json", S.clientSettings settings)]
         wsAddresses = S.wsAddresses settings
     scotty (S.httpPort settings) $ do
         middleware $ staticPolicy $ settingsPolicy <|> clientPolicy

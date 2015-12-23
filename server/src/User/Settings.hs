@@ -11,19 +11,22 @@ import Utils (Ts)
 import Types (Size)
 
 
-data Settings =
-    Settings {size :: Size,
-              speed :: Int,
-              initDurability :: Int,
-              logoutSeconds :: Int,
-              periodMilliseconds :: Ts}
+data Settings = Settings {
+    size :: Size,
+    speed :: Int,
+    initDurability :: Int,
+    logoutSeconds :: Int,
+    periodMilliseconds :: Ts
+    }
 
 instance FromJSON Settings where
-    parseJSON (Object v) = Settings <$>
-                           v .: "size" <*>
-                           v .: "speed" <*>
-                           v .: "init-durability" <*>
-                           v .: "logout-seconds" <*>
-                           v .: "period-milliseconds"
+
+    parseJSON (Object v) =
+        Settings <$>
+        v .: "size" <*>
+        v .: "speed" <*>
+        v .: "init-durability" <*>
+        v .: "logout-seconds" <*>
+        v .: "period-milliseconds"
     parseJSON _ = mzero
 

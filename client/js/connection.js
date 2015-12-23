@@ -39,7 +39,7 @@ define(["backbone", "json!settings.json"], function (Backbone, settings) {
             var self = this;
             var ws;
             var timeoutId;
-            function _onTimeout () {
+            function _onTimeout() {
                 self._ws = null;
                 onTimeout(self);
             }

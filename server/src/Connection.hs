@@ -1,9 +1,11 @@
 {-# LANGUAGE DeriveGeneric, DeriveDataTypeable #-}
 
-module Connection (acceptConnection, InputHandler, Connection,
-                   sendCmd, sendResponse, broadcastCmd, setUser,
-                   setArea, close, monitorConnection,
-                   checkMonitorNotification, sendErrorAndClose) where
+module Connection (
+    acceptConnection, InputHandler, Connection,
+    sendCmd, sendResponse, broadcastCmd, setUser,
+    setArea, close, monitorConnection,
+    checkMonitorNotification, sendErrorAndClose
+    ) where
 
 import GHC.Generics (Generic)
 import Data.Binary (Binary)
@@ -21,35 +23,42 @@ import Types (RequestNumber, UserPid(..), AreaPid)
 import Utils (evaluate, logDebug)
 
 
-data Connection = Connection {output :: ProcessId, input :: ProcessId}
-                  deriving (Eq, Ord, Generic, Typeable)
+data Connection =
+    Connection {output :: ProcessId, input :: ProcessId}
+    deriving (Eq, Ord, Generic, Typeable)
 instance Binary Connection
 
 
-type InputHandler = B.ByteString -> Connection -> Maybe UserPid ->
-                    Maybe AreaPid -> Process ()
+type InputHandler =
+    B.ByteString -> Connection -> Maybe UserPid -> Maybe AreaPid -> Process ()
 
 
 acceptConnection :: Node.LocalNode -> InputHandler -> WS.ServerApp
 acceptConnection node inputHandler pending = do
     wsConn <- WS.acceptRequest pending
-    outputPid <- Node.forkProcess node $ do
-        let outputLoop = forever $ do
-            ("send", outputData) <- expect :: Process (String, B.ByteString)
-            liftIO $ WS.sendTextData wsConn outputData
-        outputLoop `finally` logDebug "Connection: output closed"
+    outputPid <-
+        Node.forkProcess node $ do
+            let outputLoop = forever $ do
+                ("send", outputData) <-
+                    expect :: Process (String, B.ByteString)
+                liftIO $ WS.sendTextData wsConn outputData
+            outputLoop `finally` logDebug "Connection: output closed"
     Node.runProcess node $ do
         inputPid <- getSelfPid
         let conn = Connection outputPid inputPid
-            final = do exit outputPid "closed"
-                       logDebug "Connection: input closed"
+            final = do
+                exit outputPid "closed"
+                logDebug "Connection: input closed"
             setUserPid (_, areaPid) userPid@(UserPid pid) = do
                 link pid
                 return (Just userPid, areaPid)
             setAreaPid (userPid, _) areaPid = return (userPid, Just areaPid)
             updateState state = do
-                ret <- receiveTimeout 0 [match (setUserPid state),
-                                         match (setAreaPid state)]
+                ret <-
+                    receiveTimeout 0 [
+                        match (setUserPid state),
+                        match (setAreaPid state)
+                        ]
                 case ret of
                     Just state' -> updateState state'
                     Nothing -> return state
@@ -68,21 +77,27 @@ sendCmd conn cmd body = do
     evaluate body
     send (output conn) ("send", encode (cmd, body))
 
+
 sendResponse :: ToJSON a => Connection -> RequestNumber -> a -> Process ()
 sendResponse conn req = sendCmd conn $ "response:" ++ show req
+
 
 broadcastCmd :: ToJSON a => [Connection] -> String -> a -> Process ()
 broadcastCmd connections cmd body =
     mapM_ (\conn -> sendCmd conn cmd body) connections
 
+
 setUser :: Connection -> UserPid -> Process ()
 setUser (Connection _ inputPid) = send inputPid
+
 
 setArea :: Connection -> AreaPid -> Process ()
 setArea (Connection _ inputPid) = send inputPid
 
+
 close :: Connection -> Process ()
 close conn = exit (input conn) "close connection"
+
 
 sendErrorAndClose :: Connection -> String -> Process ()
 sendErrorAndClose conn errorMsg = do
@@ -93,8 +108,10 @@ sendErrorAndClose conn errorMsg = do
     return ()
     where timeoutSeconds = 5
 
+
 monitorConnection :: Connection -> Process ()
 monitorConnection conn = void $ monitor $ output conn
+
 
 checkMonitorNotification :: Connection -> ProcessMonitorNotification -> Bool
 checkMonitorNotification conn (ProcessMonitorNotification _ pid _) =

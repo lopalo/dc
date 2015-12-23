@@ -1,5 +1,5 @@
 
-define(function(require) {
+define(function (require) {
     var _ = require("underscore");
     var Backbone = require("backbone");
     var Victor = require("victor");
@@ -63,7 +63,7 @@ define(function(require) {
                     console.log("Unknown action " + action.tag);
             }
         },
-        _getT: function(timestamp, a) {
+        _getT: function (timestamp, a) {
             return (timestamp - a.startTs) / (a.endTs - a.startTs);
         },
         _applyMoveDistance: function (timestamp, a) {
