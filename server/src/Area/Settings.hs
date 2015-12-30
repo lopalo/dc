@@ -14,6 +14,7 @@ data Settings = Settings {
     gateFieldRadius :: Float,
     shotDamage :: Int,
     shotDistance :: Float,
+    asteroidPullSpeed :: Float,
     routeFilterThreshold :: Float,
     tickMilliseconds :: Ts,
     broadcastEveryTick :: Int,
@@ -28,6 +29,7 @@ instance FromJSON Settings where
         v .: "gate-field-radius" <*>
         v .: "shot-damage" <*>
         v .: "shot-distance" <*>
+        v .: "asteroid-pull-speed" <*>
         v .: "route-filter-threshold" <*>
         v .: "tick-milliseconds" <*>
         v .: "broadcast-every-tick" <*>

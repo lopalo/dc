@@ -19,17 +19,38 @@ GATE_POSITION = 100, 230
 GATE_ROTATION_SPEED = -20
 GATE_SIZE = 300
 
+CP_POSITION = -2000, -100
+CP_SIZE = 400
+CP_DURABILITY = 430
+
+
 
 INSERT_GATE = """
     INSERT INTO gate (area, id, name, x, y, angle, actions, width, height)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 """
 
+
 INSERT_ASTEROID = """
-    INSERT INTO asteroid (area, id, name, x, y, angle,
-                          max_durability, durability, actions, width, height)
+    INSERT INTO asteroid (
+        area, id, name, x, y, angle,
+        max_durability, durability,
+        actions, width, height
+    )
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 """
+
+
+INSERT_CP = """
+    INSERT INTO control_point (
+        area, id, name, x, y, angle,
+        max_durability, durability, actions,
+        width, height, owner
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+"""
+
+
 
 def get_counter():
     c = [0]
@@ -38,13 +59,14 @@ def get_counter():
         return c[0]
     return counter
 
+
 def insert_gate(cur, area_id, counter):
     pos = GATE_POSITION
     rotation = {'rotSpeed': GATE_ROTATION_SPEED,
                 'tag': "EternalRotation"}
     params = (area_id,
               counter(),
-              "gate",
+              "Gate",
               pos[0],
               pos[1],
               random.randint(0, 360),
@@ -52,6 +74,7 @@ def insert_gate(cur, area_id, counter):
               GATE_SIZE,
               GATE_SIZE)
     cur.execute(INSERT_GATE, params)
+
 
 def insert_asteroids(cur, area_id, counter):
     c_pos = ASTEROID_FIELD_POSITION
@@ -76,7 +99,7 @@ def insert_asteroids(cur, area_id, counter):
             actions.append(trajectory)
         params_list.append((area_id,
                             counter(),
-                            "asteroid",
+                            "Asteroid",
                             int(pos[0]),
                             int(pos[1]),
                             random.randint(0, 360),
@@ -88,6 +111,24 @@ def insert_asteroids(cur, area_id, counter):
     cur.executemany(INSERT_ASTEROID, params_list)
 
 
+def insert_control_point(cur, area_id, counter):
+    pos = CP_POSITION
+    actions = []
+    params = (area_id,
+              counter(),
+              "Control point",
+              pos[0],
+              pos[1],
+              random.randint(0, 360),
+              CP_DURABILITY,
+              CP_DURABILITY,
+              json.dumps(actions),
+              CP_SIZE,
+              CP_SIZE,
+              None)
+    cur.execute(INSERT_CP, params)
+
+
 def main():
     db_name = sys.argv[1]
     area_id = sys.argv[2]
@@ -96,6 +137,7 @@ def main():
     counter = get_counter()
     insert_gate(cur, area_id, counter)
     insert_asteroids(cur, area_id, counter)
+    insert_control_point(cur, area_id, counter)
     conn.commit()
 
 

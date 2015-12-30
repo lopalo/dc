@@ -85,12 +85,25 @@ define(function (require) {
             this.listenTo(uiViews.areaSelector, "select", this._enterArea);
             this.listenTo(uiViews.controlModeSelector, "select",
                                         this._changeControlMode);
+            this.listenTo(uiViews.captureButton, "click", this._capture);
+            this.listenTo(uiViews.pullButton, "click", this._pullAsteroid);
+            this.listenTo(uiViews.cancelPullButton, "click", this._cancelPull);
         },
         _showMyself: function () {
             this._stageController.showMyself();
         },
         _recover: function () {
             this._connection.send("area.recover", 1);
+        },
+        _capture: function () {
+            this._connection.send("area.capture", this._selectedStageObjectId);
+        },
+        _pullAsteroid: function () {
+            this._connection.send("area.pull-asteroid",
+                                  this._selectedStageObjectId);
+        },
+        _cancelPull: function () {
+            this._connection.send("area.cancel-pull", null);
         },
         _enterArea: function (areaId) {
             this._stageController.enterArea();

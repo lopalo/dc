@@ -14,7 +14,7 @@ import Control.Distributed.Process.Extras (newTagPool)
 
 import Connection (Connection, setArea)
 import GlobalRegistry (globalRegister)
-import DB (getAreaObjects)
+import qualified DB
 import Utils (milliseconds, safeReceive, evaluate, logError)
 import qualified Area.Settings as AS
 import Types (UserPid(..), AreaId, AreaPid(..))
@@ -95,23 +95,24 @@ handleMonitorNotification state (ProcessMonitorNotification ref pid _) = do
 areaProcess :: AS.Settings -> AreaId -> Process ()
 areaProcess aSettings aid = do
     globalRegister (show aid) =<< getSelfPid
-    res <- getAreaObjects aid =<< newTagPool
+    res <- DB.getAreaObjects aid =<< newTagPool
     objects <-
         case res of
             Just objects -> return objects
             Nothing -> do
                 logError $ "Cannot load " ++ show aid
                 terminate
-                return ([], [])
+                return DB.emptyAreaObjects
     now <- liftIO milliseconds
     let state = State{
             areaId=aid,
             settings=aSettings,
             tickNumber=0,
-            previousTs=now,
+            currentTs=now,
             users=us,
-            gates=fromList $ fst objects,
-            asteroids=fromList $ snd objects,
+            gates=fromList $ DB.gates objects,
+            asteroids=fromList $ DB.asteroids objects,
+            controlPoints=fromList $ DB.controlPoints objects,
             colliders=emptyColliders,
             signalBuffer=[],
             signalsForBroadcast=[]

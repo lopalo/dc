@@ -10,6 +10,7 @@ define(function (require) {
     var User;
     var Gate;
     var Asteroid;
+    var ControlPoint;
 
     Camera = Backbone.Model.extend({
         defaults: {
@@ -68,16 +69,16 @@ define(function (require) {
         },
         _applyMoveDistance: function (timestamp, a) {
             if (timestamp >= a.endTs) {
-                this.set("pos", a.to);
+                this.set("pos", a.endPos);
                 return;
             }
             var t = this._getT(timestamp, a);
-            var fromPos = Victor.fromArray(a.from);
-            var toPos = Victor.fromArray(a.to);
-            var pos = toPos
-                      .subtract(fromPos)
+            var startPos = Victor.fromArray(a.startPos);
+            var endPos = Victor.fromArray(a.endPos);
+            var pos = endPos
+                      .subtract(startPos)
                       .multiply(new Victor(t, t))
-                      .add(fromPos)
+                      .add(startPos)
                       .unfloat();
             this.set("pos", pos.toArray());
         },
@@ -153,6 +154,7 @@ define(function (require) {
         },
     });
 
+
     Asteroid = StageObject.extend({
         objectType: "asteroid",
         defaults: function () {
@@ -164,10 +166,14 @@ define(function (require) {
         },
 
         getInfoForUI: function () {
+            var pullAllowed = !_.find(this.get("actions"), function (i) {
+                return i.tag === "MoveCircularTrajectory";
+            });
             return {
                 name: this.get("name"),
                 durability: [this.get("durability"),
-                             this.get("max-durability")]
+                             this.get("max-durability")],
+                pullAllowed: pullAllowed
             };
         },
         _applyAction: function (timestamp, action) {
@@ -182,10 +188,36 @@ define(function (require) {
     });
 
 
+    ControlPoint = StageObject.extend({
+        objectType: "control-point",
+        defaults: function () {
+            var defaults = {
+                "max-durability": 0,
+                durability: 0,
+                owner: null,
+            };
+            return _.extend(
+                ControlPoint.__super__.defaults.call(this),
+                defaults
+            );
+        },
+
+        getInfoForUI: function () {
+            return {
+                name: this.get("name"),
+                durability: [this.get("durability"),
+                             this.get("max-durability")],
+                owner: this.get("owner")
+            };
+        },
+    });
+
+
     return {
         Camera: Camera,
         User: User,
         Gate: Gate,
-        Asteroid: Asteroid
+        Asteroid: Asteroid,
+        ControlPoint: ControlPoint
     };
 });

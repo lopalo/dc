@@ -1,6 +1,12 @@
 {-# LANGUAGE DeriveGeneric, DeriveDataTypeable, OverloadedStrings #-}
 
-module DB (dbProcess, putUser, getUser, getAreaObjects, putAreaObjects) where
+module DB (
+    AreaObjects(..),
+    dbProcess,
+    putUser, getUser,
+    getAreaObjects, putAreaObjects,
+    emptyAreaObjects
+    ) where
 
 import GHC.Generics (Generic)
 import Data.Binary (Binary)
@@ -24,10 +30,19 @@ import Utils (safeReceive)
 import User.Types (User)
 import Area.Objects.Gate (Gate)
 import Area.Objects.Asteroid (Asteroid)
+import Area.Objects.ControlPoint (ControlPoint)
 import qualified Settings as S
 
 
-type AreaObjects = ([Gate], [Asteroid])
+data AreaObjects = AreaObjects {
+    gates :: ![Gate],
+    asteroids :: ![Asteroid],
+    controlPoints :: ![ControlPoint]
+    }
+    deriving (Generic, Typeable)
+
+instance Binary AreaObjects
+
 
 data GetUser = GetUser UserId deriving (Generic, Typeable)
 
@@ -53,6 +68,10 @@ instance Binary PutAreaObjects
 
 dbServiceName :: String
 dbServiceName = "db"
+
+
+emptyAreaObjects :: AreaObjects
+emptyAreaObjects = AreaObjects [] [] []
 
 
 dbProcess :: S.Settings -> Process ()
@@ -87,10 +106,19 @@ handleGetUser conn (GetUser (UserId uid)) = do
 handleGetAreaObjects ::
     Connection -> GetAreaObjects -> Process (AreaObjects, ())
 handleGetAreaObjects conn (GetAreaObjects (AreaId aid)) = do
-    gates <- liftIO $ query conn "SELECT * FROM gate WHERE area = ?" (Only aid)
-    asteroids <-
-        liftIO $ query conn "SELECT * FROM asteroid WHERE area = ?" (Only aid)
-    return ((gates, asteroids), ())
+    gates_ <-
+        liftIO $
+            query conn "SELECT * FROM gate WHERE area = ?" (Only aid)
+    asteroids_ <-
+        liftIO $
+            query conn "SELECT * FROM asteroid WHERE area = ?" (Only aid)
+    controlPoints_ <-
+        liftIO $
+            query
+            conn
+            "SELECT * FROM control_point WHERE area = ?" (Only aid)
+    let objects = AreaObjects gates_ asteroids_ controlPoints_
+    return (objects, ())
 
 
 handlePutUser :: Connection -> PutUser -> Process ()
@@ -111,12 +139,16 @@ handlePutAreaObjects conn (PutAreaObjects (AreaId area) objects) =
         asteroidQ =
             "INSERT OR REPLACE INTO asteroid VALUES \
              \ (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        controlPointQ =
+            "INSERT OR REPLACE INTO control_point VALUES \
+             \ (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         addArea :: ToRow a => a -> [SQLData]
         addArea = ([toField area] ++) . toRow
-        (gates, asteroids) = objects
+        cps = controlPoints objects
         transaction = do
-            mapM_ (execute conn gateQ . addArea) gates
-            mapM_ (execute conn asteroidQ . addArea) asteroids
+            mapM_ (execute conn gateQ . addArea) (gates objects)
+            mapM_ (execute conn asteroidQ . addArea) (asteroids objects)
+            mapM_ (execute conn controlPointQ . addArea) cps
 
 
 --external interface

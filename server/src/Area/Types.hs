@@ -11,6 +11,7 @@ import Data.String.Utils (startswith)
 import Data.Aeson (Value, ToJSON, toJSON, FromJSON, parseJSON)
 import Data.Lens.Strict (Lens, lens)
 
+import Utils (Ts)
 import Types (UserId(..), UserPid(..), AreaId, delIdPrefix)
 import qualified User.External as UE
 
@@ -33,6 +34,9 @@ data ClientCommand
     | MoveAlongRoute ![Pos]
     | Recover !Float
     | Shoot !Pos
+    | Capture !ObjId
+    | PullAsteroid !ObjId
+    | CancelPull
     deriving (Generic, Typeable)
 
 instance Binary ClientCommand
@@ -61,6 +65,7 @@ type Angle = Float --degrees
 data ObjId = UId UserId
            | GateId String
            | AsteroidId String
+           | CPId String
            deriving (Eq, Ord, Generic, Typeable)
 
 instance Binary ObjId
@@ -70,6 +75,7 @@ instance Show ObjId where
     show (UId uid) = show uid
     show (GateId ident) = "gate:" ++ ident
     show (AsteroidId ident) = "asteroid:" ++ ident
+    show (CPId ident) = "cp:" ++ ident
 
 instance Read ObjId where
 
@@ -78,6 +84,7 @@ instance Read ObjId where
         | "gate:" `startswith` str = [(GateId ("gate" `delIdPrefix` str), "")]
         | "asteroid:" `startswith` str =
             [(AsteroidId ("asteroid" `delIdPrefix` str), "")]
+        | "cp:" `startswith` str = [(CPId ("cp" `delIdPrefix` str), "")]
 
 instance ToJSON ObjId where
 
@@ -126,5 +133,4 @@ class Object o => Destroyable o where
 
     durabilityL :: Lens o Int
     durabilityL = lens getDurability setDurability
-
 

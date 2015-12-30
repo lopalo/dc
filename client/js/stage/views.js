@@ -15,6 +15,7 @@ define(function (require) {
     var User;
     var Gate;
     var Asteroid;
+    var ControlPoint;
 
 
     function StageView(options) {
@@ -215,16 +216,20 @@ define(function (require) {
             tween = this._disappearanceEffect(reason, sprite);
             tween.eventCallback("onComplete", onComplete);
         },
+        _getTexturePath: function () {
+            return this.texturePath;
+        },
         _createContainer: function () {
             var model = this._model;
             var size = model.get("size");
             var name = model.get("name");
+            var texturePath = this._getTexturePath();
             var container;
             var sprite;
             var text;
 
             this._container = container = new pixi.Container();
-            this._sprite = sprite = pixi.Sprite.fromImage(this.texturePath);
+            this._sprite = sprite = pixi.Sprite.fromImage(texturePath);
             this._containerForListening = sprite;
             container.addChild(sprite);
             sprite.width = size[0];
@@ -373,6 +378,26 @@ define(function (require) {
         showName: false
     });
 
+    ControlPoint = StageObject.extend({
+        texturePath: "img/space_station_1.png",
+        capturedTexturePath: "img/space_station_2.png",
+        initialize: function (options) {
+            ControlPoint.__super__.initialize.call(this, options);
+            this.listenTo(this._model, "change:owner", this._changeTexture);
+        },
+        _getTexturePath: function () {
+            if (this._model.get("owner") === null) {
+                return this.texturePath;
+            } else {
+                return this.capturedTexturePath;
+            }
+        },
+        _changeTexture: function () {
+            var texture = pixi.Texture.fromImage(this._getTexturePath());
+            this._sprite.texture = texture;
+        }
+    });
+
 
     return {
         Background: Background,
@@ -380,7 +405,8 @@ define(function (require) {
         ObjectLayer: ObjectLayer,
         User: User,
         Gate: Gate,
-        Asteroid: Asteroid
+        Asteroid: Asteroid,
+        ControlPoint: ControlPoint
     };
 
 });

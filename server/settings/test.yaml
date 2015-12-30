@@ -4,14 +4,14 @@ node-address: [127.0.0.1, "11500"]
 ws-address: [127.0.0.1, 11501]
 db: ../test.db
 user:
-  speed: 6 #units per second
-  init-durability: 100
-  logout-seconds: 10
-  period-milliseconds: 1000
+    speed: 6 #units per second
+    init-durability: 100
+    logout-seconds: 10
+    period-milliseconds: 1000
 area:
-  enter-pos: [10, 10]
-  shot-damage: 10
-  tick-milliseconds: 100
-  broadcast-every-tick: 10
-  log-every-tick: 10
-  sync-every-tick: 100
+    enter-pos: [10, 10]
+    shot-damage: 10
+    tick-milliseconds: 100
+    broadcast-every-tick: 10
+    log-every-tick: 10
+    sync-every-tick: 100

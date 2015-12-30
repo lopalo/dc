@@ -40,17 +40,24 @@
             <div id="game">
                 <div id="viewport"></div>
                 <div id="ui">
-                    <div id="ui-object-context"
-                             class="form-group panel panel-default ui">
-                        <div id="ui-object-info">
+                    <div id="ui-object-context" class="ui">
+                        <div id="ui-object-info" class="panel panel-info">
                         </div>
                         <div id="ui-area">
                             <select id="select-area"
                                     class="form-control selectpicker">
                             </select>
                         </div>
+                        <button id="ui-capture" class="btn btn-default">
+                            <span class="glyphicon glyphicon-tower"></span>
+                            Capture
+                        </button>
+                        <button id="ui-pull" class="btn btn-default">
+                            <span class="glyphicon glyphicon-magnet"></span>
+                            Pull
+                        </button>
                     </div>
-                    <div id="ui-control-mode" class="form-group ui">
+                    <div id="ui-control-mode" class="ui">
                         <select id="control-mode" class="form-control selectpicker">
                             <option value="view" data-icon="glyphicon-eye-open">
                             </option>
@@ -60,14 +67,18 @@
                             </option>
                         </select>
                     </div>
-                    <div id="ui-control-mode-context" class="form-group ui">
+                    <div id="ui-control-mode-context" class="ui">
                     </div>
-                    <div id="ui-common" class="form-group ui">
+                    <div id="ui-common" class="ui">
                         <button id="ui-focus-to-myself" class="btn btn-default">
                             <span class="glyphicon glyphicon-search"></span>
                         </button>
                         <button id="ui-recover" class="btn btn-default">
                             <span class="glyphicon glyphicon-wrench"></span>
+                        </button>
+                        <button id="ui-cancel-pull" class="btn btn-default">
+                            <span class="glyphicon glyphicon-ban-circle"></span>
+                            <span class="glyphicon glyphicon-magnet"></span>
                         </button>
                     </div>
                 </div>
@@ -75,7 +86,7 @@
         </div>
 
         <script type="text/template" id="user-info-template">
-            <div class="panel-heading bg-info"><%= name %></div>
+            <div class="panel-heading"><%= name %></div>
             <div class="panel-body">
                 <ul class="list-unstyled">
                     <li>
@@ -88,15 +99,26 @@
             </div>
         </script>
         <script type="text/template" id="gate-info-template">
-            <div class="panel-heading bg-info"><%= name %></div>
+            <div class="panel-heading"><%= name %></div>
         </script>
         <script type="text/template" id="asteroid-info-template">
-            <div class="panel-heading bg-info"><%= name %></div>
+            <div class="panel-heading"><%= name %></div>
             <div class="panel-body">
                 <ul class="list-unstyled">
                     <li>
                         Durability: <%= durability[0] %>/<%= durability[1] %>
                     </li>
+                </ul>
+            </div>
+        </script>
+        <script type="text/template" id="control-point-info-template">
+            <div class="panel-heading"><%= name %></div>
+            <div class="panel-body">
+                <ul class="list-unstyled">
+                    <li>
+                        Durability: <%= durability[0] %>/<%= durability[1] %>
+                    </li>
+                    <li>Owner: <%= owner === null ? "no one" : owner %></li>
                 </ul>
             </div>
         </script>

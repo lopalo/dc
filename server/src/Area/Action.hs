@@ -4,7 +4,8 @@ module Area.Action (
     Active(..), Action(..), Time(..),
     moveAction, publicAction,
     moveDistance, eternalRotation,
-    moveRoute, recovery, moveCircularTrajectory
+    moveRoute, recovery, moveCircularTrajectory,
+    pullingAsteroid
     ) where
 
 import GHC.Generics (Generic)
@@ -13,9 +14,9 @@ import Data.Typeable (Typeable)
 
 import Data.Maybe (fromMaybe)
 import Data.Fixed (mod', divMod')
-import Data.Set (Set)
+import Data.Set (Set, singleton)
 import Control.Monad (foldM)
-import Control.Monad.Writer (Writer)
+import Control.Monad.Writer (Writer, writer)
 
 import Data.Aeson (ToJSON, FromJSON)
 import Data.Lens.Strict (Lens, lens, (^%=))
@@ -24,7 +25,7 @@ import Utils (Ts)
 import Area.Utils (getIntervals)
 import Area.Types
 import Area.Vector (Vect, angle, toPos, fromPos, fromPolar, mul, sub, add)
-import Area.Signal (Signal)
+import Area.Signal (Signal(MoveAsteroid))
 
 
 type SignalW = Writer (Set Signal)
@@ -87,11 +88,13 @@ data Action
         recoverySpeed :: Float, --units per second
         durabilityAccum :: Float
         }
-    deriving (Generic, Typeable)
+    | PullingAsteroid {asteroidId :: ObjId}
+    deriving (Generic, Typeable, Eq, Ord)
 
 instance Binary Action
 
 instance ToJSON Action
+
 instance FromJSON Action
 
 
@@ -190,6 +193,12 @@ moveRoute obj action Time{timestamp=ts} = do
             reduce $ map (uncurry (middlePoint t)) $ getIntervals points
 
 
+pullingAsteroid :: ObjectHandler
+pullingAsteroid obj action _ = do
+    putSignal $ MoveAsteroid (asteroidId action) (getPos obj)
+    return (obj, Just action)
+
+
 secondsDelta :: Time -> Float
 secondsDelta = (/ 1000) . fromIntegral . timeDelta
 
@@ -204,3 +213,7 @@ getT action ts =
 
 middlePoint :: T -> Vect -> Vect -> Vect
 middlePoint t v v' = v' `sub` v `mul` t `add` v
+
+
+putSignal :: Signal -> SignalW ()
+putSignal sig = writer ((), singleton sig)

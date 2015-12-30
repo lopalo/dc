@@ -211,6 +211,9 @@ define(function (require) {
                 case "Asteroid":
                     model = new stageModels.Asteroid(data);
                     break;
+                case "CP":
+                    model = new stageModels.ControlPoint(data);
+                    break;
                 default:
                     throw "No model for type " + data.tag;
             }
@@ -234,6 +237,9 @@ define(function (require) {
                     break;
                 case "Asteroid":
                     view = new stageViews.Asteroid({model: roModel});
+                    break;
+                case "CP":
+                    view = new stageViews.ControlPoint({model: roModel});
                     break;
                 default:
                     throw "No view for type " + data.tag;

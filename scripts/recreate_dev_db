@@ -1,0 +1,10 @@
+#!/bin/bash
+DB=../server/dbs/dev.db
+
+cd "$(dirname "$0")"
+touch $DB &&
+rm $DB &&
+./create_db $DB &&
+./generate_area_objects $DB alpha &&
+./generate_area_objects $DB beta &&
+./generate_area_objects $DB gamma

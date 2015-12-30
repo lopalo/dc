@@ -17,6 +17,7 @@ import Area.Types (ObjId)
 import qualified Area.Objects.User as U
 import qualified Area.Objects.Gate as G
 import qualified Area.Objects.Asteroid as A
+import qualified Area.Objects.ControlPoint as CP
 import Area.Signal (Signal, Signals)
 import Area.Collision (Colliders)
 import Area.Settings (Settings)
@@ -52,14 +53,18 @@ type Gates = M.Map ObjId G.Gate
 type Asteroids = M.Map ObjId A.Asteroid
 
 
+type ControlPoints = M.Map ObjId CP.ControlPoint
+
+
 data State = State {
     areaId :: !AreaId,
     settings :: !Settings,
     tickNumber :: !Int,
-    previousTs :: !Ts,
+    currentTs :: !Ts,
     users :: !Users,
     gates :: !Gates,
     asteroids :: !Asteroids,
+    controlPoints :: !ControlPoints,
     colliders :: !Colliders,
     signalBuffer :: !Signals,
     signalsForBroadcast :: !Signals
@@ -139,12 +144,24 @@ asteroidFieldPL :: ObjId -> Lens A.Asteroid a -> PartialLens State a
 asteroidFieldPL aid = objFieldPL aid asteroidsL
 
 
+cpPL :: ObjId -> PartialLens State CP.ControlPoint
+cpPL = (`objectPL` controlPointsL)
+
+
+cpFieldPL :: ObjId -> Lens CP.ControlPoint a -> PartialLens State a
+cpFieldPL aid = objFieldPL aid controlPointsL
+
+
 gatesL :: Lens State Gates
 gatesL = lens gates (\v s -> s{gates=v})
 
 
 asteroidsL :: Lens State Asteroids
 asteroidsL = lens asteroids (\v s -> s{asteroids=v})
+
+
+controlPointsL :: Lens State ControlPoints
+controlPointsL = lens controlPoints (\v s -> s{controlPoints=v})
 
 
 objectPL :: Ord k => k -> Lens State (M.Map k v) -> PartialLens State v

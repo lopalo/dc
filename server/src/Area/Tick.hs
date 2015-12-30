@@ -10,8 +10,9 @@ import Control.Applicative ((<$>))
 import Control.Monad (foldM, liftM, when)
 import Control.Monad.Writer (runWriter)
 import Control.Category ((>>>), (.))
-import Control.Monad.State.Strict (runState, gets, modify)
+import Control.Monad.State.Strict (runState, get, gets, modify)
 import Control.Concurrent (threadDelay)
+import Data.Maybe (fromJust)
 import qualified Data.Map.Strict as M
 import qualified Data.Set as Set
 import Text.Printf (printf)
@@ -22,22 +23,31 @@ import Control.Distributed.Process
 import Data.Aeson (ToJSON, Value, object, (.=))
 
 import Utils (milliseconds, logInfo, Ts)
-import DB (putAreaObjects)
+import qualified DB
 import qualified Connection as C
 import qualified Area.Settings as AS
-import Area.Action (Active(applyActions), Time(..))
+import Area.Action (
+    Active(applyActions), Time(..),
+    Action(
+        MoveDistance, MoveCircularTrajectory,
+        startTs, endTs, startPos, endPos
+        ),
+    actionsL
+    )
 import Area.State
 import Area.Collision (
     Collision, emptyColliders, addCollider,
     findCollisions, collisionPair
     )
 import Area.Signal (
-    Signal(Appearance, Disappearance),
+    Signal(Appearance, Disappearance, MoveAsteroid),
     AReason(..), DReason(..)
     )
+import Area.Utils (distance)
 import Area.Misc (spawnUser)
 import Area.Types (Object(..), Destroyable(..), ObjId(..))
 import qualified Area.Objects.User as U
+import qualified Area.Objects.ControlPoint as CP
 import qualified User.External as UE
 
 
@@ -77,7 +87,9 @@ handleTick state TimeTick = do
 
 calculateTick :: Ts -> StateS (Maybe Value)
 calculateTick ts = do
-    handleActions ts
+    previousTs <- gets currentTs
+    modify $ \s -> s{currentTs=ts}
+    handleActions previousTs
     handleCollisions
     checkDurability
     handleSignals
@@ -91,9 +103,8 @@ calculateTick ts = do
 
 
 handleActions :: Ts -> StateS ()
-handleActions ts = do
-    pts <- gets previousTs
-    modify $ \s -> s{previousTs=ts}
+handleActions previousTs= do
+    ts <- gets currentTs
     let
         handleActive lens = do
             actives <- access lens
@@ -108,10 +119,11 @@ handleActions ts = do
             let (active', newSignals) = runWriter $ applyActions time active
                 res' = M.insert ident active' res
             in (res', Set.toAscList newSignals ++ signals)
-        time = Time{timestamp=ts, timeDelta=ts - pts}
+        time = Time{timestamp=ts, timeDelta=ts - previousTs}
     handleActive $ usersL >>> usersDataL
     handleActive gatesL
     handleActive asteroidsL
+    handleActive controlPointsL
 
 
 handleCollisions :: StateS ()
@@ -119,6 +131,7 @@ handleCollisions = do
     collidersL ~= emptyColliders
     addColliders $ usersL >>> usersDataL
     addColliders asteroidsL
+    addColliders controlPointsL
     colliders_ <- access collidersL
     let
         find collisions collider =
@@ -141,6 +154,8 @@ handleCollision collision =
             decreaseDurability (asteroidFieldPL aid) (asteroidFieldPL aid')
         (UId uid, UId uid') ->
             decreaseDurability (userFieldPL uid) (userFieldPL uid')
+        (UId uid, cpid@CPId{}) ->
+            decreaseDurability (userFieldPL uid) (cpFieldPL cpid)
         _ -> return ()
     where
         decreaseDurability l l' = do
@@ -160,6 +175,7 @@ checkDurability :: StateS ()
 checkDurability = do
     checkObjects $ usersL >>> usersDataL
     checkObjects asteroidsL
+    checkObjects controlPointsL
     where
         checkObjects lens = M.elems <$> access lens >>= mapM_ check
         check obj =
@@ -205,6 +221,38 @@ handleSignal signal@(Disappearance aid@(AsteroidId _) Destruction) = do
     asteroidsL %= M.delete aid
     --TODO: delete from DB
     return $ Just signal
+handleSignal (Disappearance cpid@(CPId _) Destruction) = do
+    modify $ cpPL cpid ^%= \cp -> cp{CP.durability=1, CP.owner=Nothing}
+    return Nothing
+handleSignal (MoveAsteroid aid targetPos) = do
+    ts <- gets currentTs
+    speed <- gets $ AS.asteroidPullSpeed . settings
+    mPos <- gets $ getPL $ asteroidFieldPL aid posL
+    let asLens = asteroidFieldPL aid actionsL
+
+        moveTrajectory MoveCircularTrajectory{} = True
+        moveTrajectory _ = False
+
+        moveDistance MoveDistance{} = True
+        moveDistance _ = False
+
+        astPos = fromJust mPos
+        action = MoveDistance{
+            startTs=ts,
+            endTs=ts + round dt,
+            startPos=astPos,
+            endPos=targetPos
+            }
+        dt = distance astPos targetPos / (speed / 1000)
+    modify $ asLens ^%= filter (not . moveDistance)
+    mActions <- gets $ getPL $ asLens
+    case mActions of
+        Just as ->
+            if null $ filter moveTrajectory as
+                then modify $ asLens ^%= (action :)
+                else return ()
+        Nothing -> return ()
+    return Nothing
 handleSignal signal = return $ Just signal
 
 
@@ -213,20 +261,21 @@ tickData ts = do
     aid <- gets areaId
     signals <- access signalsForBroadcastL
     signalsForBroadcastL ~= []
-    usd <- gets $ usersData . users
-    gs <- gets gates
-    as <- gets asteroids
+    state <- get
     let
         res = object [
             "areaId" .= aid,
-            "objects" .= objects,
+            "objects" .= foldl1 (++) objects,
             "signals" .= signals,
             "timestamp" .= ts
             ]
-        usersInfo = map tickClientInfo $ M.elems usd
-        gatesInfo = map tickClientInfo $ M.elems gs
-        asteroidsInfo = map tickClientInfo $ M.elems as
-        objects = usersInfo ++ gatesInfo ++ asteroidsInfo
+        g getter = map tickClientInfo $ M.elems $ getter state
+        objects = [
+            g (usersData . users),
+            g gates,
+            g asteroids,
+            g controlPoints
+            ]
     return res
 
 
@@ -241,9 +290,10 @@ syncUsers state = mapM_ sync us
 
 
 saveObjects :: State -> Process ()
-saveObjects state = putAreaObjects (areaId state) objs
+saveObjects state = DB.putAreaObjects (areaId state) objs
     where
-        objs = (M.elems $ gates state, M.elems $ asteroids state)
+        g getter = M.elems $ getter $ state
+        objs = DB.AreaObjects (g gates) (g asteroids) (g controlPoints)
 
 
 broadcastCmd :: ToJSON a => State -> String -> a -> Process ()

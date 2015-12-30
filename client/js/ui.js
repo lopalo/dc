@@ -12,6 +12,8 @@ define(function (require) {
     var Button;
     var SelectControlMode;
     var SelectArea;
+    var CaptureButton;
+    var PullButton;
     var ObjectInfo;
 
     function setupUI(uiEl, ui, user, area) {
@@ -33,6 +35,18 @@ define(function (require) {
             area: area,
             user: user
         });
+        var captureButton = new CaptureButton({
+            el: uiEl.find("#ui-capture"),
+            model: ui,
+        });
+        var pullButton = new PullButton({
+            el: uiEl.find("#ui-pull"),
+            model: ui,
+        });
+        var cancelPullButton = new Button({
+            el: uiEl.find("#ui-cancel-pull"),
+            model: ui,
+        });
         var objectInfo = new ObjectInfo({
             el: uiEl.find("#ui-object-info"),
             model: ui,
@@ -44,6 +58,9 @@ define(function (require) {
             recoverButton: recoverButton,
             controlModeSelector: controlModeSelector,
             areaSelector: areaSelector,
+            captureButton: captureButton,
+            pullButton: pullButton,
+            cancelPullButton: cancelPullButton,
             objectInfo: objectInfo
         };
     }
@@ -153,6 +170,46 @@ define(function (require) {
         change: function () {
             this.trigger("select", this.$el.val());
         },
+    });
+
+
+    CaptureButton = Button.extend({
+        initialize: function () {
+            CaptureButton.__super__.initialize.call(this);
+            this.listenTo(this.model, "change:selectedObjectType", this.render);
+            this.listenTo(this.model, "change:selectedObjectInfo", this.render);
+            this.render();
+        },
+        render: function () {
+            var el = this.$el;
+            var type = this.model.get("selectedObjectType");
+            var info = this.model.get("selectedObjectInfo");
+            if (type === "control-point" && info.owner === null) {
+                el.show();
+            } else {
+                el.hide();
+            }
+        }
+    });
+
+
+    PullButton = Button.extend({
+        initialize: function () {
+            PullButton.__super__.initialize.call(this);
+            this.listenTo(this.model, "change:selectedObjectType", this.render);
+            this.listenTo(this.model, "change:selectedObjectInfo", this.render);
+            this.render();
+        },
+        render: function () {
+            var el = this.$el;
+            var type = this.model.get("selectedObjectType");
+            var info = this.model.get("selectedObjectInfo");
+            if (type === "asteroid" && info.pullAllowed) {
+                el.show();
+            } else {
+                el.hide();
+            }
+        }
     });
 
 

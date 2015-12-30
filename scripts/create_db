@@ -20,6 +20,7 @@ CREATE_USER = """
     );
 """
 
+
 CREATE_GATE = """
     CREATE TABLE gate (
         area TEXT,
@@ -35,6 +36,7 @@ CREATE_GATE = """
         PRIMARY KEY (id, area)
     );
 """
+
 
 CREATE_ASTEROID = """
     CREATE TABLE asteroid (
@@ -55,6 +57,27 @@ CREATE_ASTEROID = """
 """
 
 
+CREATE_CONTROL_POINT = """
+    CREATE TABLE control_point (
+        area TEXT,
+        id TEXT,
+        name TEXT,
+        x INTEGER,
+        y INTEGER,
+        angle REAL,
+        max_durability INTEGER,
+        durability INTEGER,
+        actions TEXT,
+        width INTEGER,
+        height INTEGER,
+        owner TEXT,
+
+        PRIMARY KEY (id, area)
+    );
+"""
+
+
+
 
 
 def main():
@@ -64,6 +87,7 @@ def main():
     cur.executescript(CREATE_USER)
     cur.executescript(CREATE_GATE)
     cur.executescript(CREATE_ASTEROID)
+    cur.executescript(CREATE_CONTROL_POINT)
 
 
 

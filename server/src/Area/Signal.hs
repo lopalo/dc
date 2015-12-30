@@ -32,6 +32,7 @@ data Signal
     = Appearance {userId :: UserId, aReason :: AReason}
     | Disappearance {objId :: ObjId, dReason :: DReason}
     | Shot {shooterPos :: Pos, targetPos :: Pos}
+    | MoveAsteroid {objId :: ObjId, targetPos :: Pos}
     deriving (Generic, Eq, Ord)
 
 instance ToJSON Signal

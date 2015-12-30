@@ -1,8 +1,8 @@
 module Area.Misc where
 
 import qualified Data.Map.Strict as M
-
 import System.Random (randomR)
+
 import Data.Lens.Partial.Common ((^%=))
 
 import Types (UserId, width)

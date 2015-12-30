@@ -3,7 +3,7 @@ module Area.External (enter, clientCmd, reconnect) where
 
 import Control.Applicative ((<$>))
 
-import Data.Aeson (Value, Result(Success), fromJSON)
+import Data.Aeson (FromJSON, Value(Null), Result(Success), fromJSON)
 import Control.Distributed.Process hiding (reconnect)
 
 import Utils (evaluate)
@@ -15,12 +15,19 @@ import Area.Types
 
 
 parseClientCmd :: String -> Value -> Result ClientCommand
-parseClientCmd "echo" body = Echo <$> fromJSON body
-parseClientCmd "enter-area" body = EnterArea <$> fromJSON body
-parseClientCmd "get-objects-info" body = GetObjectsInfo <$> fromJSON body
-parseClientCmd "move-along-route" body = MoveAlongRoute <$> fromJSON body
-parseClientCmd "recover" body = Recover <$> fromJSON body
-parseClientCmd "shoot" body = Shoot <$> fromJSON body
+parseClientCmd "echo" = load Echo
+parseClientCmd "enter-area" = load EnterArea
+parseClientCmd "get-objects-info" = load GetObjectsInfo
+parseClientCmd "move-along-route" = load MoveAlongRoute
+parseClientCmd "recover" = load Recover
+parseClientCmd "shoot" = load Shoot
+parseClientCmd "capture" = load Capture
+parseClientCmd "pull-asteroid" = load PullAsteroid
+parseClientCmd "cancel-pull" = load $ \Null -> CancelPull
+
+
+load :: FromJSON a => (a -> b) -> Value -> Result b
+load constructor body = constructor <$> fromJSON body
 
 
 enter :: AreaId -> UE.UserArea -> UserPid -> Bool -> Connection -> Process ()

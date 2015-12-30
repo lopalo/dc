@@ -20,8 +20,9 @@ import Area.Types (
     )
 import Area.Action (
     Active(..),
-    Action(EternalRotation, MoveCircularTrajectory),
-    eternalRotation, moveCircularTrajectory, publicAction
+    Action(EternalRotation, MoveCircularTrajectory, MoveDistance),
+    eternalRotation, moveCircularTrajectory, moveDistance,
+    publicAction
     )
 import Area.Collision (Collidable(collider), Collider(Circular))
 
@@ -115,7 +116,8 @@ instance Object Asteroid where
             "id" .= ident ast,
             "pos" .= pos ast,
             "angle" .= angle ast,
-            "durability" .= durability ast
+            "durability" .= durability ast,
+            "actions" .= filter publicAction (actions ast)
             ]
 
 
@@ -124,6 +126,7 @@ instance Active Asteroid where
     apply ast action@EternalRotation{} = eternalRotation ast action
     apply ast action@MoveCircularTrajectory{} =
         moveCircularTrajectory ast action
+    apply ast action@MoveDistance{} = moveDistance ast action
 
     getActions = actions
 

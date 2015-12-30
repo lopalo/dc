@@ -9,8 +9,8 @@ import Types (UserId, UserName, Size(Size))
 import qualified User.External as UE
 import Area.Types (Object(..), Destroyable(..), Pos, Angle, ObjId(UId))
 import Area.Action (
-    Active(..), Action(MoveRoute, Recovery),
-    moveRoute, recovery, publicAction
+    Active(..), Action(MoveRoute, Recovery, PullingAsteroid),
+    moveRoute, recovery, publicAction, pullingAsteroid
     )
 import Area.Collision (Collidable(collider), Collider(Circular))
 
@@ -74,6 +74,7 @@ instance Active User where
 
     apply user action@MoveRoute{} = moveRoute user action
     apply user action@Recovery{} = recovery user action
+    apply user action@PullingAsteroid{} = pullingAsteroid user action
 
     getActions = actions
 

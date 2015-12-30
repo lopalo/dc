@@ -3,18 +3,21 @@ module Area.ClientCommands where
 
 import qualified Data.Map.Strict as M
 import Data.List (elemIndex, maximumBy)
+import System.Random (randomR)
 
+import System.Random (randomR)
 import Data.Aeson (ToJSON, Value, toJSON)
 import Data.Lens.Strict (modL)
 import Data.Lens.Partial.Common ((^.), (^%=), (^-=))
 import Control.Distributed.Process
 
-import Utils (milliseconds)
+import Utils (milliseconds, mkRandomGen)
 import Connection (Connection, sendResponse)
-import Types (UserId, RequestNumber)
+import Types (UserId, RequestNumber, width)
 import qualified Area.Settings as AS
-import qualified Area.Objects.User as U
 import qualified User.External as UE
+import qualified Area.Objects.User as U
+import qualified Area.Objects.ControlPoint as CP
 import Area.Action (Action(..), actionsL, moveAction)
 import Area.Utils (distance, getIntervals)
 import Area.Types
@@ -53,6 +56,7 @@ handleClientRequest state (GetObjectsInfo ids, _) = do
         us = usersData $ users state
         gs = gates state
         as = asteroids state
+        cps = controlPoints state
         getObj res objIdent =
             let
                 get ident objs =
@@ -64,6 +68,7 @@ handleClientRequest state (GetObjectsInfo ids, _) = do
                     (UId uid) -> get uid us
                     gid@(GateId _) -> get gid gs
                     aid@(AsteroidId _) -> get aid as
+                    aid@(CPId _) -> get aid cps
     response objects state
 
 
@@ -99,18 +104,24 @@ handleClientCommand state (MoveAlongRoute route, conn) = do
         updActions = replaceUserAction uid moveAction action
     return $ updActions state
 
-handleClientCommand state (Recover recSpeed, conn) = do
+handleClientCommand state (Recover recSpeed, conn) =
     let uid = uidByConn conn state
         action = Recovery{durabilityAccum=0, recoverySpeed=recSpeed}
         replace Recovery{} = True
         replace _ = False
-    return $ replaceUserAction uid replace action state
+    in return $ replaceUserAction uid replace action state
 
 handleClientCommand state (Shoot targetPos, conn) =
     return $
-        case state ^. userFieldPL shooterId posL of
-            Just shooterPos ->
+        case state ^. userPL shooterId of
+            Just shooter ->
                 let sett = settings state
+
+                    rGen = mkRandomGen shooterId $ tickNumber state
+                    (t, _) = randomR (-0.5, 0.5) rGen
+                    dWidth = t * (fromIntegral $ width $ U.size shooter)
+                    widthV = fromPolar dWidth $ U.angle shooter
+                    shooterPos = toPos $ fromPos (U.pos shooter) `add` widthV
 
                     rayDist = AS.shotDistance sett
                     rayAngle =
@@ -126,6 +137,8 @@ handleClientCommand state (Shoot targetPos, conn) =
                         userFieldPL uid durabilityL ^-= damage
                     dmgTarget aid@AsteroidId{} =
                         asteroidFieldPL aid durabilityL ^-= damage
+                    dmgTarget cpid@CPId{} =
+                        cpFieldPL cpid durabilityL ^-= damage
                     dmgTarget _ = id
 
                     updTargetAttacker (UId uid) =
@@ -150,6 +163,29 @@ handleClientCommand state (Shoot targetPos, conn) =
                         Nothing -> addSig targetPos' state
             Nothing -> state
     where shooterId = uidByConn conn state
+
+handleClientCommand state (Capture cpid, conn) =
+    return $ (cpPL cpid ^%= capture) state
+    where
+        ownerId = uidByConn conn state
+        capture cp =
+            case CP.owner cp of
+                Just _ -> cp
+                Nothing -> cp{
+                    CP.owner=Just ownerId,
+                    CP.durability=CP.maxDurability cp
+                    }
+
+handleClientCommand state (PullAsteroid aid, conn) =
+    let uid = uidByConn conn state
+        action = PullingAsteroid{asteroidId=aid}
+    in return $ addUserAction uid action state
+
+handleClientCommand state (CancelPull, conn) =
+    let uid = uidByConn conn state
+        cancel PullingAsteroid{} = True
+        cancel _ = False
+    in return $ cancelUserAction uid cancel state
 
 
 userByConn :: Connection -> State -> U.User
