@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Admin.Admin (adminServer) where
+module Admin.Admin (adminProcess) where
 
 
 import Data.List (stripPrefix)
@@ -14,11 +14,12 @@ import qualified Admin.Settings as S
 import Admin.ClusterHandlers (clusterHandlers)
 
 
-adminServer :: S.Settings -> LocalNode -> Process ()
-adminServer settings node = liftIO $ do
+adminProcess :: S.Settings -> LocalNode -> String -> Int -> Process ()
+adminProcess settings node host port = liftIO $ do
+    --TODO: use host
     let uiPrefix = policy (stripPrefix "ui/")
         uiDir = S.uiDir settings
-    scotty (S.port settings) $ do
+    scotty port $ do
         middleware $ staticPolicy (uiPrefix >-> addBase uiDir)
         clusterHandlers node
         get "/" $ redirect "/ui/index.html"

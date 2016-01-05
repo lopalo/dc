@@ -12,9 +12,9 @@ import Data.Lens.Strict ((^$), (^%=))
 import Control.Distributed.Process
 import Control.Distributed.Process.Extras (newTagPool)
 
-import Connection (Connection, setArea)
+import WS.Connection (Connection, setArea)
 import GlobalRegistry (globalRegister)
-import qualified DB
+import qualified DB.DB as DB
 import Utils (milliseconds, safeReceive, evaluate, logError)
 import qualified Area.Settings as AS
 import Types (UserPid(..), AreaId, AreaPid(..))

@@ -1,21 +1,19 @@
-areas:
-    - area:alpha
-    - area:beta
-    - area:gamma
-start-area: area:alpha
-node-address: [127.0.0.1, "10500"]
-http-port: 10502
-client-dir: ../../client
-client-settings: ../../client_settings/dev.json
-ws-address: &ws-address-1 [<host>, 10501]
-ws-addresses: [*ws-address-1]
-db: ../dbs/dev.db
+start-area: &start-area area:alpha
+ws-addresses: &ws-addresses
+    - [dc-dev-host-example.net, &ws-port-1 10501]
+
 user:
+    areas:
+        - area:alpha
+        - area:beta
+        - area:gamma
+    start-area: *start-area
     size: [80, 40]
     speed: 300 # 60 #units per second
     init-durability: 100
     logout-seconds: 10
     period-milliseconds: 1000
+
 area:
     gate-field-radius: 700
     shot-damage: 10
@@ -26,7 +24,49 @@ area:
     broadcast-every-tick: 1 # 4
     log-every-tick: 100
     sync-every-tick: 100
+
+http:
+    client-dir: ../../client
+    client-settings: ../../client_settings/dev.json
+    ws-addresses:
+        - [<http-host>, *ws-port-1]
+
 admin:
-    port: 10503
     ui-dir: ../../admin
+
+nodes:
+    first:
+        node-host: localhost
+        node-port: 10500
+        services:
+            - type: db
+              ident: db:1
+              path: ../dbs/dev.db
+
+            - type: ws
+              ident: ws:1
+              host: 0.0.0.0
+              port: *ws-port-1
+
+            - type: http
+              ident: http:1
+              host: 0.0.0.0
+              port: 10502
+
+            - type: admin
+              ident: admin
+              host: 0.0.0.0
+              port: 10503
+
+            - type: area
+              ident: *start-area
+
+            - type: area
+              ident: area:beta
+
+            - type: area
+              ident: area:gamma
+
+
+
 

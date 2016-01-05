@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveGeneric, DeriveDataTypeable, OverloadedStrings #-}
 
-module DB (
+module DB.DB (
     AreaObjects(..),
     dbProcess,
     putUser, getUser,
@@ -74,10 +74,10 @@ emptyAreaObjects :: AreaObjects
 emptyAreaObjects = AreaObjects [] [] []
 
 
-dbProcess :: S.Settings -> Process ()
-dbProcess settings = do
+dbProcess :: String -> Process ()
+dbProcess path = do
     globalRegister dbServiceName =<< getSelfPid
-    conn <- liftIO $ open $ S.db settings
+    conn <- liftIO $ open $ path
     loop conn
     liftIO $ close conn
 

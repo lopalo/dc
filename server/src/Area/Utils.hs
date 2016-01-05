@@ -4,7 +4,7 @@ module Area.Utils where
 import Data.Aeson (ToJSON)
 import Control.Distributed.Process
 
-import qualified Connection as C
+import qualified WS.Connection as C
 import Area.Types (Pos)
 import Area.Vector (len, sub, fromPos)
 

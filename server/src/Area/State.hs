@@ -10,7 +10,7 @@ import qualified Data.Map.Strict as M
 import Data.Lens.Strict (Lens, lens, mapLens, (^%=), (%=))
 import Data.Lens.Partial.Common (PartialLens, totalLens, justLens)
 
-import Connection (Connection)
+import WS.Connection (Connection)
 import Utils (Ts)
 import Types (UserId, UserPid, AreaId)
 import Area.Types (ObjId)
@@ -103,7 +103,10 @@ userPidToIdsL = lens userPidToIds (\v us -> us{userPidToIds=v})
 
 
 insertUser :: UserId -> Connection -> UserPid -> U.User -> Users -> Users
-insertUser uid conn userPid user us = foldr ($) us fs
+insertUser uid conn userPid user us =
+    if uid `M.member` userPids us
+        then us
+        else foldr ($) us fs
     where
         fs = [
             usersDataL ^%= M.insert uid user,

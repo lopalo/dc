@@ -17,12 +17,11 @@ import Control.Distributed.Process.Extras (newTagPool)
 import Utils (logInfo, logDebug, safeReceive, milliseconds, Ts)
 import Types (UserPid(UserPid), UserId(UserId), UserName, AreaId)
 import GlobalRegistry (globalRegister, globalWhereIs)
-import qualified Connection as C
-import qualified Settings as S
+import qualified WS.Connection as C
 import qualified User.Settings as US
 import qualified Area.External as AE
 import qualified User.External as UE
-import DB (putUser, getUser)
+import DB.DB (putUser, getUser)
 import User.Types
 
 
@@ -120,8 +119,8 @@ handleSwitchArea state (UE.SwitchArea newAreaId) = do
     return state{user=usr'}
 
 
-userProcess :: UserName -> C.Connection -> S.Settings -> Process ()
-userProcess userName conn globalSettings = do
+userProcess :: UserName -> C.Connection -> US.Settings -> Process ()
+userProcess userName conn userSettings = do
     let uid = UserId userName
     maybeUserPid <- globalWhereIs (show uid)
     case maybeUserPid of
@@ -131,27 +130,26 @@ userProcess userName conn globalSettings = do
         Nothing -> return ()
     getSelfPid >>= globalRegister (show uid)
     res <- getUser uid =<< newTagPool
-    let startArea = S.startArea globalSettings
-        uSettings = S.user globalSettings
+    let startArea = US.startArea userSettings
         usr = fromMaybe newUser res
         areaId = area usr
-        maxDur = US.initDurability uSettings
+        maxDur = US.initDurability userSettings
         mConn = Just conn
         newUser = User{
             userId=uid,
             name=userName,
             area=startArea,
-            speed=US.speed uSettings,
+            speed=US.speed userSettings,
             maxDurability=maxDur,
             durability=maxDur,
-            size=US.size uSettings,
+            size=US.size userSettings,
             kills=0,
             deaths=0
             }
         state = State{
             user=usr,
-            areas=S.areas globalSettings,
-            settings=uSettings,
+            areas=US.areas userSettings,
+            settings=userSettings,
             connection=mConn,
             disconnectTs=Nothing
             }
@@ -161,7 +159,7 @@ userProcess userName conn globalSettings = do
     userPid <- makeSelfPid
     AE.enter areaId (userArea usr) userPid True conn
     logInfo $ "Login: " ++ userName
-    runPeriodic $ US.periodMilliseconds uSettings
+    runPeriodic $ US.periodMilliseconds userSettings
     loop state
 
 

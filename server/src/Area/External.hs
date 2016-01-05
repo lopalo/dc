@@ -7,7 +7,7 @@ import Data.Aeson (FromJSON, Value(Null), Result(Success), fromJSON)
 import Control.Distributed.Process hiding (reconnect)
 
 import Utils (evaluate)
-import Connection (Connection)
+import WS.Connection (Connection)
 import GlobalRegistry (globalNSend)
 import qualified User.External as UE
 import Types (UserId, UserPid(..), AreaId, AreaPid(..), RequestNumber)

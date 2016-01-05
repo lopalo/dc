@@ -5,7 +5,6 @@ module Utils where
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import qualified Control.Exception as Ex
 import Control.Monad (liftM, when)
-import Data.String.Utils (split, join)
 import System.Random (RandomGen, StdGen, mkStdGen, randomR)
 
 import Data.Hashable (hash)
@@ -16,12 +15,6 @@ import Database.SQLite.Simple (FormatError, ResultError)
 import Debug (debug)
 
 type Ts = Int -- time in milliseconds
-
-
-delPrefix :: String -> String -> String -> String
-delPrefix delimiter prefix str =
-    case delimiter `split` str of
-        h:rest | h == prefix -> delimiter `join` rest
 
 
 milliseconds :: IO Ts

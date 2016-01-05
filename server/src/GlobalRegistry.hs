@@ -69,8 +69,8 @@ handleMonitorNotification registry (ProcessMonitorNotification _ pid _) =
     return $ M.delete pid registry
 
 
-handleGetRegistry
-    :: Registry -> GetRegistry -> Process (Maybe Registry, Registry)
+handleGetRegistry ::
+    Registry -> GetRegistry -> Process (Maybe Registry, Registry)
 handleGetRegistry registry GetRegistry = return (Just registry, registry)
 
 

@@ -5,14 +5,13 @@ import qualified Data.Map.Strict as M
 import Data.List (elemIndex, maximumBy)
 import System.Random (randomR)
 
-import System.Random (randomR)
 import Data.Aeson (ToJSON, Value, toJSON)
 import Data.Lens.Strict (modL)
 import Data.Lens.Partial.Common ((^.), (^%=), (^-=))
 import Control.Distributed.Process
 
 import Utils (milliseconds, mkRandomGen)
-import Connection (Connection, sendResponse)
+import WS.Connection (Connection, sendResponse)
 import Types (UserId, RequestNumber, width)
 import qualified Area.Settings as AS
 import qualified User.External as UE
@@ -78,6 +77,7 @@ handleClientCommand state (EnterArea aid, conn) = do
         userPid = (userPids . users) state M.! uid
         delUser = usersL `modL` deleteUser uid
         addSig = addSignal $ Disappearance (UId uid) Exit
+    --TODO: unmonitor
     UE.switchArea userPid aid
     enter aid (U.userArea user) userPid False conn
     return $ addSig $ delUser state

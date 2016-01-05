@@ -1,17 +1,17 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module ClientCommands (inputHandler) where
+module WS.ClientCommands (inputHandler) where
 
 
 import Control.Distributed.Process
 import Data.Aeson (Value(Null), Result(Success), fromJSON, decode)
 import Data.String.Utils (startswith)
 
-import Connection (Connection, sendCmd, sendResponse, InputHandler)
+import WS.Connection (Connection, sendCmd, sendResponse, InputHandler)
 import Area.External as A
 import User.User (userProcess)
-import Types (UserPid, AreaPid, RequestNumber)
-import Utils (delPrefix, logException, logDebug, evaluate)
+import Types (UserPid, AreaPid, RequestNumber, delPrefix)
+import Utils (logException, logDebug, evaluate)
 import qualified Settings as S
 
 
@@ -34,7 +34,7 @@ commandHandler settings "login" body 0 conn _ _ = do
     let Success name = fromJSON body :: Result String
     evaluate name
     sendCmd conn "init" Null
-    spawnLocal $ userProcess name conn settings
+    spawnLocal $ userProcess name conn $ S.user settings
     return ()
 commandHandler _ path body req conn _ (Just areaPid)
     | "area." `startswith` path =

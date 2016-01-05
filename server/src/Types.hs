@@ -6,12 +6,16 @@ import GHC.Generics (Generic)
 import Data.Binary (Binary)
 import Data.Typeable (Typeable)
 import Control.Applicative ((<$>))
+import Data.String.Utils (split, join)
 
 import Data.Aeson (ToJSON, toJSON, FromJSON, parseJSON)
 import Control.Distributed.Process
 
-import Utils (delPrefix)
 
+delPrefix :: String -> String -> String -> String
+delPrefix delimiter prefix str =
+    case delimiter `split` str of
+        h:rest | h == prefix -> delimiter `join` rest
 
 delIdPrefix :: String -> String -> String
 delIdPrefix = delPrefix ":"

@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveGeneric, DeriveDataTypeable #-}
 
-module Connection (
+module WS.Connection (
     acceptConnection, InputHandler, Connection,
     sendCmd, sendResponse, broadcastCmd, setUser,
     setArea, close, monitorConnection,

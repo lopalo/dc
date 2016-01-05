@@ -23,8 +23,8 @@ import Control.Distributed.Process
 import Data.Aeson (ToJSON, Value, object, (.=))
 
 import Utils (milliseconds, logInfo, Ts)
-import qualified DB
-import qualified Connection as C
+import qualified DB.DB as DB
+import qualified WS.Connection as C
 import qualified Area.Settings as AS
 import Area.Action (
     Active(applyActions), Time(..),
