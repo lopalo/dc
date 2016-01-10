@@ -13,7 +13,6 @@ import Control.Distributed.Process
 import Control.Distributed.Process.Extras (newTagPool)
 
 import WS.Connection (Connection, setArea)
-import GlobalRegistry (globalRegister)
 import qualified DB.DB as DB
 import Utils (milliseconds, safeReceive, evaluate, logError)
 import qualified Area.Settings as AS
@@ -94,7 +93,6 @@ handleMonitorNotification state (ProcessMonitorNotification ref pid _) = do
 
 areaProcess :: AS.Settings -> AreaId -> Process ()
 areaProcess aSettings aid = do
-    globalRegister (show aid) =<< getSelfPid
     res <- DB.getAreaObjects aid =<< newTagPool
     objects <-
         case res of

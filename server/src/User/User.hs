@@ -12,10 +12,10 @@ import Text.Printf (printf)
 
 import Data.Aeson (ToJSON, Value, object, (.=))
 import Control.Distributed.Process hiding (reconnect)
-import Control.Distributed.Process.Extras (newTagPool)
+import Control.Distributed.Process.Extras (TagPool, newTagPool)
 
-import Utils (logInfo, logDebug, safeReceive, milliseconds, Ts)
-import Types (UserPid(UserPid), UserId(UserId), UserName, AreaId)
+import Utils (logInfo, logDebug, safeReceive, milliseconds)
+import Types (Ts, UserPid(UserPid), UserId(UserId), UserName, AreaId)
 import GlobalRegistry (globalRegister, globalWhereIs)
 import qualified WS.Connection as C
 import qualified User.Settings as US
@@ -25,26 +25,13 @@ import DB.DB (putUser, getUser)
 import User.Types
 
 
-userArea :: User -> UE.UserArea
-userArea usr =
-    UE.UserArea{
-        UE.userId=userId usr,
-        UE.name=name usr,
-        UE.speed=speed usr,
-        UE.maxDurability=maxDurability usr,
-        UE.durability=durability usr,
-        UE.size=size usr,
-        UE.kills=kills usr,
-        UE.deaths=deaths usr
-        }
-
-
 data State = State {
     user :: !User,
     areas :: ![AreaId],
     settings :: !US.Settings,
     connection :: Maybe C.Connection,
-    disconnectTs :: Maybe Ts
+    disconnectTs :: Maybe Ts,
+    reqTagPool :: TagPool
     }
 
 
@@ -58,9 +45,23 @@ data Reconnection = Reconnection C.Connection deriving (Generic, Typeable)
 instance Binary Reconnection
 
 
+userArea :: User -> UE.UserArea
+userArea usr = UE.UserArea{
+    UE.userId=userId usr,
+    UE.name=name usr,
+    UE.speed=speed usr,
+    UE.maxDurability=maxDurability usr,
+    UE.durability=durability usr,
+    UE.size=size usr,
+    UE.kills=kills usr,
+    UE.deaths=deaths usr
+    }
+
+
 handleMonitorNotification ::
     State -> ProcessMonitorNotification -> Process State
 handleMonitorNotification state n@ProcessMonitorNotification{} = do
+    --TODO: unmonitor
     let Just conn = connection state
     now <- liftIO milliseconds
     return $
@@ -109,27 +110,31 @@ handleSwitchArea :: State -> UE.SwitchArea -> Process State
 handleSwitchArea state (UE.SwitchArea newAreaId) = do
     let usr = user state
         conn = connection state
+        tagPool = reqTagPool state
         oldAreaId = area usr
         usr' = usr{area=newAreaId}
-    maybeOldAreaPid <- globalWhereIs $ show oldAreaId
+    maybeOldAreaPid <- globalWhereIs (show oldAreaId) tagPool
     case maybeOldAreaPid of
         Just pid -> unlink pid
         Nothing -> return () -- a link exception will be received later
-    tryToLinkToArea newAreaId conn
+    tryToLinkToArea newAreaId conn tagPool
     return state{user=usr'}
 
 
 userProcess :: UserName -> C.Connection -> US.Settings -> Process ()
 userProcess userName conn userSettings = do
     let uid = UserId userName
-    maybeUserPid <- globalWhereIs (show uid)
+    tagPool <- newTagPool
+    maybeUserPid <- globalWhereIs (show uid) tagPool
     case maybeUserPid of
         Just pid -> do
             reconnect pid conn
             terminate
         Nothing -> return ()
-    getSelfPid >>= globalRegister (show uid)
-    res <- getUser uid =<< newTagPool
+    pid <- getSelfPid
+    ok <- globalRegister (show uid) pid tagPool
+    when (not ok) terminate
+    res <- getUser uid tagPool
     let startArea = US.startArea userSettings
         usr = fromMaybe newUser res
         areaId = area usr
@@ -151,9 +156,10 @@ userProcess userName conn userSettings = do
             areas=US.areas userSettings,
             settings=userSettings,
             connection=mConn,
-            disconnectTs=Nothing
+            disconnectTs=Nothing,
+            reqTagPool=tagPool
             }
-    tryToLinkToArea areaId mConn
+    tryToLinkToArea areaId mConn tagPool
     putUser usr
     initConnection conn state
     userPid <- makeSelfPid
@@ -197,9 +203,9 @@ reconnect :: ProcessId -> C.Connection -> Process ()
 reconnect pid conn = send pid (Reconnection conn)
 
 
-tryToLinkToArea :: AreaId -> Maybe C.Connection -> Process ()
-tryToLinkToArea areaId maybeConn = do
-    maybeAreaPid <- globalWhereIs $ show areaId
+tryToLinkToArea :: AreaId -> Maybe C.Connection -> TagPool -> Process ()
+tryToLinkToArea areaId maybeConn tagPool = do
+    maybeAreaPid <- globalWhereIs (show areaId) tagPool
     case maybeAreaPid of
         Nothing -> do
             case maybeConn of

@@ -6,15 +6,21 @@ import Data.Time.Clock.POSIX (getPOSIXTime)
 import qualified Control.Exception as Ex
 import Control.Monad (liftM, when)
 import System.Random (RandomGen, StdGen, mkStdGen, randomR)
+import Control.Concurrent (threadDelay)
 
 import Data.Hashable (hash)
 import Control.Distributed.Process
+import Control.Distributed.Process.Extras.Time (Timeout)
 import Database.SQLite3 (SQLError)
 import Database.SQLite.Simple (FormatError, ResultError)
 
+import Types(Ts)
 import Debug (debug)
 
-type Ts = Int -- time in milliseconds
+
+timeoutForCall :: Timeout
+timeoutForCall = Just (seconds * 1000 * 1000)
+    where seconds = 3
 
 
 milliseconds :: IO Ts
@@ -67,5 +73,9 @@ evaluate = liftIO . Ex.evaluate
 safeReceive :: [Match a] -> a -> Process a
 safeReceive handlers state = evalState `catches` logException state
     where evalState = receiveWait handlers >>= evaluate
+
+
+sleepSeconds :: Int -> IO ()
+sleepSeconds seconds = threadDelay $ seconds * 1000 * 1000
 
 --TODO: safe send

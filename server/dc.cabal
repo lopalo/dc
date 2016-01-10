@@ -26,6 +26,7 @@ Executable dc
         mtl == 2.1.2,
         text >= 0.11.0.0,
         bytestring == 0.10.4.0,
+        bytestring-trie >= 0.2.4,
         ghc-prim == 0.3.1.0,
         data-lens == 2.10.5,
         binary == 0.7.1.0,

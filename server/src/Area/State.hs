@@ -11,8 +11,7 @@ import Data.Lens.Strict (Lens, lens, mapLens, (^%=), (%=))
 import Data.Lens.Partial.Common (PartialLens, totalLens, justLens)
 
 import WS.Connection (Connection)
-import Utils (Ts)
-import Types (UserId, UserPid, AreaId)
+import Types (UserId, UserPid, AreaId, Ts)
 import Area.Types (ObjId)
 import qualified Area.Objects.User as U
 import qualified Area.Objects.Gate as G

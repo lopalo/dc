@@ -56,18 +56,17 @@ instance FromRow ControlPoint where
         Just actions_ <- decode . encodeUtf8 <$> field
         size_ <- Size <$> field <*> field
         owner_ <- field
-        return $
-            ControlPoint{
-                ident=ident_,
-                name=name_,
-                pos=pos_,
-                angle=angle_,
-                maxDurability=maxDurability_,
-                durability=durability_,
-                actions=actions_,
-                size=size_,
-                owner=UserId <$> owner_
-                }
+        return $ ControlPoint{
+            ident=ident_,
+            name=name_,
+            pos=pos_,
+            angle=angle_,
+            maxDurability=maxDurability_,
+            durability=durability_,
+            actions=actions_,
+            size=size_,
+            owner=UserId <$> owner_
+            }
 
 instance ToRow ControlPoint where
 

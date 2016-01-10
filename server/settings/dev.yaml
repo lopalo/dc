@@ -2,6 +2,10 @@ start-area: &start-area area:alpha
 ws-addresses: &ws-addresses
     - [dc-dev-host-example.net, &ws-port-1 10501]
 
+cluster:
+    respawn-delay-milliseconds: [500, 1200]
+    node-ping-period-milliseconds: 1000
+
 user:
     areas:
         - area:alpha
@@ -40,7 +44,7 @@ nodes:
         node-port: 10500
         services:
             - type: db
-              ident: db:1
+              ident: db #NOTE: hardcoded singleton
               path: ../dbs/dev.db
 
             - type: ws

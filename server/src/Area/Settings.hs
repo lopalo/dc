@@ -7,7 +7,7 @@ import Control.Monad (mzero)
 
 import Data.Aeson (FromJSON(parseJSON), Value(Object), (.:))
 
-import Utils (Ts)
+import Types (Ts)
 
 
 data Settings = Settings {

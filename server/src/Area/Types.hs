@@ -11,7 +11,6 @@ import Data.String.Utils (startswith)
 import Data.Aeson (Value, ToJSON, toJSON, FromJSON, parseJSON)
 import Data.Lens.Strict (Lens, lens)
 
-import Utils (Ts)
 import Types (UserId(..), UserPid(..), AreaId, delIdPrefix)
 import qualified User.External as UE
 

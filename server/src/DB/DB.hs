@@ -16,7 +16,7 @@ import Data.Maybe (fromMaybe)
 
 import Control.Distributed.Process
 import Control.Distributed.Process.Extras (TagPool, getTag)
-import Control.Distributed.Process.Extras.Call (callResponse, callAt)
+import Control.Distributed.Process.Extras.Call (callResponse, callTimeout)
 import Database.SQLite.Simple (
     ToRow, SQLData, Only(..), Connection,
     open, close, query, execute, toRow,
@@ -26,12 +26,11 @@ import Database.SQLite.Simple.ToField (toField)
 
 import GlobalRegistry (globalRegister, globalWhereIs, globalNSend)
 import Types (UserId(..), AreaId(..))
-import Utils (safeReceive)
+import Utils (safeReceive, timeoutForCall)
 import User.Types (User)
 import Area.Objects.Gate (Gate)
 import Area.Objects.Asteroid (Asteroid)
 import Area.Objects.ControlPoint (ControlPoint)
-import qualified Settings as S
 
 
 data AreaObjects = AreaObjects {
@@ -76,7 +75,6 @@ emptyAreaObjects = AreaObjects [] [] []
 
 dbProcess :: String -> Process ()
 dbProcess path = do
-    globalRegister dbServiceName =<< getSelfPid
     conn <- liftIO $ open $ path
     loop conn
     liftIO $ close conn
@@ -91,7 +89,8 @@ loop conn = forever $ safeReceive handlers ()
             prepare handlePutUser,
             prepare handlePutAreaObjects,
             prepareCall handleGetUser,
-            prepareCall handleGetAreaObjects
+            prepareCall handleGetAreaObjects,
+            matchUnknown (return ())
             ]
 
 
@@ -155,9 +154,9 @@ handlePutAreaObjects conn (PutAreaObjects (AreaId area) objects) =
 
 getUser :: UserId -> TagPool -> Process (Maybe User)
 getUser uid tagPool = do
-    Just pid <- globalWhereIs dbServiceName
+    Just pid <- globalWhereIs dbServiceName tagPool
     tag <- getTag tagPool
-    res <- callAt pid (GetUser uid) tag
+    res <- callTimeout pid (GetUser uid) tag timeoutForCall
     return $ fromMaybe Nothing res
 
 
@@ -167,9 +166,9 @@ putUser user = globalNSend dbServiceName $ PutUser user
 
 getAreaObjects :: AreaId -> TagPool -> Process (Maybe AreaObjects)
 getAreaObjects aid tagPool = do
-    Just pid <- globalWhereIs dbServiceName
+    Just pid <- globalWhereIs dbServiceName tagPool
     tag <- getTag tagPool
-    callAt pid (GetAreaObjects aid) tag
+    callTimeout pid (GetAreaObjects aid) tag timeoutForCall
 
 
 putAreaObjects :: AreaId -> AreaObjects -> Process ()

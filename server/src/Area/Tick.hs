@@ -22,7 +22,8 @@ import Data.Lens.Partial.Common (getPL, (^%=), (^-=), (^+=))
 import Control.Distributed.Process
 import Data.Aeson (ToJSON, Value, object, (.=))
 
-import Utils (milliseconds, logInfo, Ts)
+import Types (Ts)
+import Utils (milliseconds, logInfo)
 import qualified DB.DB as DB
 import qualified WS.Connection as C
 import qualified Area.Settings as AS
@@ -59,6 +60,7 @@ scheduleTick :: Ts -> Process ProcessId
 scheduleTick ms = do
     selfPid <- getSelfPid
     spawnLocal $ do
+        --TODO: use sleepFor ms Millis
         liftIO $ threadDelay $ ms * 1000
         send selfPid TimeTick
 

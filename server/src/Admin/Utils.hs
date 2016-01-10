@@ -2,7 +2,6 @@
 
 module Admin.Utils where
 
-import qualified Data.Map.Strict as M
 import Control.Concurrent (newEmptyMVar, putMVar, takeMVar)
 
 import Control.Distributed.Process
@@ -10,7 +9,7 @@ import Control.Distributed.Process.Node (LocalNode, runProcess)
 import Control.Distributed.Process.Extras (newTagPool)
 import Web.Scotty hiding (settings)
 
-import GlobalRegistry (getRegistry)
+import GlobalRegistry (getRegistry, globalWhereIs)
 
 
 type NameRecord = (String, String)
@@ -18,16 +17,16 @@ type NameRecord = (String, String)
 
 getGlobalNames :: LocalNode -> ActionM [NameRecord]
 getGlobalNames node = do
-    Just registry <- execProcess node $ getRegistry =<< newTagPool
+    registry <- execProcess node $ getRegistry "" =<< newTagPool
     return $
-        [(name, show (processNodeId pid)) | (pid, name) <- M.toList registry]
+        [(name, show (processNodeId pid)) | (name, pid) <- registry]
 
 
 killProcessByName :: LocalNode -> ActionM ()
 killProcessByName node = do
     name <- param "name"
     execProcess node $ do
-        Just pid <- whereis name
+        Just pid <- globalWhereIs name =<< newTagPool
         kill pid "admin"
 
 

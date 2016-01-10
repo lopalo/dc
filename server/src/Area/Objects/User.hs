@@ -113,17 +113,16 @@ lastAttackerL = lens lastAttacker (\v s -> s{lastAttacker=v})
 
 
 userArea :: User -> UE.UserArea
-userArea user =
-    UE.UserArea{
-        UE.userId=userId user,
-        UE.name=name user,
-        UE.speed=speed user,
-        UE.maxDurability=maxDurability user,
-        UE.durability=durability user,
-        UE.size=size user,
-        UE.kills=kills user,
-        UE.deaths=deaths user
-        }
+userArea user = UE.UserArea{
+    UE.userId=userId user,
+    UE.name=name user,
+    UE.speed=speed user,
+    UE.maxDurability=maxDurability user,
+    UE.durability=durability user,
+    UE.size=size user,
+    UE.kills=kills user,
+    UE.deaths=deaths user
+    }
 
 
 

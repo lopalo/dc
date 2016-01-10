@@ -11,8 +11,8 @@ import GHC.Generics (Generic)
 import Data.Binary (Binary)
 import Data.Typeable (Typeable)
 import Control.Monad (forever, void)
-import Control.Concurrent (threadDelay)
-import qualified Data.ByteString.Lazy as B
+import qualified Data.ByteString as B
+import qualified Data.ByteString.Lazy as LB
 
 import Data.Aeson (ToJSON, encode)
 import Control.Distributed.Process
@@ -20,7 +20,7 @@ import qualified Control.Distributed.Process.Node as Node
 import qualified Network.WebSockets as WS
 
 import Types (RequestNumber, UserPid(..), AreaPid)
-import Utils (evaluate, logDebug)
+import Utils (evaluate, logDebug, sleepSeconds)
 
 
 data Connection =
@@ -40,7 +40,7 @@ acceptConnection node inputHandler pending = do
         Node.forkProcess node $ do
             let outputLoop = forever $ do
                 ("send", outputData) <-
-                    expect :: Process (String, B.ByteString)
+                    expect :: Process (String, LB.ByteString)
                 liftIO $ WS.sendTextData wsConn outputData
             outputLoop `finally` logDebug "Connection: output closed"
     Node.runProcess node $ do
@@ -103,7 +103,7 @@ sendErrorAndClose :: Connection -> String -> Process ()
 sendErrorAndClose conn errorMsg = do
     sendCmd conn "error" errorMsg
     spawnLocal $ do
-        liftIO $ threadDelay $ timeoutSeconds * 1000 * 1000
+        liftIO $ sleepSeconds timeoutSeconds
         close conn
     return ()
     where timeoutSeconds = 5

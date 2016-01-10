@@ -54,17 +54,16 @@ instance FromRow Asteroid where
         durability_ <- field
         Just actions_ <- decode . encodeUtf8 <$> field
         size_ <- Size <$> field <*> field
-        return $
-            Asteroid{
-                ident=ident_,
-                name=name_,
-                pos=pos_,
-                angle=angle_,
-                maxDurability=maxDurability_,
-                durability=durability_,
-                actions=actions_,
-                size=size_
-                }
+        return $ Asteroid{
+            ident=ident_,
+            name=name_,
+            pos=pos_,
+            angle=angle_,
+            maxDurability=maxDurability_,
+            durability=durability_,
+            actions=actions_,
+            size=size_
+            }
 
 instance ToRow Asteroid where
 

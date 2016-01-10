@@ -21,7 +21,7 @@ import Control.Monad.Writer (Writer, writer)
 import Data.Aeson (ToJSON, FromJSON)
 import Data.Lens.Strict (Lens, lens, (^%=))
 
-import Utils (Ts)
+import Types (Ts)
 import Area.Utils (getIntervals)
 import Area.Types
 import Area.Vector (Vect, angle, toPos, fromPos, fromPolar, mul, sub, add)

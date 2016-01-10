@@ -21,6 +21,12 @@ delIdPrefix :: String -> String -> String
 delIdPrefix = delPrefix ":"
 
 
+type Ts = Int -- absolute time in milliseconds
+
+
+type NodeName = String
+
+
 type RequestNumber = Int
 
 

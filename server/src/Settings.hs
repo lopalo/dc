@@ -5,11 +5,14 @@ module Settings where
 import Control.Applicative ((<$>), (<*>))
 import Control.Monad (mzero)
 import qualified Data.Map.Strict as M
+import qualified Data.ByteString.Char8 as B
 
 import Data.Aeson (FromJSON(parseJSON), Value(Object), (.:))
 import Data.Aeson.Types (Parser)
+import Control.Distributed.Process
+import Network.Transport (EndPointAddress(EndPointAddress))
 
-import Types (AreaId)
+import Types (NodeName)
 import qualified Area.Settings
 import qualified User.Settings
 import qualified HTTP.Settings
@@ -17,22 +20,38 @@ import qualified Admin.Settings
 
 
 data Settings = Settings {
+    cluster :: ClusterSettings,
     user :: User.Settings.Settings,
     area :: Area.Settings.Settings,
     http :: HTTP.Settings.Settings,
     admin :: Admin.Settings.Settings,
-    nodes :: M.Map String NodeSettings
+    nodes :: M.Map NodeName NodeSettings
     }
 
 instance FromJSON Settings where
 
     parseJSON (Object v) =
         Settings <$>
+        v .: "cluster" <*>
         v .: "user" <*>
         v .: "area" <*>
         v .: "http" <*>
         v .: "admin" <*>
         v .: "nodes"
+    parseJSON _ = mzero
+
+
+data ClusterSettings = ClusterSettings {
+    respawnDelayMilliseconds :: (Int, Int),
+    nodePingPeriodMilliseconds :: Int
+    }
+
+instance FromJSON ClusterSettings where
+
+    parseJSON (Object v) =
+        ClusterSettings <$>
+        v .: "respawn-delay-milliseconds" <*>
+        v .: "node-ping-period-milliseconds"
     parseJSON _ = mzero
 
 
@@ -58,6 +77,7 @@ data ServiceSettings
     | HTTP {ident :: String, host :: String, port :: Int}
     | Admin {ident :: String, host :: String, port :: Int}
     | Area {ident :: String}
+    | NodeControl {ident :: String}
 
 instance FromJSON ServiceSettings where
 
@@ -74,6 +94,13 @@ instance FromJSON ServiceSettings where
     parseJSON _ = mzero
 
 
+makeNodeId :: String -> Int -> NodeId
+makeNodeId nHost nPort =
+    let addr = nHost ++ ":" ++ show nPort
+    in NodeId . EndPointAddress . B.concat $ [B.pack addr, ":0"]
 
+
+nodeId :: NodeSettings -> NodeId
+nodeId s = makeNodeId (nodeHost s) (nodePort s)
 
 
