@@ -24,7 +24,6 @@ timeoutForCall = Just (seconds * 1000 * 1000)
 
 
 milliseconds :: IO Ts
---TODO: use CLOCK_MONOTONIC
 milliseconds = liftM (floor . (* 1000)) getPOSIXTime
 
 
@@ -78,4 +77,3 @@ safeReceive handlers state = evalState `catches` logException state
 sleepSeconds :: Int -> IO ()
 sleepSeconds seconds = threadDelay $ seconds * 1000 * 1000
 
---TODO: safe send

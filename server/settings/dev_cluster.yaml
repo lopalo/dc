@@ -1,6 +1,7 @@
 start-area: &start-area area:alpha
 ws-addresses: &ws-addresses
-    - [dc-dev-host-example.net, &ws-port-1 10501]
+    - [dc-dev-host-example.net, &ws-port-1 10611]
+    - [dc-dev-host-example.net, &ws-port-2 10612]
 
 cluster:
     respawn-delay-milliseconds: [500, 1200]
@@ -34,6 +35,7 @@ http:
     client-settings: ../../client_settings/dev.json
     ws-addresses:
         - [<http-host>, *ws-port-1]
+        - [<http-host>, *ws-port-2]
 
 admin:
     ui-dir: ../../admin
@@ -41,11 +43,8 @@ admin:
 nodes:
     first:
         node-host: localhost
-        node-port: 10500
+        node-port: 10601
         services:
-            - type: db
-              ident: db #NOTE: hardcoded singleton
-              path: ../dbs/dev.db
 
             - type: ws
               ident: ws:1
@@ -55,12 +54,12 @@ nodes:
             - type: http
               ident: http:1
               host: 0.0.0.0
-              port: 10502
+              port: 10621
 
             - type: admin
               ident: admin
               host: 0.0.0.0
-              port: 10503
+              port: 10622
 
             - type: area
               ident: *start-area
@@ -68,8 +67,34 @@ nodes:
             - type: area
               ident: area:beta
 
+    second:
+        node-host: localhost
+        node-port: 10602
+        services:
+            - type: db
+              ident: db #NOTE: hardcoded singleton
+              path: ../dbs/dev.db
+
+            - type: ws
+              ident: ws:2
+              host: 0.0.0.0
+              port: *ws-port-2
+
+            - type: area
+              ident: area:beta
+
+    third:
+        node-host: localhost
+        node-port: 10603
+        services:
+            - type: area
+              ident: *start-area
+
             - type: area
               ident: area:gamma
+
+
+
 
 
 

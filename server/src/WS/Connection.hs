@@ -16,11 +16,13 @@ import qualified Data.ByteString.Lazy as LB
 
 import Data.Aeson (ToJSON, encode)
 import Control.Distributed.Process
+import Control.Distributed.Process.Extras.Time (TimeUnit(..))
+import Control.Distributed.Process.Extras.Timer (sleepFor)
 import qualified Control.Distributed.Process.Node as Node
 import qualified Network.WebSockets as WS
 
 import Types (RequestNumber, UserPid(..), AreaPid)
-import Utils (evaluate, logDebug, sleepSeconds)
+import Utils (evaluate, logDebug)
 
 
 data Connection =
@@ -102,11 +104,8 @@ close conn = exit (input conn) "close connection"
 sendErrorAndClose :: Connection -> String -> Process ()
 sendErrorAndClose conn errorMsg = do
     sendCmd conn "error" errorMsg
-    spawnLocal $ do
-        liftIO $ sleepSeconds timeoutSeconds
-        close conn
+    spawnLocal $ sleepFor 5 Seconds >> close conn
     return ()
-    where timeoutSeconds = 5
 
 
 monitorConnection :: Connection -> Process ()

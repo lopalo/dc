@@ -1,10 +1,10 @@
 {-# LANGUAGE DeriveGeneric, DeriveDataTypeable, OverloadedStrings #-}
 
-module GlobalRegistry (
+module Base.GlobalRegistry (
     RegistrationFailure(RegistrationFailure),
-    globalRegistryProcess,
-    getRegistry, globalRegister,
-    globalWhereIs, globalNSend
+    globalRegistryProcess, isRunning,
+    getNameList, globalRegister, globalWhereIs,
+    globalMultiWhereIs, globalWhereIsByPrefix, globalNSend
     ) where
 
 import GHC.Generics (Generic)
@@ -13,7 +13,6 @@ import Data.Typeable (Typeable)
 import Control.Monad (void, when, forever, foldM)
 import Data.ByteString.UTF8 (fromString, toString)
 import Data.Maybe (isJust)
-import Control.Concurrent (threadDelay)
 import qualified Data.ByteString as B
 import qualified Data.Map.Strict as M
 import qualified Data.Trie as T
@@ -22,10 +21,16 @@ import Control.Distributed.Process
 import Control.Distributed.Process.Serializable (Serializable)
 import Control.Distributed.Process.Extras (TagPool, newTagPool, getTag)
 import Control.Distributed.Process.Extras.Call (callResponse, callTimeout)
+import Control.Distributed.Process.Extras.Time (TimeUnit(..))
+import Control.Distributed.Process.Extras.Timer (sleepFor)
+
 
 import Types (NodeName, Ts)
 import qualified Settings as S
-import Utils (safeReceive, timeoutForCall, milliseconds, logError, logInfo)
+import Utils (
+    safeReceive, timeoutForCall, milliseconds,
+    logError, logInfo, logDebug
+    )
 
 
 type Record = (Ts, ProcessId)
@@ -60,14 +65,19 @@ data Register = Register String ProcessId deriving (Generic, Typeable)
 instance Binary Register
 
 
-data WhereIs = WhereIs String deriving (Generic, Typeable)
+data WhereIs = WhereIs [String] deriving (Generic, Typeable)
 
 instance Binary WhereIs
 
 
-data GetRegistry = GetRegistry String deriving (Generic, Typeable)
+data WhereIsByPrefix = WhereIsByPrefix String deriving (Generic, Typeable)
 
-instance Binary GetRegistry
+instance Binary WhereIsByPrefix
+
+
+data GetNameList = GetNameList String deriving (Generic, Typeable)
+
+instance Binary GetNameList
 
 
 data RegistrationFailure =
@@ -77,7 +87,7 @@ data RegistrationFailure =
 instance Binary RegistrationFailure
 
 
-type NameList = [(String, ProcessId)]
+type NameList = [(String, ProcessId, Ts)]
 
 
 globalRegistryServiceName :: String
@@ -96,6 +106,10 @@ globalRegistryProcess settings nodeName = do
             }
     runPing pingPeriod nodeName $ M.elems nodeIds
     void $ loop state
+
+
+isRunning :: Process Bool
+isRunning = fmap isJust $ whereis globalRegistryServiceName
 
 
 thereIsQuorum :: State -> Bool
@@ -118,7 +132,8 @@ getLocalRegistry state = do
 
 
 mergeRecord :: State -> B.ByteString -> Record -> Process State
-mergeRecord state name record =
+mergeRecord state name record = do
+    logDebug $ "Merge record: " ++ toString name
     case T.lookup name reg of
         Nothing -> do
             monitor pid
@@ -130,11 +145,11 @@ mergeRecord state name record =
             | record == record' -> return state
             | record > record' -> do
                 exit pid RegistrationFailure
-                logConflict
+                logInfo $ "Remote name conflict: " ++ toString name
                 return state
             | otherwise -> do
                 exit pid' RegistrationFailure
-                logConflict
+                logInfo $ "Local name conflict: " ++ toString name
                 monitor pid
                 let modPids = M.insert pid name . M.delete pid'
                 return $ state{
@@ -144,7 +159,6 @@ mergeRecord state name record =
     where
         reg = registry state
         (_, pid) = record
-        logConflict = logInfo $ "Name conflict: " ++ toString name
 
 
 loop :: State -> Process State
@@ -159,7 +173,8 @@ loop state = safeReceive handlers state >>= loop
             prepare handleRemoteRegister,
             prepare handlePing,
             prepare handleMerge,
-            prepareCall handleGetRegistry,
+            prepareCall handleGetNameList,
+            prepareCall handleWhereIsByPrefix,
             matchUnknown (return state)
             ]
 
@@ -170,6 +185,8 @@ handlePing state (Ping nodeName nsPid) =
         Just Nothing -> do
             monitor nsPid
             fmap Merge (getLocalRegistry state') >>= send nsPid
+            logInfo $ "New node: " ++ nodeName
+            when quorumAchieved $ logInfo "Quorum achieved"
             return state'
         Just _ -> return state
         Nothing -> do
@@ -178,6 +195,7 @@ handlePing state (Ping nodeName nsPid) =
     where
         nss = nameServices state
         state' = state{nameServices=M.insert nodeName (Just nsPid) nss}
+        quorumAchieved = not (thereIsQuorum state) && thereIsQuorum state'
 
 
 handleMerge :: State -> Merge -> Process State
@@ -209,9 +227,12 @@ handleRemoteRegister state (RemoteRegister name record) =
     mergeRecord state name record
 
 
-handleWhereIs :: State -> WhereIs -> Process (Maybe ProcessId, State)
-handleWhereIs state (WhereIs name) = return $ (fmap snd maybeRecord, state)
-    where maybeRecord = T.lookup (fromString name) (registry state)
+handleWhereIs :: State -> WhereIs -> Process ([Maybe ProcessId], State)
+handleWhereIs state (WhereIs names) =
+    let ns = map fromString names
+        reg = registry state
+        getPid n = fmap snd $ T.lookup n reg
+    in return (map getPid ns, state)
 
 
 handleMonitorNotification ::
@@ -219,66 +240,81 @@ handleMonitorNotification ::
 handleMonitorNotification state (ProcessMonitorNotification _ pid _)
     | pid `M.member` pidToNames state = do
         let name = pidToNames state M.! pid
+        logDebug $ "Unregister name: " ++ toString name
         return $ state{
             registry=T.delete name $ registry state,
             pidToNames=M.delete pid $ pidToNames state
             }
     | otherwise = do
-        let nss = nameServices state
-            state' = state{nameServices=M.filter (Just pid /=) nss}
+        let f v@(Just pid') = if pid == pid' then Nothing else v
+            f Nothing = Nothing
+            nss = nameServices state
+            nss' = M.map f nss
+            state' = state{nameServices=nss'}
             noQuorum = not $ thereIsQuorum state'
             sendExit (_, localPid) = exit localPid RegistrationFailure
+            [nodeName] = M.keys $ M.filter (Just pid ==) nss
+        when (nss' /= nss) (logInfo $ "Node disconnected: " ++ nodeName)
         when noQuorum $ do
             localRegistry <- getLocalRegistry state'
             mapM_ sendExit $ T.elems localRegistry
-            logInfo "No quorum"
+            when (thereIsQuorum state) (logInfo "Quorum lost")
         return state'
 
 
-handleGetRegistry :: State -> GetRegistry -> Process (NameList, State)
-handleGetRegistry state (GetRegistry prefix) = return (map f nameList, state)
+handleWhereIsByPrefix ::
+    State -> WhereIsByPrefix -> Process ([ProcessId], State)
+handleWhereIsByPrefix state (WhereIsByPrefix prefix) =
+    let submap = T.submap (fromString prefix) (registry state)
+    in return (map snd $ T.elems submap, state)
+
+
+handleGetNameList :: State -> GetNameList -> Process (NameList, State)
+handleGetNameList state (GetNameList prefix) = return (map f nameList, state)
     where
         nameList = T.toList $ T.submap (fromString prefix) (registry state)
-        f (name, (_, pid)) = (toString name, pid)
+        f (name, (ts, pid)) = (toString name, pid, ts)
 
 
 runPing :: Ts -> NodeName -> [NodeId] -> Process ProcessId
 runPing ms nodeName nodeIds = do
     selfPid <- getSelfPid
-    let time = ms * 1000
-        payload = Ping nodeName selfPid
+    let payload = Ping nodeName selfPid
         s nodeId = nsendRemote nodeId globalRegistryServiceName payload
-        ping =
-            forever $ do
-                liftIO $ threadDelay time
-                mapM_ s nodeIds
+        ping = forever $ sleepFor ms Millis >> mapM_ s nodeIds
     spawnLocal $ link selfPid >> ping
+
+
+request :: (Serializable a, Serializable b) => a -> TagPool -> Process b
+request msg tagPool = do
+    Just regPid <- whereis globalRegistryServiceName
+    tag <- getTag tagPool
+    Just res <- callTimeout regPid msg tag timeoutForCall
+    return res
 
 
 --external interface
 
-getRegistry :: String -> TagPool -> Process NameList
-getRegistry prefix tagPool = do
-    Just regPid <- whereis globalRegistryServiceName
-    tag <- getTag tagPool
-    Just res <- callTimeout regPid (GetRegistry prefix) tag timeoutForCall
-    return res
+getNameList :: String -> TagPool -> Process NameList
+getNameList prefix = request (GetNameList prefix)
 
 
 globalRegister :: String -> ProcessId -> TagPool -> Process Bool
-globalRegister name pid tagPool = do
-    Just regPid <- whereis globalRegistryServiceName
-    tag <- getTag tagPool
-    Just ok <- callTimeout regPid (Register name pid) tag timeoutForCall
-    return ok
+globalRegister name pid = request (Register name pid)
+
+
+globalMultiWhereIs :: [String] -> TagPool -> Process [Maybe ProcessId]
+globalMultiWhereIs names = request (WhereIs names)
 
 
 globalWhereIs :: String -> TagPool -> Process (Maybe ProcessId)
 globalWhereIs name tagPool = do
-    Just regPid <- whereis globalRegistryServiceName
-    tag <- getTag tagPool
-    Just maybePid <- callTimeout regPid (WhereIs name) tag timeoutForCall
+    [maybePid] <- globalMultiWhereIs [name] tagPool
     return maybePid
+
+
+globalWhereIsByPrefix :: String -> TagPool -> Process [ProcessId]
+globalWhereIsByPrefix prefix = request (WhereIsByPrefix prefix)
 
 
 globalNSend :: Serializable a => String -> a -> Process ()
@@ -290,5 +326,3 @@ globalNSend name payload =
             Nothing -> return ()
 
 
-
---TODO: more logging

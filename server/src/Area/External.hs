@@ -8,7 +8,7 @@ import Control.Distributed.Process hiding (reconnect)
 
 import Utils (evaluate)
 import WS.Connection (Connection)
-import GlobalRegistry (globalNSend)
+import Base.GlobalRegistry (globalNSend)
 import qualified User.External as UE
 import Types (UserId, UserPid(..), AreaId, AreaPid(..), RequestNumber)
 import Area.Types

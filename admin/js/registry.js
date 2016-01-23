@@ -27,12 +27,14 @@ define(["mithril", "utils"], function (m, utils) {
         view: function (ctrl) {
             var thead = m("thead", m("tr", [
                 m("th", "Name"),
-                m("th", "Node ID"),
+                m("th", "Node"),
+                m("th", "Uptime"),
                 m("th", "Kill"),
             ]));
             var rows = ctrl.data().map(function (record) {
                 var name = m("td", record[0]);
                 var nodeId = m("td", record[1]);
+                var uptime = m("td", record[2]);
 
                 var killBtnAttrs = {
                     class: "btn btn-default",
@@ -42,7 +44,7 @@ define(["mithril", "utils"], function (m, utils) {
                 var killBtn = m("button", killBtnAttrs, killSpan);
                 var kill = m("td", killBtn);
 
-                return m("tr", [name, nodeId, kill]);
+                return m("tr", [name, nodeId, uptime, kill]);
             });
             var tbody = m("tbody", rows);
             return m("table.table stripped", [thead, tbody]);

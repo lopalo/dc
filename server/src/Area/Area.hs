@@ -14,7 +14,7 @@ import Control.Distributed.Process.Extras (newTagPool)
 
 import WS.Connection (Connection, setArea)
 import qualified DB.DB as DB
-import Utils (milliseconds, safeReceive, evaluate, logError)
+import Utils (milliseconds, safeReceive, evaluate)
 import qualified Area.Settings as AS
 import Types (UserPid(..), AreaId, AreaPid(..))
 import qualified User.External as UE
@@ -93,14 +93,7 @@ handleMonitorNotification state (ProcessMonitorNotification ref pid _) = do
 
 areaProcess :: AS.Settings -> AreaId -> Process ()
 areaProcess aSettings aid = do
-    res <- DB.getAreaObjects aid =<< newTagPool
-    objects <-
-        case res of
-            Just objects -> return objects
-            Nothing -> do
-                logError $ "Cannot load " ++ show aid
-                terminate
-                return DB.emptyAreaObjects
+    objects <- DB.getAreaObjects aid =<< newTagPool
     now <- liftIO milliseconds
     let state = State{
             areaId=aid,

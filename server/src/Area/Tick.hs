@@ -11,7 +11,6 @@ import Control.Monad (foldM, liftM, when)
 import Control.Monad.Writer (runWriter)
 import Control.Category ((>>>), (.))
 import Control.Monad.State.Strict (runState, get, gets, modify)
-import Control.Concurrent (threadDelay)
 import Data.Maybe (fromJust)
 import qualified Data.Map.Strict as M
 import qualified Data.Set as Set
@@ -20,6 +19,8 @@ import Text.Printf (printf)
 import Data.Lens.Strict (access, (^$), (~=), (+=), (%=))
 import Data.Lens.Partial.Common (getPL, (^%=), (^-=), (^+=))
 import Control.Distributed.Process
+import Control.Distributed.Process.Extras.Time (TimeUnit(..))
+import Control.Distributed.Process.Extras.Timer (sleepFor)
 import Data.Aeson (ToJSON, Value, object, (.=))
 
 import Types (Ts)
@@ -59,10 +60,7 @@ instance Binary TimeTick
 scheduleTick :: Ts -> Process ProcessId
 scheduleTick ms = do
     selfPid <- getSelfPid
-    spawnLocal $ do
-        --TODO: use sleepFor ms Millis
-        liftIO $ threadDelay $ ms * 1000
-        send selfPid TimeTick
+    spawnLocal $ sleepFor ms Millis >> send selfPid TimeTick
 
 
 handleTick :: State -> TimeTick -> Process State

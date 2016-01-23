@@ -5,14 +5,12 @@ module DB.DB (
     dbProcess,
     putUser, getUser,
     getAreaObjects, putAreaObjects,
-    emptyAreaObjects
     ) where
 
 import GHC.Generics (Generic)
 import Data.Binary (Binary)
 import Data.Typeable (Typeable)
 import Control.Monad (forever)
-import Data.Maybe (fromMaybe)
 
 import Control.Distributed.Process
 import Control.Distributed.Process.Extras (TagPool, getTag)
@@ -24,7 +22,7 @@ import Database.SQLite.Simple (
     )
 import Database.SQLite.Simple.ToField (toField)
 
-import GlobalRegistry (globalRegister, globalWhereIs, globalNSend)
+import Base.GlobalRegistry (globalWhereIs, globalNSend)
 import Types (UserId(..), AreaId(..))
 import Utils (safeReceive, timeoutForCall)
 import User.Types (User)
@@ -69,15 +67,10 @@ dbServiceName :: String
 dbServiceName = "db"
 
 
-emptyAreaObjects :: AreaObjects
-emptyAreaObjects = AreaObjects [] [] []
-
-
 dbProcess :: String -> Process ()
 dbProcess path = do
     conn <- liftIO $ open $ path
-    loop conn
-    liftIO $ close conn
+    loop conn `finally` liftIO (close conn)
 
 
 loop :: Connection -> Process ()
@@ -156,19 +149,20 @@ getUser :: UserId -> TagPool -> Process (Maybe User)
 getUser uid tagPool = do
     Just pid <- globalWhereIs dbServiceName tagPool
     tag <- getTag tagPool
-    res <- callTimeout pid (GetUser uid) tag timeoutForCall
-    return $ fromMaybe Nothing res
+    Just res <- callTimeout pid (GetUser uid) tag timeoutForCall
+    return res
 
 
 putUser :: User -> Process ()
 putUser user = globalNSend dbServiceName $ PutUser user
 
 
-getAreaObjects :: AreaId -> TagPool -> Process (Maybe AreaObjects)
+getAreaObjects :: AreaId -> TagPool -> Process AreaObjects
 getAreaObjects aid tagPool = do
     Just pid <- globalWhereIs dbServiceName tagPool
     tag <- getTag tagPool
-    callTimeout pid (GetAreaObjects aid) tag timeoutForCall
+    Just res <- callTimeout pid (GetAreaObjects aid) tag timeoutForCall
+    return res
 
 
 putAreaObjects :: AreaId -> AreaObjects -> Process ()

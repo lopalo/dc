@@ -7,16 +7,17 @@ import Data.Binary (Binary)
 import Data.Typeable (Typeable)
 import Control.Monad (forever, when)
 import Data.Maybe (fromMaybe)
-import Control.Concurrent (threadDelay)
 import Text.Printf (printf)
 
 import Data.Aeson (ToJSON, Value, object, (.=))
 import Control.Distributed.Process hiding (reconnect)
 import Control.Distributed.Process.Extras (TagPool, newTagPool)
+import Control.Distributed.Process.Extras.Time (TimeUnit(..))
+import Control.Distributed.Process.Extras.Timer (sleepFor)
 
 import Utils (logInfo, logDebug, safeReceive, milliseconds)
 import Types (Ts, UserPid(UserPid), UserId(UserId), UserName, AreaId)
-import GlobalRegistry (globalRegister, globalWhereIs)
+import Base.GlobalRegistry (globalRegister, globalWhereIs)
 import qualified WS.Connection as C
 import qualified User.Settings as US
 import qualified Area.External as AE
@@ -236,11 +237,7 @@ initClientInfo state =
 runPeriodic :: Ts -> Process ProcessId
 runPeriodic ms = do
     selfPid <- getSelfPid
-    let time = ms * 1000
-        period =
-            forever $ do
-                liftIO $ threadDelay time
-                send selfPid Period
+    let period = forever $ sleepFor ms Millis >> send selfPid Period
     spawnLocal $ link selfPid >> period
 
 
