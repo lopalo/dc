@@ -1,7 +1,7 @@
 
 module Debug where
 
---TODO: use pre-processor or a process with the specific name
+--TODO: run custom logger processes (implement in Base directory)
 debug :: Bool
 debug = True
 

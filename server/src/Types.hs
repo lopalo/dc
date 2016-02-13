@@ -7,6 +7,7 @@ import Data.Binary (Binary)
 import Data.Typeable (Typeable)
 import Control.Applicative ((<$>))
 import Data.String.Utils (split, join)
+import qualified Data.Map.Strict as M
 
 import Data.Aeson (ToJSON, toJSON, FromJSON, parseJSON)
 import Control.Distributed.Process
@@ -25,6 +26,9 @@ type Ts = Int -- absolute time in milliseconds
 
 
 type NodeName = String
+
+
+type NodeNames = M.Map NodeId NodeName
 
 
 type RequestNumber = Int

@@ -25,7 +25,7 @@ import Control.Distributed.Process.Extras.Time (TimeUnit(..))
 import Control.Distributed.Process.Extras.Timer (sleepFor)
 
 
-import Types (NodeName, Ts)
+import Types (NodeNames, Ts)
 import qualified Settings as S
 import Utils (
     safeReceive, timeoutForCall, milliseconds,
@@ -38,12 +38,13 @@ type Record = (Ts, ProcessId)
 
 data State = State {
     registry :: T.Trie Record,
-    pidToNames :: M.Map ProcessId B.ByteString,
-    nameServices :: M.Map NodeName (Maybe ProcessId)
+    pidIndex :: M.Map ProcessId B.ByteString,
+    visibleNodes :: M.Map NodeId Bool,
+    nodeNames :: NodeNames
     }
 
 
-data Ping = Ping NodeName ProcessId deriving (Generic, Typeable)
+data Ping = Ping NodeId deriving (Generic, Typeable)
 
 instance Binary Ping
 
@@ -94,17 +95,20 @@ globalRegistryServiceName :: String
 globalRegistryServiceName = "globalRegistry"
 
 
-globalRegistryProcess :: S.Settings -> NodeName -> Process ()
-globalRegistryProcess settings nodeName = do
+globalRegistryProcess :: S.Settings -> Process ()
+globalRegistryProcess settings = do
     register globalRegistryServiceName =<< getSelfPid
-    let nodeIds = M.delete nodeName $ M.map S.nodeId $ S.nodes settings
+    selfNodeId <- getSelfNode
+    let nns = S.nodeNames $ S.nodes settings
+        vns = M.delete selfNodeId $ M.map (const False) nns
         pingPeriod = S.nodePingPeriodMilliseconds $ S.cluster settings
         state = State{
             registry=T.empty,
-            pidToNames=M.empty,
-            nameServices=M.map (const Nothing) nodeIds
+            pidIndex=M.empty,
+            visibleNodes=vns,
+            nodeNames=nns
             }
-    runPing pingPeriod nodeName $ M.elems nodeIds
+    runPing pingPeriod $ M.keys vns
     void $ loop state
 
 
@@ -114,9 +118,9 @@ isRunning = fmap isJust $ whereis globalRegistryServiceName
 
 thereIsQuorum :: State -> Bool
 thereIsQuorum state =
-    let size = fromIntegral $ M.size (nameServices state) :: Float
+    let size = fromIntegral $ M.size (visibleNodes state) :: Float
         minCount = ceiling $ size / 2
-        count = M.size $ M.filter isJust $ nameServices state
+        count = M.size $ M.filter id $ visibleNodes state
     in count >= minCount
 
 
@@ -139,10 +143,13 @@ mergeRecord state name record = do
             monitor pid
             return $ state{
                 registry=T.insert name record reg,
-                pidToNames=M.insert pid name $ pidToNames state
+                pidIndex=M.insert pid name $ pidIndex state
                 }
-        Just record'@(_, pid')
-            | record == record' -> return state
+        Just record'@(ts', pid')
+            | pid == pid' -> do
+                return $ state{
+                    registry=T.insert name (min ts ts', pid) reg
+                    }
             | record > record' -> do
                 exit pid RegistrationFailure
                 logInfo $ "Remote name conflict: " ++ toString name
@@ -154,11 +161,11 @@ mergeRecord state name record = do
                 let modPids = M.insert pid name . M.delete pid'
                 return $ state{
                     registry=T.insert name record reg,
-                    pidToNames=modPids $ pidToNames state
+                    pidIndex=modPids $ pidIndex state
                     }
     where
         reg = registry state
-        (_, pid) = record
+        (ts, pid) = record
 
 
 loop :: State -> Process State
@@ -169,32 +176,35 @@ loop state = safeReceive handlers state >>= loop
         handlers = [
             prepareCall handleWhereIs,
             prepareCall handleRegister,
-            prepare handleMonitorNotification,
             prepare handleRemoteRegister,
-            prepare handlePing,
-            prepare handleMerge,
+            prepare handleMonitorNotification,
             prepareCall handleGetNameList,
             prepareCall handleWhereIsByPrefix,
+            prepare handlePing,
+            prepare handleMerge,
+            prepare handleNodeMonitorNotification,
             matchUnknown (return state)
             ]
 
 
 handlePing :: State -> Ping -> Process State
-handlePing state (Ping nodeName nsPid) =
-    case M.lookup nodeName nss of
-        Just Nothing -> do
-            monitor nsPid
-            fmap Merge (getLocalRegistry state') >>= send nsPid
+handlePing state (Ping nodeId) =
+    case M.lookup nodeId vns of
+        Just False -> do
+            monitorNode nodeId
+            merge <- fmap Merge (getLocalRegistry state')
+            nsendRemote nodeId globalRegistryServiceName merge
             logInfo $ "New node: " ++ nodeName
             when quorumAchieved $ logInfo "Quorum achieved"
             return state'
-        Just _ -> return state
+        Just True -> return state
         Nothing -> do
-            logError $ "Unknown node: " ++ nodeName
+            logError $ "Unknown node id: " ++ show nodeId
             return state
     where
-        nss = nameServices state
-        state' = state{nameServices=M.insert nodeName (Just nsPid) nss}
+        nodeName = nodeNames state M.! nodeId
+        vns = visibleNodes state
+        state' = state{visibleNodes=M.insert nodeId True vns}
         quorumAchieved = not (thereIsQuorum state) && thereIsQuorum state'
 
 
@@ -212,13 +222,15 @@ handleRegister state (Register name pid) = do
         ok = thereIsQuorum state && not (n `T.member` reg)
         state' = state{
             registry=T.insert n record reg,
-            pidToNames=M.insert pid n $ pidToNames state
+            pidIndex=M.insert pid n $ pidIndex state
             }
-        s (Just nsPid) = send nsPid $ RemoteRegister n record
-        s Nothing = return ()
+        payload = RemoteRegister n record
+        s (nodeId, True) =
+            nsendRemote nodeId globalRegistryServiceName payload
+        s _ = return ()
     when ok $ do
         monitor pid
-        mapM_ s $ M.elems $ nameServices state'
+        mapM_ s $ M.toList $ visibleNodes state'
     return $ if ok then (True, state') else (False, state)
 
 
@@ -238,28 +250,31 @@ handleWhereIs state (WhereIs names) =
 handleMonitorNotification ::
     State -> ProcessMonitorNotification -> Process State
 handleMonitorNotification state (ProcessMonitorNotification _ pid _)
-    | pid `M.member` pidToNames state = do
-        let name = pidToNames state M.! pid
+    | pid `M.member` pidIndex state = do
+        let name = pidIndex state M.! pid
         logDebug $ "Unregister name: " ++ toString name
         return $ state{
             registry=T.delete name $ registry state,
-            pidToNames=M.delete pid $ pidToNames state
+            pidIndex=M.delete pid $ pidIndex state
             }
-    | otherwise = do
-        let f v@(Just pid') = if pid == pid' then Nothing else v
-            f Nothing = Nothing
-            nss = nameServices state
-            nss' = M.map f nss
-            state' = state{nameServices=nss'}
-            noQuorum = not $ thereIsQuorum state'
-            sendExit (_, localPid) = exit localPid RegistrationFailure
-            [nodeName] = M.keys $ M.filter (Just pid ==) nss
-        when (nss' /= nss) (logInfo $ "Node disconnected: " ++ nodeName)
-        when noQuorum $ do
-            localRegistry <- getLocalRegistry state'
-            mapM_ sendExit $ T.elems localRegistry
-            when (thereIsQuorum state) (logInfo "Quorum lost")
-        return state'
+    | otherwise = return state
+
+
+handleNodeMonitorNotification ::
+    State -> NodeMonitorNotification -> Process State
+handleNodeMonitorNotification state notification = do
+    let (NodeMonitorNotification _ nodeId _) = notification
+        nodeName = nodeNames state M.! nodeId
+        vns = visibleNodes state
+        state' = state{visibleNodes=M.insert nodeId False vns}
+        noQuorum = not $ thereIsQuorum state'
+        sendExit (_, localPid) = exit localPid RegistrationFailure
+    logInfo $ "Node disconnected: " ++ nodeName
+    when noQuorum $ do
+        localRegistry <- getLocalRegistry state'
+        mapM_ sendExit $ T.elems localRegistry
+        when (thereIsQuorum state) (logInfo "Quorum lost")
+    return state'
 
 
 handleWhereIsByPrefix ::
@@ -276,10 +291,11 @@ handleGetNameList state (GetNameList prefix) = return (map f nameList, state)
         f (name, (ts, pid)) = (toString name, pid, ts)
 
 
-runPing :: Ts -> NodeName -> [NodeId] -> Process ProcessId
-runPing ms nodeName nodeIds = do
+runPing :: Ts -> [NodeId] -> Process ProcessId
+runPing ms nodeIds = do
     selfPid <- getSelfPid
-    let payload = Ping nodeName selfPid
+    selfNodeId <- getSelfNode
+    let payload = Ping selfNodeId
         s nodeId = nsendRemote nodeId globalRegistryServiceName payload
         ping = forever $ sleepFor ms Millis >> mapM_ s nodeIds
     spawnLocal $ link selfPid >> ping

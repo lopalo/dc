@@ -20,8 +20,7 @@ adminProcess settings node host port = liftIO $ do
     --TODO: use host
     let uiPrefix = policy (stripPrefix "ui/")
         uiDir = AS.uiDir $ S.admin settings
-        nodeNames = M.foldMapWithKey foldF $ S.nodes settings
-        foldF nodeName ss = M.singleton (S.nodeId ss) nodeName
+        nodeNames = S.nodeNames $ S.nodes settings
     scotty port $ do
         middleware $ staticPolicy (uiPrefix >-> addBase uiDir)
         clusterHandlers node nodeNames

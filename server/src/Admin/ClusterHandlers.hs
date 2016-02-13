@@ -10,13 +10,10 @@ import Control.Distributed.Process.Node (LocalNode)
 import Control.Distributed.Process.Extras (newTagPool)
 import Web.Scotty hiding (settings)
 
-import Types (NodeName)
+import Types (NodeName, NodeNames)
 import Utils (milliseconds)
 import Admin.Utils (execProcess)
 import qualified Base.GlobalRegistry as GR
-
-
-type NodeNames = M.Map NodeId NodeName
 
 
 clusterHandlers :: LocalNode -> NodeNames -> ScottyM ()

@@ -12,7 +12,7 @@ import Data.Aeson.Types (Parser)
 import Control.Distributed.Process
 import Network.Transport (EndPointAddress(EndPointAddress))
 
-import Types (NodeName)
+import Types (NodeName, NodeNames)
 import qualified Area.Settings
 import qualified User.Settings
 import qualified HTTP.Settings
@@ -102,5 +102,10 @@ makeNodeId nHost nPort =
 
 nodeId :: NodeSettings -> NodeId
 nodeId s = makeNodeId (nodeHost s) (nodePort s)
+
+
+nodeNames :: M.Map NodeName NodeSettings -> NodeNames
+nodeNames = M.foldMapWithKey f
+    where f nodeName ss = M.singleton (nodeId ss) nodeName
 
 

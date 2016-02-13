@@ -37,7 +37,7 @@ startNode node settings nodeName = do
     tagPool <- newTagPool
     spawnLocal broadcasterProcess
     spawnLocal globalCacheProcess
-    spawnLocal $ globalRegistryProcess settings nodeName
+    spawnLocal $ globalRegistryProcess settings
     mapM_ (spawnService node settings tagPool) services'
 
 

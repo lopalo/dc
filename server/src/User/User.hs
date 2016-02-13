@@ -62,7 +62,6 @@ userArea usr = UE.UserArea{
 handleMonitorNotification ::
     State -> ProcessMonitorNotification -> Process State
 handleMonitorNotification state n@ProcessMonitorNotification{} = do
-    --TODO: unmonitor
     let Just conn = connection state
     now <- liftIO milliseconds
     return $
@@ -84,6 +83,7 @@ handlePeriod state Period = do
 
 handleReconnection :: State -> Reconnection -> Process State
 handleReconnection state (Reconnection conn) = do
+    --TODO: unmonitor old connection
     case connection state of
         Just oldConn -> C.sendErrorAndClose oldConn "Reconnection"
         Nothing -> return ()
