@@ -18,8 +18,21 @@ delPrefix delimiter prefix str =
     case delimiter `split` str of
         h:rest | h == prefix -> delimiter `join` rest
 
+
 delIdPrefix :: String -> String -> String
 delIdPrefix = delPrefix ":"
+
+
+areaPrefix :: String
+areaPrefix = "area:"
+
+
+userPrefix :: String
+userPrefix = "user:"
+
+
+nodePrefix :: String
+nodePrefix = "node:"
 
 
 type Ts = Int -- absolute time in milliseconds
@@ -43,7 +56,7 @@ instance Binary UserId
 
 instance Show UserId where
 
-    show (UserId str) = "user:" ++ str
+    show (UserId str) = userPrefix ++ str
 
 instance Read UserId where
 
@@ -69,7 +82,7 @@ instance Binary AreaId
 
 instance Show AreaId where
 
-    show (AreaId str) = "area:" ++ str
+    show (AreaId str) = areaPrefix ++ str
 
 instance Read AreaId where
 

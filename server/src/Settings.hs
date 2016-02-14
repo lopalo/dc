@@ -77,7 +77,7 @@ data ServiceSettings
     | HTTP {ident :: String, host :: String, port :: Int}
     | Admin {ident :: String, host :: String, port :: Int}
     | Area {ident :: String}
-    | NodeControl {ident :: String}
+    | NodeAgent {ident :: String}
 
 instance FromJSON ServiceSettings where
 
