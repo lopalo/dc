@@ -16,7 +16,6 @@ import Data.Yaml (ParseException, decodeFileEither)
 
 import Types (NodeName, nodePrefix)
 import Utils (sleepSeconds, logInfo, logDebug)
-import Base.Broadcaster (broadcasterProcess)
 import Base.GlobalCache (globalCacheProcess)
 import Base.GlobalRegistry (
     globalRegistryProcess,
@@ -40,7 +39,6 @@ startNode node settings nodeName = do
         nodeService = S.NodeAgent $ nodePrefix ++ nodeName
         services' = nodeService : services
     tagPool <- newTagPool
-    spawnLocal broadcasterProcess
     spawnLocal globalCacheProcess
     spawnLocal $ globalRegistryProcess settings
     mapM_ (spawnService node settings tagPool) services'

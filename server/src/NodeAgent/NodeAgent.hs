@@ -21,7 +21,6 @@ import Control.Distributed.Process.Extras.Call (
 
 import Types (nodePrefix)
 import Utils (safeReceive, timeoutForCall)
-import qualified Base.Broadcaster as B
 import qualified Base.GlobalRegistry as GR
 import qualified Base.GlobalCache as GC
 
@@ -39,7 +38,6 @@ instance Binary WhereIs
 data NodeInfo = NodeInfo {
         nodeId :: NodeId,
         stats :: NodeStats,
-        broadcasterIsRunning :: Bool,
         globalRegistryIsRunning :: Bool,
         globalCacheIsRunning :: Bool
     }
@@ -72,7 +70,6 @@ handleGetNodeInfo _ GetNodeInfo = do
         NodeInfo <$>
         (processNodeId <$> getSelfPid) <*>
         getLocalNodeStats <*>
-        B.isRunning <*>
         GR.isRunning <*>
         GC.isRunning
     return (info, ())

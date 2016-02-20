@@ -21,6 +21,7 @@ import Control.Distributed.Process.Extras.Timer (sleepFor)
 import qualified Control.Distributed.Process.Node as Node
 import qualified Network.WebSockets as WS
 
+import Broadcaster (broadcast, localBroadcast)
 import Types (RequestNumber, UserPid(..), AreaPid)
 import Utils (evaluate, logDebug)
 
@@ -40,10 +41,15 @@ acceptConnection node inputHandler pending = do
     wsConn <- WS.acceptRequest pending
     outputPid <-
         Node.forkProcess node $ do
-            let outputLoop = forever $ do
-                ("send", outputData) <-
-                    expect :: Process (String, LB.ByteString)
-                liftIO $ WS.sendTextData wsConn outputData
+            let handleSingle bs =
+                    liftIO $ WS.sendTextData wsConn (bs :: LB.ByteString)
+                handleBroadcast (bc, bs) = do
+                    localBroadcast bc bs
+                    handleSingle bs
+                outputLoop = forever $ receiveWait [
+                    match handleBroadcast,
+                    match handleSingle
+                    ]
             outputLoop `finally` logDebug "Connection: output closed"
     Node.runProcess node $ do
         inputPid <- getSelfPid
@@ -77,7 +83,7 @@ sendCmd :: ToJSON a => Connection -> String -> a -> Process ()
 sendCmd conn cmd body = do
     --logDebug $ "Outgoing command: " ++ cmd
     evaluate body
-    send (output conn) ("send", encode (cmd, body))
+    send (output conn) (encode (cmd, body))
 
 
 sendResponse :: ToJSON a => Connection -> RequestNumber -> a -> Process ()
@@ -85,8 +91,11 @@ sendResponse conn req = sendCmd conn $ "response:" ++ show req
 
 
 broadcastCmd :: ToJSON a => [Connection] -> String -> a -> Process ()
-broadcastCmd connections cmd body =
-    mapM_ (\conn -> sendCmd conn cmd body) connections
+broadcastCmd connections cmd body = do
+    --logDebug $ "Outgoing command: " ++ cmd
+    evaluate body
+    broadcast (map output connections) payload
+    where payload = encode (cmd, body)
 
 
 setUser :: Connection -> UserPid -> Process ()

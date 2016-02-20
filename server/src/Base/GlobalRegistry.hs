@@ -112,10 +112,6 @@ globalRegistryProcess settings = do
     void $ loop state
 
 
-isRunning :: Process Bool
-isRunning = fmap isJust $ whereis globalRegistryServiceName
-
-
 thereIsQuorum :: State -> Bool
 thereIsQuorum state =
     let size = fromIntegral $ M.size (visibleNodes state) :: Float
@@ -310,6 +306,11 @@ request msg tagPool = do
 
 
 --external interface
+
+
+isRunning :: Process Bool
+isRunning = fmap isJust $ whereis globalRegistryServiceName
+
 
 getNameList :: String -> TagPool -> Process NameList
 getNameList prefix = request (GetNameList prefix)
