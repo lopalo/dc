@@ -3,6 +3,7 @@
 module Area.Signal where
 
 import GHC.Generics (Generic)
+import Data.Sequence (Seq)
 
 import Data.Aeson (ToJSON)
 
@@ -37,4 +38,4 @@ data Signal
 
 instance ToJSON Signal
 
-type Signals = [Signal]
+type Signals = Seq Signal

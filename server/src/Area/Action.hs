@@ -14,7 +14,7 @@ import Data.Typeable (Typeable)
 
 import Data.Maybe (fromMaybe)
 import Data.Fixed (mod', divMod')
-import Data.Set (Set, singleton)
+import Data.Sequence (Seq, singleton)
 import Control.Monad (foldM)
 import Control.Monad.Writer (Writer, writer)
 
@@ -28,7 +28,7 @@ import Area.Vector (Vect, angle, toPos, fromPos, fromPolar, mul, sub, add)
 import Area.Signal (Signal(MoveAsteroid))
 
 
-type SignalW = Writer (Set Signal)
+type SignalW = Writer (Seq Signal)
 
 
 class Active a where

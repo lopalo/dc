@@ -6,6 +6,7 @@ import Prelude hiding ((.))
 import Control.Monad (liftM)
 import Control.Category ((.), (>>>))
 import qualified Data.Map.Strict as M
+import qualified Data.Sequence as Seq
 
 import Data.Aeson (object, (.=))
 import Data.Lens.Strict ((^$), (^%=))
@@ -105,8 +106,8 @@ areaProcess aSettings aid = do
             asteroids=fromList $ DB.asteroids objects,
             controlPoints=fromList $ DB.controlPoints objects,
             colliders=emptyColliders,
-            signalBuffer=[],
-            signalsForBroadcast=[]
+            signalBuffer=Seq.empty,
+            signalsForBroadcast=Seq.empty
             }
         us = Users{
             connections=M.empty,

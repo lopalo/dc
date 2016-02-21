@@ -6,6 +6,7 @@ import Control.Category ((.))
 import Control.Monad (void)
 import qualified Control.Monad.State.Strict as S
 import qualified Data.Map.Strict as M
+import Data.Sequence ((|>))
 
 import Data.Lens.Strict (Lens, lens, mapLens, (^%=), (%=))
 import Data.Lens.Partial.Common (PartialLens, totalLens, justLens)
@@ -188,8 +189,8 @@ signalsForBroadcastL =
 
 
 addSignal :: Signal -> State -> State
-addSignal signal = signalsL ^%= (signal :)
+addSignal signal = signalsL ^%= (|> signal)
 
 
 addSignalS :: Signal -> StateS ()
-addSignalS signal = void $ signalsL %= (signal :)
+addSignalS signal = void $ signalsL %= (|> signal)

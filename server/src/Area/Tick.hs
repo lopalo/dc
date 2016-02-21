@@ -7,13 +7,15 @@ import Data.Binary (Binary)
 import Data.Typeable (Typeable)
 import Prelude hiding ((.))
 import Control.Applicative ((<$>))
-import Control.Monad (foldM, liftM, when)
+import Control.Monad (liftM, when)
 import Control.Monad.Writer (runWriter)
 import Control.Category ((>>>), (.))
 import Control.Monad.State.Strict (runState, get, gets, modify)
+import Data.Foldable (foldlM, toList)
 import Data.Maybe (fromJust)
 import qualified Data.Map.Strict as M
 import qualified Data.Set as Set
+import qualified Data.Sequence as Seq
 import Text.Printf (printf)
 
 import Data.Lens.Strict (access, (^$), (~=), (+=), (%=))
@@ -111,14 +113,14 @@ handleActions previousTs= do
             signals <- access signalsL
             let
                 (actives', signals') =
-                    M.foldrWithKey handle (M.empty, signals) actives
+                    M.foldlWithKey handle (M.empty, signals) actives
             lens ~= actives'
             signalsL ~= signals'
             return ()
-        handle ident active (res, signals) =
+        handle (res, signals) ident active =
             let (active', newSignals) = runWriter $ applyActions time active
                 res' = M.insert ident active' res
-            in (res', Set.toAscList newSignals ++ signals)
+            in (res', signals Seq.>< newSignals)
         time = Time{timestamp=ts, timeDelta=ts - previousTs}
     handleActive $ usersL >>> usersDataL
     handleActive gatesL
@@ -186,9 +188,9 @@ checkDurability = do
 handleSignals :: StateS ()
 handleSignals = do
     signals <- access signalsL
-    signalsL ~= []
-    signals' <- foldM handle [] signals
-    signalsForBroadcastL %= (signals' ++)
+    signalsL ~= Seq.empty
+    signals' <- foldlM handle Seq.empty signals
+    signalsForBroadcastL %= (Seq.>< signals')
     return ()
     where
         handle res signal = do
@@ -196,7 +198,7 @@ handleSignals = do
             return $
                 case maybeSendSignal of
                     Nothing -> res
-                    Just signal' -> signal' : res
+                    Just signal' -> res Seq.|> signal'
 
 
 handleSignal :: Signal -> StateS (Maybe Signal)
@@ -245,10 +247,10 @@ handleSignal (MoveAsteroid aid targetPos) = do
             }
         dt = distance astPos targetPos / (speed / 1000)
     modify $ asLens ^%= filter (not . moveDistance)
-    mActions <- gets $ getPL $ asLens
+    mActions <- gets $ getPL asLens
     case mActions of
         Just as ->
-            if null $ filter moveTrajectory as
+            if not $ any moveTrajectory as
                 then modify $ asLens ^%= (action :)
                 else return ()
         Nothing -> return ()
@@ -260,13 +262,13 @@ tickData :: Ts -> StateS Value
 tickData ts = do
     aid <- gets areaId
     signals <- access signalsForBroadcastL
-    signalsForBroadcastL ~= []
+    signalsForBroadcastL ~= Seq.empty
     state <- get
     let
         res = object [
             "areaId" .= aid,
-            "objects" .= foldl1 (++) objects,
-            "signals" .= signals,
+            "objects" .= concat objects,
+            "signals" .= toList signals,
             "timestamp" .= ts
             ]
         g getter = map tickClientInfo $ M.elems $ getter state
@@ -292,7 +294,7 @@ syncUsers state = mapM_ sync us
 saveObjects :: State -> Process ()
 saveObjects state = DB.putAreaObjects (areaId state) objs
     where
-        g getter = M.elems $ getter $ state
+        g getter = M.elems $ getter state
         objs = DB.AreaObjects (g gates) (g asteroids) (g controlPoints)
 
 
