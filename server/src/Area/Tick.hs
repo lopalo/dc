@@ -284,10 +284,7 @@ tickData ts = do
 syncUsers :: State -> Process ()
 syncUsers state = mapM_ sync us
     where
-        sync usr =
-            let pid = uPids M.! U.userId usr
-            in UE.syncState pid $ U.userArea usr
-        uPids = userPidsL . usersL ^$ state
+        sync usr = UE.syncState (U.pid usr) (U.userArea usr)
         us = M.elems $ usersDataL . usersL ^$ state
 
 
@@ -299,7 +296,7 @@ saveObjects state = DB.putAreaObjects (areaId state) objs
 
 
 broadcastCmd :: ToJSON a => State -> String -> a -> Process ()
-broadcastCmd state cmd = C.broadcastCmd (M.elems cs) ("area." ++ cmd)
+broadcastCmd state cmd = C.broadcastCmd (M.keys cs) ("area." ++ cmd)
     where
-        cs = connectionsL . usersL ^$ state
+        cs = connectionIndex . users $ state
 

@@ -15,7 +15,11 @@ import Types (UserId(..), UserPid(..), AreaId, delIdPrefix, userPrefix)
 import qualified User.External as UE
 
 
+type Angle = Float --degrees
+
+
 ----messages----
+
 data Reconnection = Reconnection UserId deriving (Generic, Typeable)
 
 instance Binary Reconnection
@@ -56,9 +60,6 @@ instance FromJSON Pos where
     parseJSON val = do
         (x, y) <- parseJSON val
         return (Pos x y)
-
-
-type Angle = Float --degrees
 
 
 data ObjId = UId UserId

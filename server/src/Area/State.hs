@@ -12,7 +12,7 @@ import Data.Lens.Strict (Lens, lens, mapLens, (^%=), (%=))
 import Data.Lens.Partial.Common (PartialLens, totalLens, justLens)
 
 import WS.Connection (Connection)
-import Types (UserId, UserPid, AreaId, Ts)
+import Types (UserId, UserMonitorRef, AreaId, Ts)
 import Area.Types (ObjId)
 import qualified Area.Objects.User as U
 import qualified Area.Objects.Gate as G
@@ -24,27 +24,19 @@ import Area.Settings (Settings)
 
 
 data Users = Users {
-    connections :: !Connections,
-    connToIds :: !ConnToIds,
     usersData :: !UsersData,
-    userPids :: !UserPids,
-    userPidToIds :: !UserPidToIds
+    connectionIndex :: !ConnectionIndex,
+    userMonitorRefIndex :: !UserMonitorRefIndex
     }
 
 
 type UsersData = M.Map UserId U.User
 
 
-type Connections = M.Map UserId Connection
+type ConnectionIndex = M.Map Connection UserId
 
 
-type ConnToIds = M.Map Connection UserId
-
-
-type UserPids = M.Map UserId UserPid
-
-
-type UserPidToIds = M.Map UserPid UserId
+type UserMonitorRefIndex = M.Map UserMonitorRef UserId
 
 
 type Gates = M.Map ObjId G.Gate
@@ -86,48 +78,39 @@ usersDataL :: Lens Users UsersData
 usersDataL = lens usersData (\v us -> us{usersData=v})
 
 
-connToIdsL :: Lens Users ConnToIds
-connToIdsL = lens connToIds (\v us -> us{connToIds=v})
+connectionIndexL :: Lens Users ConnectionIndex
+connectionIndexL = lens connectionIndex (\v us -> us{connectionIndex=v})
 
 
-connectionsL :: Lens Users Connections
-connectionsL = lens connections (\v us -> us{connections=v})
+userMonitorRefIndexL :: Lens Users UserMonitorRefIndex
+userMonitorRefIndexL =
+    lens userMonitorRefIndex (\v us -> us{userMonitorRefIndex=v})
 
 
-userPidsL :: Lens Users UserPids
-userPidsL = lens userPids (\v us -> us{userPids=v})
-
-
-userPidToIdsL :: Lens Users UserPidToIds
-userPidToIdsL = lens userPidToIds (\v us -> us{userPidToIds=v})
-
-
-insertUser :: UserId -> Connection -> UserPid -> U.User -> Users -> Users
-insertUser uid conn userPid user us =
-    if uid `M.member` userPids us
+insertUser :: U.User -> Users -> Users
+insertUser user us =
+    if uid `M.member` usersData us
         then us
         else foldr ($) us fs
     where
         fs = [
             usersDataL ^%= M.insert uid user,
-            connToIdsL ^%= M.insert conn uid,
-            connectionsL ^%= M.insert uid conn,
-            userPidsL ^%= M.insert uid userPid,
-            userPidToIdsL ^%= M.insert userPid uid
+            connectionIndexL ^%= M.insert (U.connection user) uid,
+            userMonitorRefIndexL ^%= M.insert (U.monitorRef user) uid
             ]
+        uid = U.userId user
 
 
 deleteUser :: UserId -> Users -> Users
 deleteUser uid us = foldr ($) us fs
     where
-        conn = connections us M.! uid
-        pid = userPids us M.! uid
+        usr = usersData  us M.! uid
+        conn = U.connection usr
+        ref = U.monitorRef usr
         fs = [
             usersDataL ^%= M.delete uid,
-            connectionsL ^%= M.delete uid,
-            connToIdsL ^%= M.delete conn,
-            userPidsL ^%= M.delete uid,
-            userPidToIdsL ^%= M.delete pid
+            connectionIndexL ^%= M.delete conn,
+            userMonitorRefIndexL ^%= M.delete ref
             ]
 
 

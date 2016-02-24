@@ -8,7 +8,6 @@ module User.External(
 import GHC.Generics (Generic)
 import Data.Binary (Binary)
 import Data.Typeable (Typeable)
-import Control.Monad (void)
 
 import Control.Distributed.Process
 
@@ -40,8 +39,8 @@ newtype SwitchArea = SwitchArea AreaId deriving (Generic, Typeable)
 instance Binary SwitchArea
 
 
-monitorUser :: UserPid -> Process ()
-monitorUser (UserPid pid) = void $ monitor pid
+monitorUser :: UserPid -> Process UserMonitorRef
+monitorUser (UserPid pid) = monitor pid
 
 
 syncState :: UserPid -> UserArea -> Process ()

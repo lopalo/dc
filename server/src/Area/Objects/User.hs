@@ -5,9 +5,13 @@ module Area.Objects.User where
 import Data.Aeson (object, (.=))
 import Data.Lens.Strict (Lens, lens)
 
-import Types (UserId, UserName, Size(Size))
+import Types (UserId, UserName, UserMonitorRef, UserPid, Size(Size))
+import WS.Connection (Connection)
 import qualified User.External as UE
-import Area.Types (Object(..), Destroyable(..), Pos, Angle, ObjId(UId))
+import Area.Types (
+    Object(..), Destroyable(..),
+    Pos, Angle, ObjId(UId),
+    )
 import Area.Action (
     Active(..), Action(MoveRoute, Recovery, PullingAsteroid),
     moveRoute, recovery, publicAction, pullingAsteroid
@@ -17,6 +21,9 @@ import Area.Collision (Collidable(collider), Collider(Circular))
 
 data User = User {
     userId :: !UserId,
+    connection :: !Connection,
+    pid :: !UserPid,
+    monitorRef :: !UserMonitorRef,
     name :: !UserName,
     pos :: !Pos,
     angle :: !Angle,
@@ -98,6 +105,10 @@ instance Collidable User where
         where
             Size w h = size user
             radius = (w + h) `quot` 4
+
+
+connectionL :: Lens User Connection
+connectionL = lens connection (\v s -> s{connection=v})
 
 
 killsL :: Lens User Int

@@ -50,6 +50,9 @@ type RequestNumber = Int
 type UserName = String
 
 
+type UserMonitorRef = MonitorRef
+
+
 newtype UserId = UserId String deriving (Eq, Ord, Generic, Typeable)
 
 instance Binary UserId

@@ -73,13 +73,13 @@ handleClientRequest state (GetObjectsInfo ids, _) = do
 
 handleClientCommand :: State -> (ClientCommand, Connection) -> Process State
 handleClientCommand state (EnterArea aid, conn) = do
-    let user@U.User{U.userId=uid} = conn `userByConn` state
-        userPid = (userPids . users) state M.! uid
-        delUser = usersL `modL` deleteUser uid
+    let delUser = usersL `modL` deleteUser uid
         addSig = addSignal $ Disappearance (UId uid) Exit
-    --TODO: unmonitor
-    UE.switchArea userPid aid
-    enter aid (U.userArea user) userPid False conn
+        user@U.User{U.userId=uid, U.pid=pid, U.monitorRef=ref} =
+            conn `userByConn` state
+    unmonitor ref
+    UE.switchArea pid aid
+    enter aid (U.userArea user) pid False conn
     return $ addSig $ delUser state
 
 handleClientCommand state (MoveAlongRoute route, conn) = do
@@ -193,7 +193,7 @@ userByConn conn state = (usersData . users) state M.! uidByConn conn state
 
 
 uidByConn :: Connection -> State -> UserId
-uidByConn conn state = (connToIds . users) state M.! conn
+uidByConn conn state = (connectionIndex . users) state M.! conn
 
 
 modifyUserActions :: UserId -> ([Action] -> [Action]) -> State -> State
