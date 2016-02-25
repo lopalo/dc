@@ -79,6 +79,21 @@ define(function (require) {
         isSelf: function (id) {
             return this.getUserId() === id;
         },
+        setSelfStageObject: function (ident) {
+            var model = this._stageController.getObjectModel(ident);
+            var ui = this._models.models.ui;
+            this._deleteSelfStageObject();
+            ui.set("selfObjectInfo", model.getInfoForUI());
+            this.listenTo(model, "change", this._selfStageObjectChanged);
+        },
+        deleteStageObject: function (ident) {
+            if (this.isSelf(ident)) {
+                this._deleteSelfStageObject();
+            }
+            if (ident === this._selectedStageObjectId) {
+                this._unselectStageObject();
+            }
+        },
         _listenToUI: function (uiViews) {
             this.listenTo(uiViews.focusButton, "click", this._showMyself);
             this.listenTo(uiViews.recoverButton, "click", this._recover);
@@ -195,10 +210,23 @@ define(function (require) {
             var ident = this._selectedStageObjectId;
             var model = this._stageController.getObjectModel(ident);
             var ui = this._models.models.ui;
+            if (model === undefined) return;
             ui.set("selectedObjectType", "nothing");
             ui.set("selectedObjectInfo", {});
             this.stopListening(model, "change");
             this._selectedStageObjectId = null;
+        },
+        _selfStageObjectChanged: function (model) {
+            var ui = this._models.models.ui;
+            ui.set("selfObjectInfo", model.getInfoForUI());
+        },
+        _deleteSelfStageObject: function () {
+            var ident = this.getUserId();
+            var model = this._stageController.getObjectModel(ident);
+            var ui = this._models.models.ui;
+            if (model === undefined) return;
+            ui.set("selfObjectInfo", {});
+            this.stopListening(model, "change");
         }
     });
     return Controller;

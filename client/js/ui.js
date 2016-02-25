@@ -73,7 +73,8 @@ define(function (require) {
                 controlModes: this.controlModes,
                 controlMode: this.controlModes[1],
                 selectedObjectType: "nothing",
-                selectedObjectInfo: {}
+                selectedObjectInfo: {},
+                selfObjectInfo: {}
             };
         }
     });

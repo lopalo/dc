@@ -249,15 +249,16 @@ define(function (require) {
             this._objectLayer.addView(view);
             if (isSelf) {
                 this.showMyself();
+                this._controller.setSelfStageObject(data.id);
             }
         },
         _removeObject: function (ident, reason) {
             var view = this._objectViews[ident];
-            var roModel = this.getObjectModel(ident);
             reason = reason || this._disappearanceReasons[ident];
+            this._signalHandler.deleteStageObject(ident);
+            this._controller.deleteStageObject(ident);
             this.stopListening(view);
             this._controller.stopListening(view);
-            this._controller.stopListening(roModel);
             view.destroy(reason);
             this._objectModels.cleanup(ident);
             delete this._objectViews[ident];
