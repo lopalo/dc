@@ -7,7 +7,7 @@ import Data.Binary (Binary)
 import Data.Typeable (Typeable)
 import Prelude hiding (log, (.))
 import Control.Applicative ((<$>))
-import Control.Monad (liftM, when)
+import Control.Monad (liftM, when, unless)
 import Control.Monad.Writer (runWriter)
 import Control.Category ((>>>), (.))
 import Control.Monad.State.Strict (runState, get, gets, modify)
@@ -249,9 +249,8 @@ handleSignal (MoveAsteroid aid targetPos) = do
     mActions <- gets $ getPL asLens
     case mActions of
         Just as ->
-            if not $ any moveTrajectory as
-                then modify $ asLens ^%= (action :)
-                else return ()
+            unless (any moveTrajectory as) $
+                modify $ asLens ^%= (action :)
         Nothing -> return ()
     return Nothing
 handleSignal signal = return $ Just signal

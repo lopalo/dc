@@ -41,7 +41,7 @@ instance FromRow Gate where
         angle_ <- field
         Just actions_ <- decode . encodeUtf8 <$> field
         size_ <- Size <$> field <*> field
-        return $ Gate{
+        return Gate{
             ident=ident_,
             name=name_,
             pos=pos_,

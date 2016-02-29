@@ -69,7 +69,7 @@ dbServiceName = "db"
 
 dbProcess :: String -> Process ()
 dbProcess path = do
-    conn <- liftIO $ open $ path
+    conn <- liftIO $ open path
     loop conn `finally` liftIO (close conn)
 
 

@@ -92,7 +92,7 @@ spawnService node settings tagPool serviceSettings = do
 
 main :: IO ()
 main = do
-    (settingsPath:nodeName:[]) <- getArgs
+    [settingsPath, nodeName] <- getArgs
     res <-
         decodeFileEither settingsPath
         :: IO (Either ParseException S.Settings)

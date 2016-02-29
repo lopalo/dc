@@ -6,7 +6,7 @@ import GHC.Generics (Generic)
 import Data.Binary (Binary)
 import Data.Typeable (Typeable)
 import Prelude hiding (log)
-import Control.Monad (forever, when)
+import Control.Monad (forever, when, unless)
 import Data.Maybe (fromMaybe)
 import Text.Printf (printf)
 
@@ -139,7 +139,7 @@ userProcess userName conn userSettings = do
         Nothing -> return ()
     pid <- getSelfPid
     ok <- globalRegister (show uid) pid tagPool
-    when (not ok) terminate
+    unless ok terminate
     res <- getUser uid tagPool
     let startArea = US.startArea userSettings
         usr = fromMaybe newUser res

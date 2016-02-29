@@ -56,7 +56,7 @@ instance FromRow ControlPoint where
         Just actions_ <- decode . encodeUtf8 <$> field
         size_ <- Size <$> field <*> field
         owner_ <- field
-        return $ ControlPoint{
+        return ControlPoint{
             ident=ident_,
             name=name_,
             pos=pos_,
@@ -78,7 +78,7 @@ instance ToRow ControlPoint where
             toField $ angle cp,
             toField $ maxDurability cp,
             toField $ durability cp,
-            toField $ actions_,
+            toField actions_,
             toField w,
             toField h,
             toField $ (\(UserId uid) -> uid) <$> owner cp

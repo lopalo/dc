@@ -11,6 +11,7 @@ import GHC.Generics (Generic)
 import Data.Binary (Binary)
 import Data.Typeable (Typeable)
 import Prelude hiding (log)
+import Control.Applicative ((<$>))
 import Control.Monad (void, when, forever, foldM)
 import Data.ByteString.UTF8 (fromString, toString)
 import Data.Maybe (isJust)
@@ -141,8 +142,8 @@ mergeRecord state name record = do
                 pidIndex=M.insert pid name $ pidIndex state
                 }
         Just record'@(ts', pid')
-            | pid == pid' -> do
-                return $ state{
+            | pid == pid' ->
+                return state{
                     registry=T.insert name (min ts ts', pid) reg
                     }
             | record > record' -> do
@@ -238,7 +239,7 @@ handleWhereIs :: State -> WhereIs -> Process ([Maybe ProcessId], State)
 handleWhereIs state (WhereIs names) =
     let ns = map fromString names
         reg = registry state
-        getPid n = fmap snd $ T.lookup n reg
+        getPid n = snd <$> T.lookup n reg
     in return (map getPid ns, state)
 
 
@@ -308,7 +309,7 @@ request msg tagPool = do
 
 
 isRunning :: Process Bool
-isRunning = fmap isJust $ whereis globalRegistryServiceName
+isRunning = isJust <$> whereis globalRegistryServiceName
 
 
 getNameList :: String -> TagPool -> Process NameList

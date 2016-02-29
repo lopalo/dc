@@ -48,7 +48,7 @@ getRegistry node nodeNames = do
     now <- liftIO milliseconds
     let nodeName = (nodeNames M.!) . processNodeId
         uptime ts = show $ now - ts --TODO: format string
-    json $ [(name, nodeName pid, uptime ts) | (name, pid, ts) <- registry]
+    json [(name, nodeName pid, uptime ts) | (name, pid, ts) <- registry]
 
 
 

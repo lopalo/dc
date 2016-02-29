@@ -92,4 +92,4 @@ distributedWhereIs name tagPool = do
     nodeAgentPids <- GR.globalWhereIsByPrefix nodePrefix tagPool
     tag <- getTag tagPool
     res <- multicall nodeAgentPids (WhereIs name) tag timeoutForCall
-    return $ [pid | Just (Just pid) <- res]
+    return [pid | Just (Just pid) <- res]

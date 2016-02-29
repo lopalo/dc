@@ -40,7 +40,7 @@ loggerProcess settings next = do
             (logLevel', txt) <- expect :: Process LogRecord
             when (logLevel' <= logLevel) $ do
                 msg <- format logLevel' txt
-                when (stdout) (liftIO $ putStrLn msg)
+                when stdout (liftIO $ putStrLn msg)
                 case maybeHandle of
                     Just handle ->
                         liftIO $ hPutStrLn handle msg

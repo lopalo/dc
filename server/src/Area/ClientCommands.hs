@@ -119,7 +119,7 @@ handleClientCommand state (Shoot targetPos, conn) =
 
                     rGen = mkRandomGen shooterId $ tickNumber state
                     (t, _) = randomR (-0.5, 0.5) rGen
-                    dWidth = t * (fromIntegral $ width $ U.size shooter)
+                    dWidth = t * fromIntegral (width $ U.size shooter)
                     widthV = fromPolar dWidth $ U.angle shooter
                     shooterPos = toPos $ fromPos (U.pos shooter) `add` widthV
 
