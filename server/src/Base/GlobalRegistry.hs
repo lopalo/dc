@@ -10,6 +10,7 @@ module Base.GlobalRegistry (
 import GHC.Generics (Generic)
 import Data.Binary (Binary)
 import Data.Typeable (Typeable)
+import Prelude hiding (log)
 import Control.Monad (void, when, forever, foldM)
 import Data.ByteString.UTF8 (fromString, toString)
 import Data.Maybe (isJust)
@@ -25,12 +26,10 @@ import Control.Distributed.Process.Extras.Time (TimeUnit(..))
 import Control.Distributed.Process.Extras.Timer (sleepFor)
 
 
-import Types (NodeNames, Ts)
+import Types (NodeNames, Ts, LogLevel(..))
 import qualified Settings as S
-import Utils (
-    safeReceive, timeoutForCall, milliseconds,
-    logError, logInfo, logDebug
-    )
+import Utils (safeReceive, timeoutForCall, milliseconds)
+import Base.Logger (log)
 
 
 type Record = (Ts, ProcessId)
@@ -133,7 +132,7 @@ getLocalRegistry state = do
 
 mergeRecord :: State -> B.ByteString -> Record -> Process State
 mergeRecord state name record = do
-    logDebug $ "Merge record: " ++ toString name
+    log Debug $ "Merge record: " ++ toString name
     case T.lookup name reg of
         Nothing -> do
             monitor pid
@@ -148,11 +147,11 @@ mergeRecord state name record = do
                     }
             | record > record' -> do
                 exit pid RegistrationFailure
-                logInfo $ "Remote name conflict: " ++ toString name
+                log Info $ "Remote name conflict: " ++ toString name
                 return state
             | otherwise -> do
                 exit pid' RegistrationFailure
-                logInfo $ "Local name conflict: " ++ toString name
+                log Info $ "Local name conflict: " ++ toString name
                 monitor pid
                 let modPids = M.insert pid name . M.delete pid'
                 return $ state{
@@ -190,12 +189,12 @@ handlePing state (Ping nodeId) =
             monitorNode nodeId
             merge <- fmap Merge (getLocalRegistry state')
             nsendRemote nodeId globalRegistryServiceName merge
-            logInfo $ "New node: " ++ nodeName
-            when quorumAchieved $ logInfo "Quorum achieved"
+            log Info $ "New node: " ++ nodeName
+            when quorumAchieved $ log Info "Quorum achieved"
             return state'
         Just True -> return state
         Nothing -> do
-            logError $ "Unknown node id: " ++ show nodeId
+            log Error $ "Unknown node id: " ++ show nodeId
             return state
     where
         nodeName = nodeNames state M.! nodeId
@@ -248,7 +247,7 @@ handleMonitorNotification ::
 handleMonitorNotification state (ProcessMonitorNotification _ pid _)
     | pid `M.member` pidIndex state = do
         let name = pidIndex state M.! pid
-        logDebug $ "Unregister name: " ++ toString name
+        log Debug $ "Unregister name: " ++ toString name
         return $ state{
             registry=T.delete name $ registry state,
             pidIndex=M.delete pid $ pidIndex state
@@ -265,11 +264,11 @@ handleNodeMonitorNotification state notification = do
         state' = state{visibleNodes=M.insert nodeId False vns}
         noQuorum = not $ thereIsQuorum state'
         sendExit (_, localPid) = exit localPid RegistrationFailure
-    logInfo $ "Node disconnected: " ++ nodeName
+    log Info $ "Node disconnected: " ++ nodeName
     when noQuorum $ do
         localRegistry <- getLocalRegistry state'
         mapM_ sendExit $ T.elems localRegistry
-        when (thereIsQuorum state) (logInfo "Quorum lost")
+        when (thereIsQuorum state) (log Info "Quorum lost")
     return state'
 
 

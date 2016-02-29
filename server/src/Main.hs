@@ -1,5 +1,6 @@
 module Main where
 
+import Prelude hiding (log)
 import Control.Monad (forever, when)
 import Data.Maybe (isNothing)
 import System.Environment (getArgs)
@@ -14,8 +15,9 @@ import Network.Transport.TCP (createTransport, defaultTCPParameters)
 import qualified Control.Distributed.Process.Node as Node
 import Data.Yaml (ParseException, decodeFileEither)
 
-import Types (NodeName, nodePrefix)
-import Utils (sleepSeconds, logInfo, logDebug)
+import Utils (sleepSeconds)
+import Types (NodeName, LogLevel(..), nodePrefix)
+import Base.Logger (loggerProcess, log)
 import Base.GlobalCache (globalCacheProcess)
 import Base.GlobalRegistry (
     globalRegistryProcess,
@@ -28,16 +30,20 @@ import HTTP.HTTP (httpProcess)
 import WS.WS (wsProcess)
 import Admin.Admin (adminProcess)
 import NodeAgent.NodeAgent (nodeAgentProcess, distributedWhereIs)
+import LogAggregator.LogAggregator (logAggregatorProcess, createSender)
 import qualified Settings as S
 
 
 startNode ::
     Node.LocalNode -> S.Settings -> NodeName -> Process ()
 startNode node settings nodeName = do
-    logInfo $ "Start node: " ++ nodeName
     let services = S.services $  S.nodes settings ! nodeName
         nodeService = S.NodeAgent $ nodePrefix ++ nodeName
         services' = nodeService : services
+        logSettings = S.log settings
+    logSender <- createSender (S.logAggregatorName logSettings) nodeName
+    spawnLocal $ loggerProcess logSettings logSender
+    log Info $ "Start node: " ++ nodeName
     tagPool <- newTagPool
     spawnLocal globalCacheProcess
     spawnLocal $ globalRegistryProcess settings
@@ -62,11 +68,12 @@ spawnService node settings tagPool serviceSettings = do
                 S.Area{} ->
                     areaProcess (S.area settings) (read ident)
                 S.NodeAgent{} -> nodeAgentProcess
+                S.LogAggregator{} -> logAggregatorProcess
         wait = randomDelay >>= sleep . milliSeconds
         serviceLoop = do
             wait
             forever $ do
-                --logDebug $ "Try to start service: " ++ ident
+                --log Debug $ "Try to start service: " ++ ident
                 maybePid <- globalWhereIs ident tagPool --optimization
                 when (isNothing maybePid) $ do
                     servicePids <- distributedWhereIs ident tagPool
@@ -75,7 +82,7 @@ spawnService node settings tagPool serviceSettings = do
                         pid <- getSelfPid
                         ok <- globalRegister ident pid tagPool
                         when ok $ do
-                            logInfo $ "Start service: " ++ ident
+                            log Info $ "Start service: " ++ ident
                             service
                 wait
         spawnLoop = spawnLocal $ serviceLoop `finally` spawnLoop

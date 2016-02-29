@@ -5,7 +5,7 @@ module Area.Tick (handleTick, scheduleTick) where
 import GHC.Generics (Generic)
 import Data.Binary (Binary)
 import Data.Typeable (Typeable)
-import Prelude hiding ((.))
+import Prelude hiding (log, (.))
 import Control.Applicative ((<$>))
 import Control.Monad (liftM, when)
 import Control.Monad.Writer (runWriter)
@@ -25,8 +25,9 @@ import Control.Distributed.Process.Extras.Time (TimeUnit(..))
 import Control.Distributed.Process.Extras.Timer (sleepFor)
 import Data.Aeson (ToJSON, Value, object, (.=))
 
-import Types (Ts)
-import Utils (milliseconds, logInfo)
+import Types (Ts, LogLevel(..))
+import Utils (milliseconds)
+import Base.Logger (log)
 import qualified DB.DB as DB
 import qualified WS.Connection as C
 import qualified Area.Settings as AS
@@ -77,10 +78,8 @@ handleTick state TimeTick = do
         Nothing -> return ()
     let logEveryTick = (AS.logEveryTick . settings) state
         syncEveryTick = (AS.syncEveryTick . settings) state
-    --TODO: timers that are processed only inside ticks. Save the last time
-    --of each timer in the state
     when (tnum `rem` logEveryTick == 0) $
-        logInfo $ printf "Tick %d of the '%s'" tnum $ show aid
+        log Info $ printf "Tick %d of the '%s'" tnum $ show aid
     when (tnum `rem` syncEveryTick == 0) $ do
         syncUsers state
         saveObjects state

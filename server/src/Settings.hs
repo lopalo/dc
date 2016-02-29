@@ -12,7 +12,7 @@ import Data.Aeson.Types (Parser)
 import Control.Distributed.Process
 import Network.Transport (EndPointAddress(EndPointAddress))
 
-import Types (NodeName, NodeNames)
+import Types (NodeName, NodeNames, LogLevel)
 import qualified Area.Settings
 import qualified User.Settings
 import qualified HTTP.Settings
@@ -20,6 +20,7 @@ import qualified Admin.Settings
 
 
 data Settings = Settings {
+    log :: LogSettings,
     cluster :: ClusterSettings,
     user :: User.Settings.Settings,
     area :: Area.Settings.Settings,
@@ -32,6 +33,7 @@ instance FromJSON Settings where
 
     parseJSON (Object v) =
         Settings <$>
+        v .: "log" <*>
         v .: "cluster" <*>
         v .: "user" <*>
         v .: "area" <*>
@@ -39,6 +41,25 @@ instance FromJSON Settings where
         v .: "admin" <*>
         v .: "nodes"
     parseJSON _ = mzero
+
+
+data LogSettings = LogSettings {
+    logLevel :: LogLevel,
+    stdout :: Bool,
+    logFile :: Maybe String,
+    logAggregatorName :: Maybe String
+    }
+
+instance FromJSON LogSettings where
+
+    parseJSON (Object v) =
+        LogSettings <$>
+        v .: "log-level" <*>
+        v .: "stdout" <*>
+        v .: "logFile" <*>
+        v .: "aggregator-name"
+    parseJSON _ = mzero
+
 
 
 data ClusterSettings = ClusterSettings {
@@ -78,6 +99,7 @@ data ServiceSettings
     | Admin {ident :: String, host :: String, port :: Int}
     | Area {ident :: String}
     | NodeAgent {ident :: String}
+    | LogAggregator {ident :: String}
 
 instance FromJSON ServiceSettings where
 
@@ -90,6 +112,7 @@ instance FromJSON ServiceSettings where
             "http" -> HTTP i <$> v .: "host" <*> v .: "port"
             "admin" -> Admin i <$> v .: "host" <*> v .: "port"
             "area" -> return $ Area i
+            "log-aggregator" -> return $ LogAggregator i
             _ -> mzero
     parseJSON _ = mzero
 

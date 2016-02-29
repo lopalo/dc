@@ -15,6 +15,9 @@ globalCacheProcess :: Process ()
 globalCacheProcess = return ()
 
 
+--external interface
+
+
 isRunning :: Process Bool
 isRunning = isJust <$> whereis globalCacheServiceName
 

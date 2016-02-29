@@ -5,6 +5,7 @@ module User.User (userProcess) where
 import GHC.Generics (Generic)
 import Data.Binary (Binary)
 import Data.Typeable (Typeable)
+import Prelude hiding (log)
 import Control.Monad (forever, when)
 import Data.Maybe (fromMaybe)
 import Text.Printf (printf)
@@ -15,9 +16,13 @@ import Control.Distributed.Process.Extras (TagPool, newTagPool)
 import Control.Distributed.Process.Extras.Time (TimeUnit(..))
 import Control.Distributed.Process.Extras.Timer (sleepFor)
 
-import Utils (logInfo, logDebug, safeReceive, milliseconds)
-import Types (Ts, UserPid(UserPid), UserId(UserId), UserName, AreaId)
+import Utils (safeReceive, milliseconds)
+import Types (
+    Ts, UserPid(UserPid), UserId(UserId),
+    UserName, AreaId, LogLevel(..)
+    )
 import Base.GlobalRegistry (globalRegister, globalWhereIs)
+import Base.Logger (log)
 import qualified WS.Connection as C
 import qualified User.Settings as US
 import qualified Area.External as AE
@@ -89,7 +94,7 @@ handleReconnection state (Reconnection conn) = do
         Nothing -> return ()
     initConnection conn state
     AE.reconnect (area usr) (userId usr) conn
-    logDebug "User reconnected"
+    log Debug "User reconnected"
     return state{connection=Just conn, disconnectTs=Nothing}
     where usr = user state
 
@@ -103,7 +108,7 @@ handleSyncState state (UE.SyncState ua) = do
             deaths=UE.deaths ua
             }
     putUser usr'
-    logDebug $ printf "User '%s' synchronized" $ show $ userId usr'
+    log Debug $ printf "User '%s' synchronized" $ show $ userId usr'
     return state{user=usr'}
 
 
@@ -165,7 +170,7 @@ userProcess userName conn userSettings = do
     initConnection conn state
     userPid <- makeSelfPid
     AE.enter areaId (userArea usr) userPid True conn
-    logInfo $ "Login: " ++ userName
+    log Info $ "Login: " ++ userName
     runPeriodic $ US.periodMilliseconds userSettings
     loop state
 
@@ -187,7 +192,7 @@ loop state = safeReceive handlers state >>= loop
 
 logout :: UserName -> Process ()
 logout userName = do
-    logInfo $ "Logout: " ++ userName
+    log Info $ "Logout: " ++ userName
     selfPid <- getSelfPid
     exit selfPid ("logout" :: String)
 

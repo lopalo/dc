@@ -3,6 +3,12 @@ ws-addresses: &ws-addresses
     - [dc-dev-host-example.net, &ws-port-1 10611]
     - [dc-dev-host-example.net, &ws-port-2 10612]
 
+log:
+    log-level: Debug
+    stdout: true
+    logFile: null
+    aggregator-name: null
+
 cluster:
     respawn-delay-milliseconds: [500, 1200]
     node-ping-period-milliseconds: 1000

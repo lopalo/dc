@@ -10,6 +10,7 @@ module WS.Connection (
 import GHC.Generics (Generic)
 import Data.Binary (Binary)
 import Data.Typeable (Typeable)
+import Prelude hiding (log)
 import Control.Monad (forever, void)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as LB
@@ -22,8 +23,9 @@ import qualified Control.Distributed.Process.Node as Node
 import qualified Network.WebSockets as WS
 
 import Broadcaster (broadcast, localBroadcast)
-import Types (RequestNumber, UserPid(..), AreaPid)
-import Utils (evaluate, logDebug)
+import Types (RequestNumber, UserPid(..), AreaPid, LogLevel(..))
+import Utils (evaluate)
+import Base.Logger (log)
 
 
 data Connection =
@@ -50,13 +52,13 @@ acceptConnection node inputHandler pending = do
                     match handleBroadcast,
                     match handleSingle
                     ]
-            outputLoop `finally` logDebug "Connection: output closed"
+            outputLoop `finally` log Debug "Connection: output closed"
     Node.runProcess node $ do
         inputPid <- getSelfPid
         let conn = Connection outputPid inputPid
             final = do
                 exit outputPid "closed"
-                logDebug "Connection: input closed"
+                log Debug "Connection: input closed"
             setUserPid (_, areaPid) userPid@(UserPid pid) = do
                 link pid
                 return (Just userPid, areaPid)
@@ -81,7 +83,7 @@ acceptConnection node inputHandler pending = do
 --external interface
 sendCmd :: ToJSON a => Connection -> String -> a -> Process ()
 sendCmd conn cmd body = do
-    --logDebug $ "Outgoing command: " ++ cmd
+    --log Debug $ "Outgoing command: " ++ cmd
     evaluate body
     send (output conn) (encode (cmd, body))
 
@@ -92,7 +94,7 @@ sendResponse conn req = sendCmd conn $ "response:" ++ show req
 
 broadcastCmd :: ToJSON a => [Connection] -> String -> a -> Process ()
 broadcastCmd connections cmd body = do
-    --logDebug $ "Outgoing command: " ++ cmd
+    --log Debug $ "Outgoing command: " ++ cmd
     evaluate body
     broadcast (map output connections) payload
     where payload = encode (cmd, body)

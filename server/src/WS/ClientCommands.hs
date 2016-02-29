@@ -2,6 +2,7 @@
 
 module WS.ClientCommands (inputHandler) where
 
+import Prelude hiding (log)
 
 import Control.Distributed.Process
 import Data.Aeson (Value(Null), Result(Success), fromJSON, decodeStrict)
@@ -10,8 +11,9 @@ import Data.String.Utils (startswith)
 import WS.Connection (Connection, sendCmd, sendResponse, InputHandler)
 import Area.External as A
 import User.User (userProcess)
-import Types (UserPid, AreaPid, RequestNumber, delPrefix)
-import Utils (logException, logDebug, evaluate)
+import Types (UserPid, AreaPid, RequestNumber, LogLevel(..), delPrefix)
+import Utils (evaluate)
+import Base.Logger (log, logException)
 import qualified Settings as S
 
 
@@ -45,7 +47,7 @@ inputHandler :: S.Settings -> InputHandler
 inputHandler settings input conn userPid areaPid = do
     let Just (cmd, body, req) = decodeStrict input :: Maybe Command
         handler = commandHandler settings cmd body req conn userPid areaPid
-    logDebug $ "Incoming command: " ++ cmd
+    log Debug $ "Incoming command: " ++ cmd
     handler `catches` logException ()
 
 

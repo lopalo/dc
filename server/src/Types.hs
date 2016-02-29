@@ -104,6 +104,14 @@ newtype AreaPid = AreaPid ProcessId  deriving (Generic, Typeable)
 instance Binary AreaPid
 
 
+data LogLevel = Error | Info | Debug
+    deriving (Generic, Typeable, Show, Eq, Ord)
+
+instance Binary LogLevel
+
+instance FromJSON LogLevel
+
+
 data Size =
     Size {width :: !Int, height :: !Int}
     deriving (Generic, Typeable, Eq, Show)

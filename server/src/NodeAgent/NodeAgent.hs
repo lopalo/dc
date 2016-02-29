@@ -23,6 +23,7 @@ import Types (nodePrefix)
 import Utils (safeReceive, timeoutForCall)
 import qualified Base.GlobalRegistry as GR
 import qualified Base.GlobalCache as GC
+import qualified Base.Logger as L
 
 
 data GetNodeInfo = GetNodeInfo deriving (Generic, Typeable)
@@ -39,7 +40,8 @@ data NodeInfo = NodeInfo {
         nodeId :: NodeId,
         stats :: NodeStats,
         globalRegistryIsRunning :: Bool,
-        globalCacheIsRunning :: Bool
+        globalCacheIsRunning :: Bool,
+        loggerIsRunning :: Bool
     }
     deriving (Generic, Typeable)
 
@@ -71,7 +73,8 @@ handleGetNodeInfo _ GetNodeInfo = do
         (processNodeId <$> getSelfPid) <*>
         getLocalNodeStats <*>
         GR.isRunning <*>
-        GC.isRunning
+        GC.isRunning <*>
+        L.isRunning
     return (info, ())
 
 
