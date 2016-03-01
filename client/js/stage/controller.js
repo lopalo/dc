@@ -18,13 +18,17 @@ define(function (require) {
         this._controller = controller;
         this._area = controller.getAreaModel();
 
+        this._serverTimeDiffList = [];
         this._serverTimeDiff = 0;
+        this._tickQueue = []; //TODO: like inputQueue in connection.js
         this._appearanceReasons = {};
         this._disappearanceReasons = {};
         this._firstEnter = true;
 
         this._animationLoopId = null;
         this._interpolationLoopId = null;
+        this._timeCorrectionLoopId = null;
+        this._tickCheckLoopId = null;
 
         this._camera = new stageModels.Camera();
         this._objectModels = new models.ModelStore();
@@ -39,6 +43,8 @@ define(function (require) {
         _.bindAll(this,
                   "_animationCallback",
                   "_interpolationStep",
+                  "_serverTimeDiffCorrection",
+                  "_tickCheck",
                   "_resizeWindow",
                   "_addEffect",
                   "getObjectModel");
@@ -68,6 +74,8 @@ define(function (require) {
         start: function () {
             this._requestAnimation();
             this._startInterpolation();
+            this._startTimeCorrection();
+            this._startTickCheck();
         },
         destroy: function () {
             this.stopListening();
@@ -143,10 +151,11 @@ define(function (require) {
         },
         _handleTick: function (data) {
             if (this._area.get("areaId") !== data.areaId) return;
-            if (data.timestamp > this._getServerTime()) {
-                this._setServerTime(data.timestamp);
-                console.log("Server time updated");
-            }
+            this._saveServerTime(data.timestamp);
+            this._tickQueue.push(data);
+            this._tickCheck();
+        },
+        _tick: function (data) {
             var objectModels = this._objectModels.models;
             //FIXME: use sets to improve time complexity
             var idents = [];
@@ -188,6 +197,10 @@ define(function (require) {
         },
         _setServerTime: function (serverTimestamp) {
             this._serverTimeDiff = this._getTime() - serverTimestamp;
+            this._serverTimeDiffList = [];
+        },
+        _saveServerTime: function (serverTimestamp) {
+            this._serverTimeDiffList.push(this._getTime() - serverTimestamp);
         },
         _getServerTime: function () {
             return this._getTime() - this._serverTimeDiff;
@@ -296,9 +309,43 @@ define(function (require) {
                 }
             }, this);
         },
+        _startTimeCorrection: function () {
+            this._timeCorrectionLoopId = window.setInterval(
+                this._serverTimeDiffCorrection,
+                1000
+            );
+        },
+        _serverTimeDiffCorrection: function () {
+            var diffList = this._serverTimeDiffList;
+            if (_.isEmpty(diffList)) return;
+            var sum = _.reduce(diffList, function (a, b) { return a + b; });
+            var correction = sum / _.size(diffList) - this._serverTimeDiff;
+            var sign = Math.sign(correction);
+            var abs = Math.abs(correction);
+            abs = _.min([abs, settings["time-correction-msec-per-sec"]]);
+            this._serverTimeDiff += abs * sign;
+            this._serverTimeDiffList = [];
+        },
+        _startTickCheck: function () {
+            this._tickCheckLoopId = window.setInterval(
+                this._tickCheck,
+                settings["tick-check-period-msec"]
+            );
+        },
+        _tickCheck: function () {
+            var queue = this._tickQueue;
+            var ts = this._getServerTime();
+            while (!_.isEmpty(queue) && queue[0].timestamp <= ts) {
+                this._tick(queue.shift());
+                ts = this._getServerTime();
+            }
+
+        },
         _stopLoops: function () {
             window.cancelAnimationFrame(this._animationLoopId);
             window.clearInterval(this._interpolationLoopId);
+            window.clearInterval(this._timeCorrectionLoopId);
+            window.clearInterval(this._tickCheckLoopId);
         },
     });
 

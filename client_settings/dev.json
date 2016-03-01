@@ -1,7 +1,9 @@
 {
     "stage": {
         "interpolation-msec": 30,
-        "enable-interpolation": true
+        "enable-interpolation": true,
+        "time-correction-msec-per-sec": 6,
+        "tick-check-period-msec": 5
     },
     "connection": {
         "check-period-msec": 5,

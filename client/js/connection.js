@@ -79,7 +79,7 @@ define(["backbone", "json!settings.json"], function (Backbone, settings) {
                 console.log("Connection input freezed");
             }
             this._checkInputId = window.setTimeout(this._checkInput, period);
-            while (!(_.isEmpty(inputQueue))) {
+            while (!_.isEmpty(inputQueue)) {
                 data = inputQueue.shift();
                 cmd = data[0];
                 body = data[1];
