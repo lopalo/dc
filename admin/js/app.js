@@ -11,8 +11,8 @@ define(function (require) {
             routes[page.route] = page.component;
         });
         m.mount(document.getElementById("navbar"), Navbar);
-        m.route(document.getElementById("page"), "registry", routes);
         m.route.mode = "hash";
+        m.route(document.getElementById("page"), "node-status", routes);
     }
 
     return init;

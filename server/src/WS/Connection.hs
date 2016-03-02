@@ -48,10 +48,11 @@ acceptConnection node inputHandler pending = do
                 handleBroadcast (bc, bs) = do
                     localBroadcast bc bs
                     handleSingle bs
-                outputLoop = forever $ receiveWait [
-                    match handleBroadcast,
-                    match handleSingle
-                    ]
+                outputLoop =
+                    forever $ receiveWait [
+                        match handleBroadcast,
+                        match handleSingle
+                        ]
             outputLoop `finally` log Debug "Connection: output closed"
     Node.runProcess node $ do
         inputPid <- getSelfPid

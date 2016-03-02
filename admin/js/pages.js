@@ -1,7 +1,7 @@
 
 define(function (require) {
     var Registry = require("registry");
-    var NodeStatistic = require("node-statistic");
+    var NodeStatus = require("node-status");
 
     var pages = [
         {
@@ -10,9 +10,9 @@ define(function (require) {
             component: Registry
         },
         {
-            route: "node-statistic",
-            title: "Node Statistic",
-            component: NodeStatistic
+            route: "node-status",
+            title: "Node Status",
+            component: NodeStatus
         },
     ];
     return pages;

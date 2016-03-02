@@ -1,9 +1,9 @@
 {-# LANGUAGE DeriveGeneric, DeriveDataTypeable #-}
 
 module NodeAgent.NodeAgent (
-    GetNodeInfo(..), NodeInfo(..),
+    GetNodeStatus(..), NodeStatus(..),
     nodeAgentProcess,
-    getNodeInfo,
+    getNodeStatus,
     distributedWhereIs
     ) where
 
@@ -14,6 +14,7 @@ import Control.Applicative ((<$>), (<*>))
 import Control.Monad (forever)
 
 import Control.Distributed.Process
+import Control.Distributed.Process.Serializable (Serializable)
 import Control.Distributed.Process.Extras (TagPool, newTagPool, getTag)
 import Control.Distributed.Process.Extras.Call (
     callResponse, callTimeout, multicall
@@ -26,9 +27,9 @@ import qualified Base.GlobalCache as GC
 import qualified Base.Logger as L
 
 
-data GetNodeInfo = GetNodeInfo deriving (Generic, Typeable)
+data GetNodeStatus = GetNodeStatus deriving (Generic, Typeable)
 
-instance Binary GetNodeInfo
+instance Binary GetNodeStatus
 
 
 data WhereIs = WhereIs String deriving (Generic, Typeable)
@@ -36,8 +37,7 @@ data WhereIs = WhereIs String deriving (Generic, Typeable)
 instance Binary WhereIs
 
 
-data NodeInfo = NodeInfo {
-        nodeId :: NodeId,
+data NodeStatus = NodeStatus {
         stats :: NodeStats,
         globalRegistryIsRunning :: Bool,
         globalCacheIsRunning :: Bool,
@@ -45,7 +45,7 @@ data NodeInfo = NodeInfo {
     }
     deriving (Generic, Typeable)
 
-instance Binary NodeInfo
+instance Binary NodeStatus
 
 
 nodeAgentProcess :: Process ()
@@ -54,7 +54,7 @@ nodeAgentProcess = do
     let prepareCall h = callResponse (h tagPool)
         handlers = [
             prepareCall handleWhereIs,
-            prepareCall handleGetNodeInfo,
+            prepareCall handleGetNodeStatus,
             matchUnknown (return ())
             ]
     forever $ safeReceive handlers ()
@@ -66,11 +66,10 @@ handleWhereIs tagPool (WhereIs name) = do
     return (maybePid, ())
 
 
-handleGetNodeInfo :: TagPool -> GetNodeInfo -> Process (NodeInfo, ())
-handleGetNodeInfo _ GetNodeInfo = do
+handleGetNodeStatus :: TagPool -> GetNodeStatus -> Process (NodeStatus, ())
+handleGetNodeStatus _ GetNodeStatus = do
     info <-
-        NodeInfo <$>
-        (processNodeId <$> getSelfPid) <*>
+        NodeStatus <$>
         getLocalNodeStats <*>
         GR.isRunning <*>
         GC.isRunning <*>
@@ -78,18 +77,23 @@ handleGetNodeInfo _ GetNodeInfo = do
     return (info, ())
 
 
+distributedRequest ::
+    (Serializable a, Serializable b) => a -> TagPool -> Process [b]
+distributedRequest msg tagPool = do
+    nodeAgentPids <- GR.globalWhereIsByPrefix nodePrefix tagPool
+    tag <- getTag tagPool
+    res <- multicall nodeAgentPids msg tag timeoutForCall
+    return [val | Just val <- res]
+
+
 --external interface
 
-getNodeInfo :: ProcessId -> TagPool -> Process NodeInfo
-getNodeInfo pid tagPool = do
-    tag <- getTag tagPool
-    Just res <- callTimeout pid GetNodeInfo tag timeoutForCall
-    return res
+
+getNodeStatus :: TagPool -> Process [NodeStatus]
+getNodeStatus = distributedRequest GetNodeStatus
 
 
 distributedWhereIs :: String -> TagPool -> Process [ProcessId]
 distributedWhereIs name tagPool = do
-    nodeAgentPids <- GR.globalWhereIsByPrefix nodePrefix tagPool
-    tag <- getTag tagPool
-    res <- multicall nodeAgentPids (WhereIs name) tag timeoutForCall
-    return [pid | Just (Just pid) <- res]
+    res <- distributedRequest (WhereIs name) tagPool
+    return [pid | Just pid <- res]

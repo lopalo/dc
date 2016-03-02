@@ -263,12 +263,13 @@ tickData ts = do
     signalsForBroadcastL ~= Seq.empty
     state <- get
     let
-        res = object [
-            "areaId" .= aid,
-            "objects" .= concat objects,
-            "signals" .= toList signals,
-            "timestamp" .= ts
-            ]
+        res =
+            object [
+                "areaId" .= aid,
+                "objects" .= concat objects,
+                "signals" .= toList signals,
+                "timestamp" .= ts
+                ]
         g getter = map tickClientInfo $ M.elems $ getter state
         objects = [
             g (usersData . users),

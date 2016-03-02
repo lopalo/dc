@@ -28,7 +28,11 @@ define(["mithril"], function (m) {
             m.request({
                 method: "GET",
                 url: this.url,
-                data: this.queryData
+                data: this.queryData,
+                serialize: function (data) {
+                    return m.route.buildQueryString(data);
+                },
+                config: urlEncoded
             }).then(this.data);
         },
         startPolling: function () {

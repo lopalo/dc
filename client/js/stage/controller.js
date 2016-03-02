@@ -20,7 +20,7 @@ define(function (require) {
 
         this._serverTimeDiffList = [];
         this._serverTimeDiff = 0;
-        this._tickQueue = []; //TODO: like inputQueue in connection.js
+        this._tickQueue = [];
         this._appearanceReasons = {};
         this._disappearanceReasons = {};
         this._firstEnter = true;

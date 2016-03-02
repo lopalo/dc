@@ -2,6 +2,7 @@
 define(["mithril", "utils"], function (m, utils) {
     var PollerController = utils.PollerController;
 
+
     function RegistryController() {
         PollerController.apply(this, arguments);
     }
@@ -20,6 +21,7 @@ define(["mithril", "utils"], function (m, utils) {
         }
     });
 
+
     var Registry = {
         controller: function () {
             return new RegistryController("/cluster/registry");
@@ -34,7 +36,7 @@ define(["mithril", "utils"], function (m, utils) {
             var rows = ctrl.data().map(function (record) {
                 var name = m("td", record[0]);
                 var nodeId = m("td", record[1]);
-                var uptime = m("td", record[2]);
+                var uptime = m("td", formatTimeDelta(record[2]));
 
                 var killBtnAttrs = {
                     class: "btn btn-default",
@@ -50,6 +52,30 @@ define(["mithril", "utils"], function (m, utils) {
             return m("table.table stripped", [thead, tbody]);
         }
     };
+
+    function formatTimeDelta(ms) {
+        var dayMs = 8.64 * Math.pow(10, 7);
+        var hourMs = 3.6 * Math.pow(10, 6);
+        var minuteMs = 60000;
+        var secondMs = 1000;
+        var str = [];
+        ms = Math.floor(ms);
+        var days = Math.floor(ms / dayMs);
+        ms %= dayMs;
+        if (days) {
+            str += days + "-";
+        }
+        var hours = Math.floor(ms / hourMs).toString();
+        ms %= hourMs;
+        str += (hours.length === 1 ? "0" + hours : hours) + ":";
+        var minutes = Math.floor(ms / minuteMs).toString();
+        ms %= minuteMs;
+        str += (minutes.length === 1 ? "0" + minutes : minutes) + ":";
+        var seconds = Math.floor(ms / secondMs).toString();
+        ms %= secondMs;
+        str += seconds.length === 1 ? "0" + seconds : seconds;
+        return str;
+    }
 
     return Registry;
 });
