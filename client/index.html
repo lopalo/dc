@@ -43,8 +43,8 @@
                     <div id="ui-object-context" class="ui">
                         <div id="ui-object-info" class="panel panel-info">
                         </div>
-                        <div id="ui-area">
-                            <select id="select-area"
+                        <div id="ui-area-selection">
+                            <select id="ui-select-area"
                                     class="form-control selectpicker">
                             </select>
                         </div>
@@ -58,16 +58,22 @@
                         </button>
                     </div>
                     <div id="ui-control-mode" class="ui">
-                        <select id="control-mode" class="form-control selectpicker">
-                            <option value="view" data-icon="glyphicon-eye-open">
-                            </option>
-                            <option value="move" data-icon="glyphicon-arrow-right">
-                            </option>
-                            <option value="shot" data-icon="glyphicon-screenshot">
-                            </option>
-                        </select>
-                    </div>
-                    <div id="ui-control-mode-context" class="ui">
+                        <div id="ui-select-control-mode"
+                                    class="btn-group-vertical">
+                            <button value="view" class="btn btn-default">
+                                <span class="glyphicon glyphicon-eye-open">
+                                </span>
+                            </button>
+                            <button value="move" class="btn btn-default">
+                                <span class="glyphicon glyphicon-arrow-right">
+                                </span>
+                            </button>
+                            <button value="shot" class="btn btn-default">
+                                <span class="glyphicon glyphicon-screenshot">
+                                </span>
+                            </button>
+                        </div>
+                        <div id="ui-control-mode-context" class="ui"></div>
                     </div>
                     <div id="ui-common" class="ui">
                         <button id="ui-focus-to-myself" class="btn btn-default">

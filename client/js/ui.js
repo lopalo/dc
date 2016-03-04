@@ -26,11 +26,11 @@ define(function (require) {
             model: ui,
         });
         var controlModeSelector = new SelectControlMode({
-            el: uiEl.find("#control-mode"),
+            el: uiEl.find("#ui-select-control-mode"),
             model: ui
         });
         var areaSelector = new SelectArea({
-            el: uiEl.find("#select-area"),
+            el: uiEl.find("#ui-select-area"),
             model: ui,
             area: area,
             user: user
@@ -103,22 +103,28 @@ define(function (require) {
 
     SelectControlMode = UIView.extend({
         keyMap: [49, 50, 51],
-        events: {
-            change: "change",
-        },
         initialize: function () {
             SelectControlMode.__super__.initialize.call(this);
             this.listenTo(this.model, "change:controlMode", this.render);
-            _.bindAll(this, "keyDown");
+            _.bindAll(this, "keyDown", "buttonClick", "rotate");
             $(window).on("keydown", this.keyDown);
+            $(window).on("wheel", this.rotate);
+            _.map(this.$el.find("button"), function (btn) {
+                $(btn).on("click", _.partial(this.buttonClick, btn));
+            }, this);
             this.render();
         },
         render: function () {
-            this.$el.val(this.model.get("controlMode"));
-            this.$el.selectpicker("render");
+            _.map(this.$el.find("button"), function (btn) {
+                var $btn = $(btn);
+                $btn.removeClass("active");
+                if ($btn.val() === this.model.get("controlMode")) {
+                    $btn.addClass("active");
+                }
+            }, this);
         },
-        change: function () {
-            this.trigger("select", this.$el.val());
+        buttonClick: function (btn) {
+            this.trigger("select", $(btn).val());
         },
         keyDown: function (e) {
             var idx = this.keyMap.indexOf(e.keyCode);
@@ -128,11 +134,23 @@ define(function (require) {
             this.trigger("select", mode);
 
         },
+        rotate: function (e) {
+            var modes = this.model.get("controlModes");
+            var mode = this.model.get("controlMode");
+            var sign = Math.sign(e.originalEvent.wheelDelta);
+            var newMode = modes[modes.indexOf(mode) - sign];
+            if (newMode !== undefined) {
+                this.trigger("select", newMode);
+            }
+        },
         destroy: function () {
             SelectControlMode.__super__.destroy.call(this);
-            $(window).off("keydown", this.keyDown);
+            $(window).off("keydown");
+            $(window).off("wheel");
+            _.map(this.$el.find("button"), function (btn) {
+                $(btn).off("click");
+            }, this);
         }
-
     });
 
 
