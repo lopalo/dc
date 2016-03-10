@@ -9,7 +9,7 @@ import qualified Data.Map.Strict as M
 import qualified Data.Sequence as Seq
 
 import Data.Aeson (object, (.=))
-import Data.Lens.Strict ((^$), (^%=))
+import Data.Lens.Strict ((^%=))
 import Data.Lens.Partial.Common (getPL, setPL)
 import Control.Distributed.Process
 import Control.Distributed.Process.Extras (newTagPool)
@@ -18,14 +18,14 @@ import WS.Connection (Connection, setArea)
 import qualified DB.DB as DB
 import Utils (milliseconds, safeReceive, evaluate)
 import qualified Area.Settings as AS
-import Types (UserPid(..), AreaId, AreaPid(..))
+import Types (AreaId, AreaPid(..))
 import qualified User.External as UE
 import qualified Area.Objects.User as U
 import Area.Utils (sendCmd)
 import Area.Misc (spawnUser)
 import Area.Types
 import Area.State
-import Area.ClientCommands
+import Area.ClientCommands (handleClientCommand, handleClientReq)
 import Area.Signal (
     Signal(Appearance, Disappearance),
     AReason(LogIn, Entry),

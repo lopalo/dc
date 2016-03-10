@@ -105,6 +105,13 @@ define(function (require) {
         getObjectModel: function (id) {
             return this._objectModels.roModels[id];
         },
+        getVisibleUserIds: function () {
+            var models = _.values(this._objectModels.models);
+            models = _.filter(models, function (model) {
+                return model instanceof stageModels.User;
+            });
+            return _.map(models, function (model) { return model.get("id"); });
+        },
         getCameraPos: function () {
             return Victor.fromArray(this._camera.get("pos"));
         },

@@ -2,16 +2,22 @@
 
 module User.External(
     UserArea(..), SyncState(..), SwitchArea(..),
-    monitorUser, syncState, switchArea
+    monitorUser, syncState, switchArea,
+    clientCmd
     ) where
 
 import GHC.Generics (Generic)
 import Data.Binary (Binary)
 import Data.Typeable (Typeable)
+import Control.Applicative ((<$>))
 
+import Data.Aeson (FromJSON, Value, Result(Success), fromJSON)
 import Control.Distributed.Process
 
+import WS.Connection (Connection)
+import Utils (evaluate)
 import Types
+import User.Types
 
 
 data UserArea = UserArea {
@@ -34,11 +40,6 @@ newtype SyncState = SyncState UserArea deriving (Generic, Typeable)
 instance Binary SyncState
 
 
-newtype SwitchArea = SwitchArea AreaId deriving (Generic, Typeable)
-
-instance Binary SwitchArea
-
-
 monitorUser :: UserPid -> Process UserMonitorRef
 monitorUser (UserPid pid) = monitor pid
 
@@ -49,5 +50,26 @@ syncState (UserPid pid) user = send pid $ SyncState user
 
 switchArea :: UserPid -> AreaId -> Process ()
 switchArea (UserPid pid) aid = send pid $ SwitchArea aid
+
+
+parseClientCmd :: String -> Value -> Result ClientCommand
+parseClientCmd "send-message" =
+    load $ \(uids, msg) -> SendUserMessage uids msg
+
+
+load :: FromJSON a => (a -> b) -> Value -> Result b
+load constructor body = constructor <$> fromJSON body
+
+
+clientCmd ::
+    UserPid -> String -> Value -> RequestNumber -> Connection -> Process ()
+clientCmd (UserPid pid) cmd body req conn = do
+    let Success parsed = parseClientCmd cmd body
+    evaluate parsed
+    case req of
+        0 -> send pid parsed
+        _ -> send pid (parsed, req)
+
+
 
 

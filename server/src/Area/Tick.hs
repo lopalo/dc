@@ -220,7 +220,6 @@ handleSignal signal@(Disappearance (UId uid) Destruction) = do
     return $ Just signal
 handleSignal signal@(Disappearance aid@(AsteroidId _) Destruction) = do
     asteroidsL %= M.delete aid
-    --TODO: delete from DB
     return $ Just signal
 handleSignal (Disappearance cpid@(CPId _) Destruction) = do
     modify $ cpPL cpid ^%= \cp -> cp{CP.durability=1, CP.owner=Nothing}

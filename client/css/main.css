@@ -4,8 +4,6 @@ body {
     cursor: default;
 }
 
-/* TODO: use media queries for different display sizes */
-
 .container-fluid {
     height: 100vh;
     padding-left: 0;

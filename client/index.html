@@ -8,8 +8,6 @@
 
         <link rel="stylesheet" href="css/vendors/bootstrap.min.css">
         <link rel="stylesheet" href="css/vendors/bootstrap-select.min.css">
-        <!-- TODO: use media queries or col-xs-* and col-md-*
-                   for different display sizes *-->
         <link rel="stylesheet" href="css/main.css">
         <link rel="stylesheet" href="css/ui.css">
         <script data-main="js/main" src="js/vendors/require.min.js"></script>
@@ -86,6 +84,27 @@
                             <span class="glyphicon glyphicon-ban-circle"></span>
                             <span class="glyphicon glyphicon-magnet"></span>
                         </button>
+                    </div>
+                    <div id="ui-windows" class="ui">
+                        <button id="ui-open-messages" class="btn btn-default">
+                            <span class="glyphicon glyphicon-envelope"></span>
+                        </button>
+                        <div id="ui-messages-window" class="panel panel-default">
+                            <div class="panel-body">
+                                <ul id="ui-messages" class="list-unstyled"></ul>
+                                <div class="input-group">
+                                    <input id="ui-messages-input"
+                                           type="text" class="form-control">
+                                    <span class="input-group-btn">
+                                        <button id="ui-send-message"
+                                                class="btn btn-default">
+                                            <span class="glyphicon glyphicon-send">
+                                            </span>
+                                        </button>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

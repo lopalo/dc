@@ -18,3 +18,22 @@
     left: 1%;
 }
 
+#ui-windows {
+    bottom: 3%;
+    right: 1%;
+    max-height: 50%;
+    max-width: 50%;
+}
+
+#ui-messages-window {
+    float: right;
+    margin-bottom: 0%;
+}
+
+#ui-messages {
+    overflow-y: scroll;
+    height: 30em;
+}
+
+
+

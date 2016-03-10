@@ -1,5 +1,5 @@
 
-module Area.ClientCommands where
+module Area.ClientCommands (handleClientCommand, handleClientReq) where
 
 import qualified Data.Map.Strict as M
 import Data.List (elemIndex, maximumBy)

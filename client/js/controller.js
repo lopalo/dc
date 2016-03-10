@@ -7,7 +7,6 @@ define(function (require) {
     var models = require("models");
     var UI = require("ui");
     var StageController = require("stage/controller");
-    var stageModels = require("stage/models");
 
 
     function Controller(gameEl, connection) {
@@ -16,6 +15,7 @@ define(function (require) {
         this._models = new models.ModelStore();
         this._models.set("user", new models.User());
         this._models.set("area", new models.Area());
+        this._models.set("messages", new models.Messages());
         this._models.set("ui", new UI.UI());
         this._stageController = new StageController(gameEl.find("#viewport"),
                                                     this);
@@ -33,14 +33,13 @@ define(function (require) {
             var uiViews;
             var stage = this._stageController;
             var conn = this._connection;
-            var user = this._models.models.user;
-            var roModels = this._models.roModels;
-            conn.once("user.init", user.set, user);
-            uiViews = UI.setupUI(this._gameEl.find("#ui"),
-                                 roModels.ui,
-                                 roModels.user,
-                                 roModels.area);
+            var uiModels = _.pick(
+                this._models.roModels,
+                ["ui", "user", "area", "messages"]
+            );
+            uiViews = UI.setupUI(this._gameEl.find("#ui"), uiModels);
             this.listenTo(conn, "area.init", this._initArea);
+            this.listenTo(conn, "user", this._userDispatch);
             this._listenToUI(uiViews);
             stage.init();
             stage.listenTo(conn, "area", stage.dispatch);
@@ -94,6 +93,22 @@ define(function (require) {
                 this._unselectStageObject();
             }
         },
+        _initArea: function (data) {
+            this._models.models.area.set({
+                areaId: data.areaId,
+                background: data.areaId.replace("area:", "") + ".jpg" //FIXME
+            });
+        },
+        _userDispatch: function (data) {
+            var handler = $.camelCase("_handle-" + data.cmd);
+            this[handler](data.body);
+        },
+        _handleInit: function (data) {
+            this._models.models.user.set(data);
+        },
+        _handleAddMessages: function (messages) {
+            this._models.models.messages.add(messages);
+        },
         _listenToUI: function (uiViews) {
             this.listenTo(uiViews.focusButton, "click", this._showMyself);
             this.listenTo(uiViews.recoverButton, "click", this._recover);
@@ -103,6 +118,17 @@ define(function (require) {
             this.listenTo(uiViews.captureButton, "click", this._capture);
             this.listenTo(uiViews.pullButton, "click", this._pullAsteroid);
             this.listenTo(uiViews.cancelPullButton, "click", this._cancelPull);
+
+            this.listenTo(uiViews.messagesButton, "click",
+                                this._activateMessagesWindow);
+            this.listenTo(uiViews.messagesWindow, "send", this._sendMessage);
+        },
+        _activateMessagesWindow: function () {
+            this._models.models.ui.set("activeWindow", "messages");
+        },
+        _sendMessage: function (message) {
+            var userIds = this._stageController.getVisibleUserIds();
+            this._connection.send("user.send-message", [userIds, message]);
         },
         _showMyself: function () {
             this._stageController.showMyself();
@@ -127,12 +153,6 @@ define(function (require) {
         _changeControlMode: function (mode) {
             this._models.models.ui.set("controlMode", mode);
         },
-        _initArea: function (data) {
-            this._models.models.area.set({
-                areaId: data.areaId,
-                background: data.areaId.replace("area:", "") + ".jpg" //FIXME
-            });
-        },
         _stageObjectViewClick: function (ident) {
             var ui = this._models.models.ui;
             switch (ui.get("controlMode")) {
@@ -151,6 +171,7 @@ define(function (require) {
         _stageObjectViewMouseOut: function () {
         },
         _backgroundClick: function (pos) {
+            this._models.models.ui.set("activeWindow", null);
             this._unselectStageObject();
             var cameraPos = this._stageController.getCameraPos();
             pos.add(cameraPos).invertY();

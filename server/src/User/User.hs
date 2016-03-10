@@ -2,13 +2,12 @@
 
 module User.User (userProcess) where
 
-import GHC.Generics (Generic)
-import Data.Binary (Binary)
-import Data.Typeable (Typeable)
 import Prelude hiding (log)
 import Control.Monad (forever, when, unless)
 import Data.Maybe (fromMaybe)
 import Text.Printf (printf)
+import qualified Data.Sequence as Seq
+import Data.Foldable (toList)
 
 import Data.Aeson (ToJSON, Value, object, (.=))
 import Control.Distributed.Process hiding (reconnect)
@@ -23,32 +22,15 @@ import Types (
     )
 import Base.GlobalRegistry (globalRegister, globalWhereIs)
 import Base.Logger (log)
+import Broadcaster (Broadcast, localBroadcast)
 import qualified WS.Connection as C
 import qualified User.Settings as US
 import qualified Area.External as AE
 import qualified User.External as UE
 import DB.DB (putUser, getUser)
 import User.Types
-
-
-data State = State {
-    user :: !User,
-    areas :: ![AreaId],
-    settings :: !US.Settings,
-    connection :: Maybe C.Connection,
-    disconnectTs :: Maybe Ts,
-    reqTagPool :: TagPool
-    }
-
-
-data Period = Period deriving (Generic, Typeable)
-
-instance Binary Period
-
-
-data Reconnection = Reconnection C.Connection deriving (Generic, Typeable)
-
-instance Binary Reconnection
+import User.State
+import User.ClientCommands (handleClientCommand)
 
 
 userArea :: User -> UE.UserArea
@@ -112,8 +94,8 @@ handleSyncState state (UE.SyncState ua) = do
     return state{user=usr'}
 
 
-handleSwitchArea :: State -> UE.SwitchArea -> Process State
-handleSwitchArea state (UE.SwitchArea newAreaId) = do
+handleSwitchArea :: State -> SwitchArea -> Process State
+handleSwitchArea state (SwitchArea newAreaId) = do
     let usr = user state
         conn = connection state
         tagPool = reqTagPool state
@@ -125,6 +107,22 @@ handleSwitchArea state (UE.SwitchArea newAreaId) = do
         Nothing -> return () -- a link exception will be received later
     tryToLinkToArea newAreaId conn tagPool
     return state{user=usr'}
+
+
+handleUserMessage :: State -> UserMessage -> Process State
+handleUserMessage state userMsg = do
+    case connection state of
+        Just conn ->
+            sendCmd conn "add-messages" [userMsg]
+        Nothing -> return ()
+    return state{userMessages=userMessages state Seq.|> userMsg}
+
+
+handleBroadcastUserMessage ::
+    State -> (Broadcast, UserMessage) -> Process State
+handleBroadcastUserMessage state (bc, userMsg) = do
+    localBroadcast bc userMsg
+    handleUserMessage state userMsg
 
 
 userProcess :: UserName -> C.Connection -> US.Settings -> Process ()
@@ -163,7 +161,8 @@ userProcess userName conn userSettings = do
             settings=userSettings,
             connection=mConn,
             disconnectTs=Nothing,
-            reqTagPool=tagPool
+            reqTagPool=tagPool,
+            userMessages=Seq.empty
             }
     tryToLinkToArea areaId mConn tagPool
     putUser usr
@@ -183,6 +182,9 @@ loop state = safeReceive handlers state >>= loop
         handlers = [
             prepare handlePeriod,
             prepare handleSyncState,
+            prepare handleClientCommand,
+            prepare handleUserMessage,
+            prepare handleBroadcastUserMessage,
             prepare handleSwitchArea,
             prepare handleMonitorNotification,
             prepare handleReconnection,
@@ -227,6 +229,7 @@ initConnection conn state = do
     C.monitorConnection conn
     makeSelfPid >>= C.setUser conn
     sendCmd conn "init" $ initClientInfo state
+    sendCmd conn "add-messages" $ toList $ userMessages state
 
 
 initClientInfo :: State -> Value

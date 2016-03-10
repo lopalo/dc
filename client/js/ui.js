@@ -15,41 +15,52 @@ define(function (require) {
     var CaptureButton;
     var PullButton;
     var ObjectInfo;
+    var WindowButton;
+    var MessagesWindow;
 
-    function setupUI(uiEl, ui, user, area) {
+    function setupUI(uiEl, models) {
         var focusButton = new Button({
             el: uiEl.find("#ui-focus-to-myself"),
-            model: ui,
+            model: models.ui,
         });
         var recoverButton = new Button({
             el: uiEl.find("#ui-recover"),
-            model: ui,
+            model: models.ui,
         });
         var controlModeSelector = new SelectControlMode({
             el: uiEl.find("#ui-select-control-mode"),
-            model: ui
+            model: models.ui
         });
         var areaSelector = new SelectArea({
             el: uiEl.find("#ui-select-area"),
-            model: ui,
-            area: area,
-            user: user
+            model: models.ui,
+            area: models.area,
+            user: models.user
         });
         var captureButton = new CaptureButton({
             el: uiEl.find("#ui-capture"),
-            model: ui,
+            model: models.ui,
         });
         var pullButton = new PullButton({
             el: uiEl.find("#ui-pull"),
-            model: ui,
+            model: models.ui,
         });
         var cancelPullButton = new Button({
             el: uiEl.find("#ui-cancel-pull"),
-            model: ui,
+            model: models.ui,
         });
         var objectInfo = new ObjectInfo({
             el: uiEl.find("#ui-object-info"),
-            model: ui,
+            model: models.ui,
+        });
+        var messagesButton = new WindowButton({
+            el: uiEl.find("#ui-open-messages"),
+            model: models.ui,
+        });
+        var messagesWindow = new MessagesWindow({
+            el: uiEl.find("#ui-messages-window"),
+            model: models.ui,
+            messages: models.messages
         });
 
         uiEl.find(".selectpicker").selectpicker();
@@ -61,17 +72,22 @@ define(function (require) {
             captureButton: captureButton,
             pullButton: pullButton,
             cancelPullButton: cancelPullButton,
-            objectInfo: objectInfo
+            objectInfo: objectInfo,
+            messagesButton: messagesButton,
+            messagesWindow: messagesWindow
         };
     }
 
 
     UI = Backbone.Model.extend({
         controlModes: ["view", "move", "shot"],
+        windows: [null, "messages"],
         defaults: function () {
             return {
                 controlModes: this.controlModes,
                 controlMode: this.controlModes[1],
+                windows: this.windows,
+                activeWindow: this.windows[0],
                 selectedObjectType: "nothing",
                 selectedObjectInfo: {},
                 selfObjectInfo: {}
@@ -109,13 +125,13 @@ define(function (require) {
             _.bindAll(this, "keyDown", "buttonClick", "rotate");
             $(window).on("keydown", this.keyDown);
             $(window).on("wheel", this.rotate);
-            _.map(this.$el.find("button"), function (btn) {
+            _.each(this.$el.find("button"), function (btn) {
                 $(btn).on("click", _.partial(this.buttonClick, btn));
             }, this);
             this.render();
         },
         render: function () {
-            _.map(this.$el.find("button"), function (btn) {
+            _.each(this.$el.find("button"), function (btn) {
                 var $btn = $(btn);
                 $btn.removeClass("active");
                 if ($btn.val() === this.model.get("controlMode")) {
@@ -147,7 +163,7 @@ define(function (require) {
             SelectControlMode.__super__.destroy.call(this);
             $(window).off("keydown");
             $(window).off("wheel");
-            _.map(this.$el.find("button"), function (btn) {
+            _.each(this.$el.find("button"), function (btn) {
                 $(btn).off("click");
             }, this);
         }
@@ -170,12 +186,9 @@ define(function (require) {
         },
         render: function () {
             var el = this.$el;
-            if (this.model.get("selectedObjectType") === "gate") {
-                el.parent().show();
-            } else {
-                el.parent().hide();
-                return;
-            }
+            var gateSelected = this.model.get("selectedObjectType") === "gate";
+            this.$el.parent().toggle(gateSelected);
+            if (!gateSelected) return;
             el.empty();
             _.each(this.user.get("areas"), function (aid) {
                 el.append(this.template({
@@ -200,14 +213,9 @@ define(function (require) {
             this.render();
         },
         render: function () {
-            var el = this.$el;
             var type = this.model.get("selectedObjectType");
             var info = this.model.get("selectedObjectInfo");
-            if (type === "control-point" && info.owner === null) {
-                el.show();
-            } else {
-                el.hide();
-            }
+            this.$el.toggle(type === "control-point" && info.owner === null);
         }
     });
 
@@ -220,14 +228,9 @@ define(function (require) {
             this.render();
         },
         render: function () {
-            var el = this.$el;
             var type = this.model.get("selectedObjectType");
             var info = this.model.get("selectedObjectInfo");
-            if (type === "asteroid" && info.pullAllowed) {
-                el.show();
-            } else {
-                el.hide();
-            }
+            this.$el.toggle(type === "asteroid" && info.pullAllowed);
         }
     });
 
@@ -252,6 +255,76 @@ define(function (require) {
             }
         }
     });
+
+
+    WindowButton = Button.extend({
+        initialize: function () {
+            WindowButton.__super__.initialize.call(this);
+            this.listenTo(this.model, "change:activeWindow", this.render);
+            this.render();
+        },
+        render: function () {
+            this.$el.toggle(this.model.get("activeWindow") === null);
+        }
+    });
+
+
+    MessagesWindow = UIView.extend({
+        initialize: function (options) {
+            MessagesWindow.__super__.initialize.call(this);
+            this.messages = options.messages;
+            this.messagesEl = this.$el.find("#ui-messages");
+            this.inputEl = this.$el.find("#ui-messages-input");
+            this.sendBtn = this.$el.find("#ui-send-message");
+            _.bindAll(this, "send");
+            this.sendBtn.on("click", this.send);
+            this.listenTo(this.messages, "update", this.addMessages);
+            this.listenTo(this.model, "change:activeWindow", this.render);
+            this._addMessages(this.messages.toArray());
+            this.render();
+        },
+        destroy: function () {
+            MessagesWindow.__super__.destroy.call(this);
+            this.messagesEl.empty();
+            this.inputEl.off();
+            this.sendBtn.off();
+            this.messagesEl = null;
+            this.inputEl = null;
+            this.sendBtn = null;
+        },
+        render: function () {
+            this.$el.toggle(this.model.get("activeWindow") === "messages");
+            this._scrollToLast();
+        },
+        send: function () {
+            var msg = $.trim(this.inputEl.val());
+            if (!msg) return;
+            this.inputEl.val("");
+            this.trigger("send", msg);
+        },
+        addMessages: function (messages, options) {
+            this._addMessages(options.changes.added);
+        },
+        _addMessages: function (messages) {
+            var messagesFragment = $(document.createDocumentFragment());
+            _.each(messages, function (message) {
+                this._renderMessage(message).appendTo(messagesFragment);
+            }, this);
+            messagesFragment.appendTo(this.messagesEl);
+            this._scrollToLast();
+        },
+        _renderMessage: function (m) {
+            var msg = "<li>";
+            msg += m.get("name") + ": ";
+            msg += m.get("text");
+            msg += "</li>";
+            return $(msg);
+        },
+        _scrollToLast: function () {
+            this.messagesEl.scrollTop(this.messagesEl.prop("scrollHeight"));
+        }
+    });
+
 
     return {
         UI: UI,

@@ -2,6 +2,8 @@
 define(["underscore", "backbone"], function (_, Backbone) {
     var User;
     var Area;
+    var Message;
+    var Messages;
 
     function ReadOnlyProxy(model) {
         this._model = model;
@@ -78,11 +80,32 @@ define(["underscore", "backbone"], function (_, Backbone) {
         }
     });
 
+
+    Message = Backbone.Model.extend({
+        idAttribute: "_id",
+        defaults: function () {
+            return {
+                id: "",
+                name: "",
+                body: ""
+            };
+        }
+    });
+
+
+    Messages = Backbone.Collection.extend({
+        model: Message,
+        proxyAttributes: [
+            "toArray",
+        ],
+    });
+
     return {
         ReadOnlyProxy: ReadOnlyProxy,
         ModelStore: ModelStore,
         User: User,
-        Area: Area
+        Area: Area,
+        Messages: Messages
     };
 });
 

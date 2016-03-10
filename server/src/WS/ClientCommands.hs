@@ -9,7 +9,8 @@ import Data.Aeson (Value(Null), Result(Success), fromJSON, decodeStrict)
 import Data.String.Utils (startswith)
 
 import WS.Connection (Connection, sendCmd, sendResponse, InputHandler)
-import Area.External as A
+import qualified Area.External as AE
+import qualified User.External as UE
 import User.User (userProcess)
 import Types (UserPid, AreaPid, RequestNumber, LogLevel(..), delPrefix)
 import Utils (evaluate)
@@ -40,7 +41,10 @@ commandHandler settings "login" body 0 conn _ _ = do
     return ()
 commandHandler _ path body req conn _ (Just areaPid)
     | "area." `startswith` path =
-        A.clientCmd areaPid ("area" `delPathPrefix` path) body req conn
+        AE.clientCmd areaPid ("area" `delPathPrefix` path) body req conn
+commandHandler _ path body req conn (Just userPid) _
+    | "user." `startswith` path =
+        UE.clientCmd userPid ("user" `delPathPrefix` path) body req conn
 
 
 inputHandler :: S.Settings -> InputHandler
