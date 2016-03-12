@@ -25,14 +25,14 @@
     max-width: 50%;
 }
 
-#ui-messages-window {
+#ui-window-content {
     float: right;
     margin-bottom: 0%;
 }
 
 #ui-messages {
     overflow-y: scroll;
-    height: 30em;
+    height: 20em;
 }
 
 

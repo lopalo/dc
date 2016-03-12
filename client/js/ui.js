@@ -16,6 +16,7 @@ define(function (require) {
     var PullButton;
     var ObjectInfo;
     var WindowButton;
+    var CloseButton;
     var MessagesWindow;
 
     function setupUI(uiEl, models) {
@@ -53,9 +54,15 @@ define(function (require) {
             el: uiEl.find("#ui-object-info"),
             model: models.ui,
         });
+
+        var closeButton = new CloseButton({
+            el: uiEl.find("#ui-close-window"),
+            model: models.ui,
+        });
         var messagesButton = new WindowButton({
             el: uiEl.find("#ui-open-messages"),
             model: models.ui,
+            windowName: "messages"
         });
         var messagesWindow = new MessagesWindow({
             el: uiEl.find("#ui-messages-window"),
@@ -73,6 +80,7 @@ define(function (require) {
             pullButton: pullButton,
             cancelPullButton: cancelPullButton,
             objectInfo: objectInfo,
+            closeButton: closeButton,
             messagesButton: messagesButton,
             messagesWindow: messagesWindow
         };
@@ -161,8 +169,8 @@ define(function (require) {
         },
         destroy: function () {
             SelectControlMode.__super__.destroy.call(this);
-            $(window).off("keydown");
-            $(window).off("wheel");
+            $(window).off("keydown", this.keyDown);
+            $(window).off("wheel", this.rotate);
             _.each(this.$el.find("button"), function (btn) {
                 $(btn).off("click");
             }, this);
@@ -257,15 +265,32 @@ define(function (require) {
     });
 
 
-    WindowButton = Button.extend({
-        initialize: function () {
+    WindowButton = UIView.extend({
+        events: {
+            click: "click",
+        },
+        initialize: function (options) {
             WindowButton.__super__.initialize.call(this);
+            this.windowName = options.windowName;
             this.listenTo(this.model, "change:activeWindow", this.render);
             this.render();
         },
         render: function () {
             this.$el.toggle(this.model.get("activeWindow") === null);
-        }
+        },
+        click: function () {
+            this.trigger("activateWindow", this.windowName);
+        },
+    });
+
+
+    CloseButton = WindowButton.extend({
+        initialize: function () {
+            CloseButton.__super__.initialize.call(this, {windowName: null});
+        },
+        render: function () {
+            this.$el.toggle(this.model.get("activeWindow") !== null);
+        },
     });
 
 
@@ -276,7 +301,8 @@ define(function (require) {
             this.messagesEl = this.$el.find("#ui-messages");
             this.inputEl = this.$el.find("#ui-messages-input");
             this.sendBtn = this.$el.find("#ui-send-message");
-            _.bindAll(this, "send");
+            _.bindAll(this, "send", "keyDown");
+            $(window).on("keydown", this.keyDown);
             this.sendBtn.on("click", this.send);
             this.listenTo(this.messages, "update", this.addMessages);
             this.listenTo(this.model, "change:activeWindow", this.render);
@@ -286,6 +312,7 @@ define(function (require) {
         destroy: function () {
             MessagesWindow.__super__.destroy.call(this);
             this.messagesEl.empty();
+            $(window).off("keydown", this.keyDown);
             this.inputEl.off();
             this.sendBtn.off();
             this.messagesEl = null;
@@ -295,6 +322,11 @@ define(function (require) {
         render: function () {
             this.$el.toggle(this.model.get("activeWindow") === "messages");
             this._scrollToLast();
+        },
+        keyDown: function (e) {
+            if (e.keyCode !== 13) return;
+            if (this.model.get("activeWindow") !== "messages") return;
+            this.send();
         },
         send: function () {
             var msg = $.trim(this.inputEl.val());

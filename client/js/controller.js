@@ -119,12 +119,15 @@ define(function (require) {
             this.listenTo(uiViews.pullButton, "click", this._pullAsteroid);
             this.listenTo(uiViews.cancelPullButton, "click", this._cancelPull);
 
-            this.listenTo(uiViews.messagesButton, "click",
-                                this._activateMessagesWindow);
+            //window handlers
+            this.listenTo(uiViews.closeButton, "activateWindow",
+                                            this._activateWindow);
+            this.listenTo(uiViews.messagesButton, "activateWindow",
+                                            this._activateWindow);
             this.listenTo(uiViews.messagesWindow, "send", this._sendMessage);
         },
-        _activateMessagesWindow: function () {
-            this._models.models.ui.set("activeWindow", "messages");
+        _activateWindow: function (windowName) {
+            this._models.models.ui.set("activeWindow", windowName);
         },
         _sendMessage: function (message) {
             var userIds = this._stageController.getVisibleUserIds();
@@ -154,6 +157,7 @@ define(function (require) {
             this._models.models.ui.set("controlMode", mode);
         },
         _stageObjectViewClick: function (ident) {
+            if (this._windowIsActive()) return;
             var ui = this._models.models.ui;
             switch (ui.get("controlMode")) {
                 case "shot":
@@ -164,14 +168,20 @@ define(function (require) {
             }
         },
         _stageObjectViewMouseUp: function (ident) {
+            if (this._windowIsActive()) return;
         },
         _stageObjectViewMouseOver: function (ident) {
+            if (this._windowIsActive()) return;
             this._cursorPos = null;
         },
         _stageObjectViewMouseOut: function () {
+            if (this._windowIsActive()) return;
         },
         _backgroundClick: function (pos) {
-            this._models.models.ui.set("activeWindow", null);
+            if (this._windowIsActive()) {
+                this._models.models.ui.set("activeWindow", null);
+                return;
+            }
             this._unselectStageObject();
             var cameraPos = this._stageController.getCameraPos();
             pos.add(cameraPos).invertY();
@@ -183,10 +193,12 @@ define(function (require) {
 
         },
         _backgroundMouseDown: function () {
+            if (this._windowIsActive()) return;
             this._cursorPos = null;
             this._cursorPath = [];
         },
         _backgroundMouseMove: function (pos) {
+            if (this._windowIsActive()) return;
             pos = new Victor(pos.x, pos.y);
             switch (this._models.models.ui.get("controlMode")) {
                 case "view":
@@ -204,6 +216,7 @@ define(function (require) {
 
         },
         _backgroundMouseUp: function () {
+            if (this._windowIsActive()) return;
             if (this._models.models.ui.get("controlMode") !== "move") return;
             var cameraPos = this._stageController.getCameraPos();
             var positions = _.map(this._cursorPath, function (pos) {
@@ -248,6 +261,9 @@ define(function (require) {
             if (model === undefined) return;
             ui.set("selfObjectInfo", {});
             this.stopListening(model, "change");
+        },
+        _windowIsActive: function () {
+            return this._models.models.ui.get("activeWindow") !== null;
         }
     });
     return Controller;
