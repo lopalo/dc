@@ -12,6 +12,11 @@ define(function (require) {
     var stageViews = require("./views");
     var SignalHandler = require("./signal-handler");
 
+    var user = require("./objects/user");
+    var gate = require("./objects/gate");
+    var asteroid = require("./objects/asteroid");
+    var controlPoint = require("./objects/control-point");
+
 
     function StageController(viewportEl, controller) {
         this._viewportEl = viewportEl;
@@ -108,7 +113,7 @@ define(function (require) {
         getVisibleUserIds: function () {
             var models = _.values(this._objectModels.models);
             models = _.filter(models, function (model) {
-                return model instanceof stageModels.User;
+                return model instanceof user.User;
             });
             return _.map(models, function (model) { return model.get("id"); });
         },
@@ -223,16 +228,16 @@ define(function (require) {
 
             switch (data.tag) {
                 case "User":
-                    model = new stageModels.User(data);
+                    model = new user.User(data);
                     break;
                 case "Gate":
-                    model = new stageModels.Gate(data);
+                    model = new gate.Gate(data);
                     break;
                 case "Asteroid":
-                    model = new stageModels.Asteroid(data);
+                    model = new asteroid.Asteroid(data);
                     break;
                 case "CP":
-                    model = new stageModels.ControlPoint(data);
+                    model = new controlPoint.ControlPoint(data);
                     break;
                 default:
                     throw "No model for type " + data.tag;
@@ -246,20 +251,20 @@ define(function (require) {
                     if (!reason && isSelf) {
                         reason = this._firstEnter ? "LogIn" : "Entry";
                     }
-                    view = new stageViews.User({
+                    view = new user.UserView({
                         model: roModel,
                         reason: reason,
                         isSelf: isSelf,
                     });
                     break;
                 case "Gate":
-                    view = new stageViews.Gate({model: roModel});
+                    view = new gate.GateView({model: roModel});
                     break;
                 case "Asteroid":
-                    view = new stageViews.Asteroid({model: roModel});
+                    view = new asteroid.AsteroidView({model: roModel});
                     break;
                 case "CP":
-                    view = new stageViews.ControlPoint({model: roModel});
+                    view = new controlPoint.ControlPointView({model: roModel});
                     break;
                 default:
                     throw "No view for type " + data.tag;

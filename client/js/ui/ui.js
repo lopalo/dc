@@ -1,9 +1,9 @@
 
 define(function (require) {
-    var common = require("ui/common");
-    var controlMode = require("ui/control-mode");
-    var objectContext = require("ui/object-context");
-    var MessagesWindow = require("ui/windows/messages");
+    var common = require("./common");
+    var controlMode = require("./control-mode");
+    var objectContext = require("./object-context");
+    var MessagesWindow = require("./windows/messages");
 
 
     function setupUI(uiEl, models) {

@@ -12,10 +12,6 @@ define(function (require) {
     var Background;
     var Midground;
     var StageObject;
-    var User;
-    var Gate;
-    var Asteroid;
-    var ControlPoint;
 
 
     function StageView(options) {
@@ -65,7 +61,6 @@ define(function (require) {
             });
         },
     });
-
 
 
     Background = StageView.extend({
@@ -281,132 +276,11 @@ define(function (require) {
         }
     });
 
-
-    User = StageObject.extend({
-        texturePath: "img/ship.png",
-        initialize: function (options) {
-            User.__super__.initialize.call(this, options);
-            this._isSelf = options.isSelf;
-            this._appearanceReason = options.reason;
-            this._updateAllowed = true;
-
-        },
-        _update: function () {
-            if (!this._updateAllowed) return;
-            User.__super__._update.call(this);
-        },
-        _getTextColor: function () {
-            return this._isSelf ? "#8B8FBD" : "white";
-        },
-        _appearanceEffect: function () {
-            var self = this;
-            var size = this._model.get("size");
-            var width = size[0];
-            var height = size[1];
-            var sprite = this._sprite;
-            var onComplete = function () {
-                self._updateAllowed = true;
-                self._update();
-            };
-            var rotation = this._getRotation();
-            var toProps;
-            var tween;
-            switch (this._appearanceReason) {
-                case "LogIn":
-                    sprite.width = sprite.height = 1;
-                    sprite.rotation = rotation - 4 * Math.PI;
-                    toProps = {rotation: rotation, width: width, height: height};
-                    tween = TweenLite.to(sprite, 1, toProps);
-                    break;
-                case "Entry":
-                    sprite.width = 50 * width;
-                    sprite.height = 0.01 * height;
-                    tween = TweenLite.to(sprite, 0.5,
-                                        {width: width, height: height});
-                    break;
-                case "Recovery":
-                    tween = User.__super__._appearanceEffect.call(this);
-                    break;
-                default:
-                    tween = User.__super__._appearanceEffect.call(this);
-
-            }
-            this._updateAllowed = false;
-            tween.eventCallback("onComplete", onComplete);
-            return tween;
-        },
-        _disappearanceEffect: function (reason, sprite) {
-            var size = this._model.get("size");
-            var width = size[0];
-            var height = size[1];
-            var rotation = this._getRotation();
-            var toProps;
-            var tween;
-            switch (reason) {
-                case "Destruction":
-                    toProps = {width: 2 * width, height: 2 * height, alpha: 0};
-                    tween = TweenLite.to(sprite, 0.5, toProps);
-                    break;
-                case "Exit":
-                    toProps = {width: 50 * width, height: 0.01 * height};
-                    tween = TweenLite.to(sprite, 0.5, toProps);
-                    break;
-                case "LogOut":
-                    toProps = {
-                        rotation: rotation - 4 * Math.PI,
-                        width: 1,
-                        height: 1
-                    };
-                    tween = TweenLite.to(sprite, 1, toProps);
-                    break;
-                default:
-                    tween = User.__super__._disappearanceEffect.call(
-                        this, reason, sprite
-                    );
-            }
-            return tween;
-        }
-
-    });
-
-    Gate = StageObject.extend({
-        texturePath: "img/gate.png",
-    });
-
-    Asteroid = StageObject.extend({
-        texturePath: "img/asteroid.png",
-        showName: false
-    });
-
-    ControlPoint = StageObject.extend({
-        texturePath: "img/space_station_1.png",
-        capturedTexturePath: "img/space_station_2.png",
-        initialize: function (options) {
-            ControlPoint.__super__.initialize.call(this, options);
-            this.listenTo(this._model, "change:owner", this._changeTexture);
-        },
-        _getTexturePath: function () {
-            if (this._model.get("owner") === null) {
-                return this.texturePath;
-            } else {
-                return this.capturedTexturePath;
-            }
-        },
-        _changeTexture: function () {
-            var texture = pixi.Texture.fromImage(this._getTexturePath());
-            this._sprite.texture = texture;
-        }
-    });
-
-
     return {
         Background: Background,
         Midground: Midground,
         ObjectLayer: ObjectLayer,
-        User: User,
-        Gate: Gate,
-        Asteroid: Asteroid,
-        ControlPoint: ControlPoint
+        StageObject: StageObject
     };
 
 });
