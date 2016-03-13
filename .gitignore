@@ -4,6 +4,7 @@
 *logs
 */__pycache__
 *.db
+*.db-journal
 .cabal-sandbox
 .hsenv
 cabal.sandbox.config

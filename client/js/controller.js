@@ -5,7 +5,7 @@ define(function (require) {
     var Victor = require("victor");
 
     var models = require("models");
-    var UI = require("ui");
+    var setupUI = require("ui/ui");
     var StageController = require("stage/controller");
 
 
@@ -16,7 +16,7 @@ define(function (require) {
         this._models.set("user", new models.User());
         this._models.set("area", new models.Area());
         this._models.set("messages", new models.Messages());
-        this._models.set("ui", new UI.UI());
+        this._models.set("ui", new models.UI());
         this._stageController = new StageController(gameEl.find("#viewport"),
                                                     this);
         _.bindAll(this, "destroy");
@@ -37,7 +37,7 @@ define(function (require) {
                 this._models.roModels,
                 ["ui", "user", "area", "messages"]
             );
-            uiViews = UI.setupUI(this._gameEl.find("#ui"), uiModels);
+            uiViews = setupUI(this._gameEl.find("#ui"), uiModels);
             this.listenTo(conn, "area.init", this._initArea);
             this.listenTo(conn, "user", this._userDispatch);
             this._listenToUI(uiViews);
@@ -110,21 +110,26 @@ define(function (require) {
             this._models.models.messages.add(messages);
         },
         _listenToUI: function (uiViews) {
-            this.listenTo(uiViews.focusButton, "click", this._showMyself);
-            this.listenTo(uiViews.recoverButton, "click", this._recover);
-            this.listenTo(uiViews.areaSelector, "select", this._enterArea);
-            this.listenTo(uiViews.controlModeSelector, "select",
-                                        this._changeControlMode);
-            this.listenTo(uiViews.captureButton, "click", this._capture);
-            this.listenTo(uiViews.pullButton, "click", this._pullAsteroid);
-            this.listenTo(uiViews.cancelPullButton, "click", this._cancelPull);
+            var common = uiViews.common;
+            var obj = uiViews.objectContext;
+            var windows = uiViews.windows;
 
-            //window handlers
-            this.listenTo(uiViews.closeButton, "activateWindow",
+            this.listenTo(common.focusButton, "click", this._showMyself);
+            this.listenTo(common.recoverButton, "click", this._recover);
+            this.listenTo(common.cancelPullButton, "click", this._cancelPull);
+
+            this.listenTo(uiViews.controlMode.controlModeSelector,
+                          "select", this._changeControlMode);
+
+            this.listenTo(obj.areaSelector, "select", this._enterArea);
+            this.listenTo(obj.captureButton, "click", this._capture);
+            this.listenTo(obj.pullButton, "click", this._pullAsteroid);
+
+            this.listenTo(windows.closeButton, "activateWindow",
                                             this._activateWindow);
-            this.listenTo(uiViews.messagesButton, "activateWindow",
+            this.listenTo(windows.messagesButton, "activateWindow",
                                             this._activateWindow);
-            this.listenTo(uiViews.messagesWindow, "send", this._sendMessage);
+            this.listenTo(windows.messagesWindow, "send", this._sendMessage);
         },
         _activateWindow: function (windowName) {
             this._models.models.ui.set("activeWindow", windowName);

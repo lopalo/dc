@@ -1,5 +1,6 @@
 
 define(["underscore", "backbone"], function (_, Backbone) {
+    var UI;
     var User;
     var Area;
     var Message;
@@ -64,6 +65,23 @@ define(["underscore", "backbone"], function (_, Backbone) {
     };
 
 
+    UI = Backbone.Model.extend({
+        controlModes: ["view", "move", "shot"],
+        windows: [null, "messages"],
+        defaults: function () {
+            return {
+                controlModes: this.controlModes,
+                controlMode: this.controlModes[1],
+                windows: this.windows,
+                activeWindow: this.windows[0],
+                selectedObjectType: "nothing",
+                selectedObjectInfo: {},
+                selfObjectInfo: {}
+            };
+        }
+    });
+
+
     User = Backbone.Model.extend({
         defaults: {
             userId: "",
@@ -103,6 +121,7 @@ define(["underscore", "backbone"], function (_, Backbone) {
     return {
         ReadOnlyProxy: ReadOnlyProxy,
         ModelStore: ModelStore,
+        UI: UI,
         User: User,
         Area: Area,
         Messages: Messages
