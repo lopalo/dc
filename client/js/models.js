@@ -74,6 +74,7 @@ define(["underscore", "backbone"], function (_, Backbone) {
                 controlMode: this.controlModes[1],
                 windows: this.windows,
                 activeWindow: this.windows[0],
+                selectedObjectId: null,
                 selectedObjectType: "nothing",
                 selectedObjectInfo: {},
                 selfObjectInfo: {}

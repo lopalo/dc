@@ -7,6 +7,8 @@ define(function (require) {
     var models = require("models");
     var setupUI = require("ui/ui");
     var StageController = require("stage/controller");
+    var WindowsController = require("windows-controller");
+    var ObjectContextController = require("object-context-controller");
 
 
     function Controller(gameEl, connection) {
@@ -19,11 +21,18 @@ define(function (require) {
         this._models.set("ui", new models.UI());
         this._stageController = new StageController(gameEl.find("#viewport"),
                                                     this);
+        var options = {
+            models: this._models,
+            connection: this._connection,
+            stageController: this._stageController
+        };
+        this._windowsController = new WindowsController(options);
+        this._objectContextController = new ObjectContextController(options);
+
         _.bindAll(this, "destroy");
 
         this._cursorPos = null;
         this._cursorPath = [];
-        this._selectedStageObjectId = null;
 
     }
     Controller.prototype = Object.create(Backbone.Events);
@@ -53,6 +62,8 @@ define(function (require) {
             this.stopListening();
             this._models.cleanupAll();
             this._stageController.destroy();
+            this._windowsController.destroy();
+            this._objectContextController.destroy();
         },
         listenToStageBackground: function (bg) {
             this.listenTo(bg, "click", this._backgroundClick);
@@ -89,9 +100,11 @@ define(function (require) {
             if (this.isSelf(ident)) {
                 this._deleteSelfStageObject();
             }
-            if (ident === this._selectedStageObjectId) {
+            if (ident === this._models.models.ui.get("selectedObjectId")) {
                 this._unselectStageObject();
             }
+            this._windowsController.deleteStageObject(ident);
+            this._objectContextController.deleteStageObject(ident);
         },
         _initArea: function (data) {
             this._models.models.area.set({
@@ -111,8 +124,6 @@ define(function (require) {
         },
         _listenToUI: function (uiViews) {
             var common = uiViews.common;
-            var obj = uiViews.objectContext;
-            var windows = uiViews.windows;
 
             this.listenTo(common.focusButton, "click", this._showMyself);
             this.listenTo(common.recoverButton, "click", this._recover);
@@ -121,22 +132,9 @@ define(function (require) {
             this.listenTo(uiViews.controlMode.controlModeSelector,
                           "select", this._changeControlMode);
 
-            this.listenTo(obj.areaSelector, "select", this._enterArea);
-            this.listenTo(obj.captureButton, "click", this._capture);
-            this.listenTo(obj.pullButton, "click", this._pullAsteroid);
+            this._windowsController.listenToUI(uiViews.windows);
+            this._objectContextController.listenToUI(uiViews.objectContext);
 
-            this.listenTo(windows.closeButton, "activateWindow",
-                                            this._activateWindow);
-            this.listenTo(windows.messagesButton, "activateWindow",
-                                            this._activateWindow);
-            this.listenTo(windows.messagesWindow, "send", this._sendMessage);
-        },
-        _activateWindow: function (windowName) {
-            this._models.models.ui.set("activeWindow", windowName);
-        },
-        _sendMessage: function (message) {
-            var userIds = this._stageController.getVisibleUserIds();
-            this._connection.send("user.send-message", [userIds, message]);
         },
         _showMyself: function () {
             this._stageController.showMyself();
@@ -144,19 +142,8 @@ define(function (require) {
         _recover: function () {
             this._connection.send("area.recover", 1);
         },
-        _capture: function () {
-            this._connection.send("area.capture", this._selectedStageObjectId);
-        },
-        _pullAsteroid: function () {
-            this._connection.send("area.pull-asteroid",
-                                  this._selectedStageObjectId);
-        },
         _cancelPull: function () {
             this._connection.send("area.cancel-pull", null);
-        },
-        _enterArea: function (areaId) {
-            this._stageController.enterArea();
-            this._connection.send("area.enter-area", areaId);
         },
         _changeControlMode: function (mode) {
             this._models.models.ui.set("controlMode", mode);
@@ -236,24 +223,24 @@ define(function (require) {
             var model = this._stageController.getObjectModel(ident);
             var ui = this._models.models.ui;
             this._unselectStageObject();
+            ui.set("selectedObjectId", ident);
             ui.set("selectedObjectType", model.objectType);
             ui.set("selectedObjectInfo", model.getInfoForUI());
             this.listenTo(model, "change", this._selectedStageObjectChanged);
-            this._selectedStageObjectId = ident;
         },
         _selectedStageObjectChanged: function (model) {
             var ui = this._models.models.ui;
             ui.set("selectedObjectInfo", model.getInfoForUI());
         },
         _unselectStageObject: function () {
-            var ident = this._selectedStageObjectId;
-            var model = this._stageController.getObjectModel(ident);
             var ui = this._models.models.ui;
+            var ident = ui.get("selectedObjectId");
+            var model = this._stageController.getObjectModel(ident);
             if (model === undefined) return;
+            ui.set("selectedObjectId", null);
             ui.set("selectedObjectType", "nothing");
             ui.set("selectedObjectInfo", {});
             this.stopListening(model, "change");
-            this._selectedStageObjectId = null;
         },
         _selfStageObjectChanged: function (model) {
             var ui = this._models.models.ui;
