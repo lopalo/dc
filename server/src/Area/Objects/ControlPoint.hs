@@ -6,6 +6,7 @@ import GHC.Generics (Generic)
 import Data.Binary (Binary)
 import Data.Typeable (Typeable)
 
+import Data.Maybe (fromMaybe)
 import Control.Applicative ((<$>), (<*>))
 import Data.Text.Lazy.Encoding (encodeUtf8, decodeUtf8)
 
@@ -14,7 +15,7 @@ import Database.SQLite.Simple.ToField (toField)
 import Database.SQLite.Simple.Internal (RowParser)
 import Data.Aeson (encode, decode, object, (.=))
 
-import Types (UserId(UserId), Size(Size), width)
+import Types (UserId(UserId), UserName, Size(Size), width)
 import Area.Types (
     Object(..), Destroyable(..),
     Pos(Pos), Angle, ObjId(CPId)
@@ -36,7 +37,7 @@ data ControlPoint = ControlPoint {
     durability :: !Int,
     actions :: ![Action],
     size :: !Size,
-    owner :: Maybe UserId
+    owner :: Maybe (UserId, UserName)
     }
     deriving (Generic, Typeable)
 
@@ -55,7 +56,7 @@ instance FromRow ControlPoint where
         durability_ <- field
         Just actions_ <- decode . encodeUtf8 <$> field
         size_ <- Size <$> field <*> field
-        owner_ <- field
+        maybeOwner <- decode . encodeUtf8 <$> field
         return ControlPoint{
             ident=ident_,
             name=name_,
@@ -65,7 +66,7 @@ instance FromRow ControlPoint where
             durability=durability_,
             actions=actions_,
             size=size_,
-            owner=UserId <$> owner_
+            owner=fromMaybe Nothing maybeOwner
             }
 
 instance ToRow ControlPoint where
@@ -81,13 +82,14 @@ instance ToRow ControlPoint where
             toField actions_,
             toField w,
             toField h,
-            toField $ (\(UserId uid) -> uid) <$> owner cp
+            toField owner_
             ]
         where
             CPId ident_ = ident cp
             Pos x y = pos cp
             Size w h = size cp
             actions_ = decodeUtf8 $ encode $ actions cp
+            owner_ = decodeUtf8 $ encode $ owner cp
 
 
 instance Object ControlPoint where
@@ -120,7 +122,7 @@ instance Object ControlPoint where
             "pos" .= pos cp,
             "angle" .= angle cp,
             "durability" .= durability cp,
-            "owner" .= owner cp
+            "owner" .= (snd <$> owner cp)
             ]
 
 

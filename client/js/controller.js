@@ -18,6 +18,7 @@ define(function (require) {
         this._models.set("user", new models.User());
         this._models.set("area", new models.Area());
         this._models.set("messages", new models.Messages());
+        this._models.set("worldmap", new models.Worldmap());
         this._models.set("ui", new models.UI());
         this._stageController = new StageController(gameEl.find("#viewport"),
                                                     this);
@@ -42,10 +43,7 @@ define(function (require) {
             var uiViews;
             var stage = this._stageController;
             var conn = this._connection;
-            var uiModels = _.pick(
-                this._models.roModels,
-                ["ui", "user", "area", "messages"]
-            );
+            var uiModels = _.clone(this._models.roModels);
             uiViews = setupUI(this._gameEl.find("#ui"), uiModels);
             this.listenTo(conn, "area.init", this._initArea);
             this.listenTo(conn, "user", this._userDispatch);
@@ -122,6 +120,9 @@ define(function (require) {
         _handleAddMessages: function (messages) {
             this._models.models.messages.add(messages);
         },
+        _handleUpdateWorldmap: function (data) {
+            this._models.models.worldmap.set(data);
+        },
         _listenToUI: function (uiViews) {
             var common = uiViews.common;
 
@@ -149,7 +150,10 @@ define(function (require) {
             this._models.models.ui.set("controlMode", mode);
         },
         _stageObjectViewClick: function (ident) {
-            if (this._windowIsActive()) return;
+            if (this._windowIsActive()) {
+                this._models.models.ui.set("activeWindow", null);
+                return;
+            }
             var ui = this._models.models.ui;
             switch (ui.get("controlMode")) {
                 case "shot":

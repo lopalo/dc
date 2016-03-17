@@ -1,4 +1,3 @@
-areas: [alpha, beta]
 start-area: alpha
 node-address: [127.0.0.1, "11500"]
 ws-address: [127.0.0.1, 11501]

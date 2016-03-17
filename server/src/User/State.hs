@@ -4,7 +4,7 @@ import Data.Sequence (Seq)
 
 import Control.Distributed.Process.Extras (TagPool)
 
-import Types (Ts, AreaId)
+import Types (Ts, AreaOwners)
 import User.Types
 import qualified User.Settings as US
 import qualified WS.Connection as C
@@ -12,11 +12,11 @@ import qualified WS.Connection as C
 
 data State = State {
     user :: !User,
-    areas :: ![AreaId],
     settings :: !US.Settings,
     connection :: Maybe C.Connection,
     disconnectTs :: Maybe Ts,
     reqTagPool :: TagPool,
-    userMessages :: Seq UserMessage
+    userMessages :: Seq UserMessage,
+    areaOwners :: AreaOwners
     }
 

@@ -172,7 +172,6 @@ define(function (require) {
             //FIXME: use sets to improve time complexity
             var idents = [];
             var unknownIdents = [];
-            var excessIdents = [];
             _.each(data.signals, function (signal) {
                 if (signal.tag === "Appearance") {
                     this._appearanceReasons[signal.userId] = signal.aReason;
@@ -200,8 +199,9 @@ define(function (require) {
             }
             this._interpolationStep();
             this._signalHandler.process(data.signals);
-            excessIdents = _.difference(_.keys(objectModels), idents);
-            _.each(excessIdents, this._removeObject, this);
+            _.chain(objectModels)
+                .keys().difference(idents)
+                .each(this._removeObject, this);
             this._disappearanceReasons = {};
         },
         _getTime: function () {

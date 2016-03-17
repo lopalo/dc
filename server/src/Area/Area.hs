@@ -13,16 +13,17 @@ import Data.Lens.Strict ((^%=))
 import Data.Lens.Partial.Common (getPL, setPL)
 import Control.Distributed.Process
 import Control.Distributed.Process.Extras (newTagPool)
+import Control.Distributed.Process.Extras.Call (callResponse)
 
 import WS.Connection (Connection, setArea)
 import qualified DB.DB as DB
 import Utils (milliseconds, safeReceive, evaluate)
 import qualified Area.Settings as AS
-import Types (AreaId, AreaPid(..))
+import Types (AreaId, AreaPid(..), UserName)
 import qualified User.External as UE
 import qualified Area.Objects.User as U
 import Area.Utils (sendCmd)
-import Area.Misc (spawnUser)
+import Area.Misc (spawnUser, broadcastOwnerName)
 import Area.Types
 import Area.State
 import Area.ClientCommands (handleClientCommand, handleClientReq)
@@ -98,6 +99,12 @@ handleMonitorNotification state (ProcessMonitorNotification ref _ _) =
             Nothing -> state
 
 
+handleGetOwner ::
+    State -> GetOwner -> Process ((AreaId, Maybe UserName), State)
+handleGetOwner state _ =
+    return ((areaId state, ownerName state), state)
+
+
 areaProcess :: AS.Settings -> AreaId -> Process ()
 areaProcess aSettings aid = do
     objects <- DB.getAreaObjects aid =<< newTagPool
@@ -123,6 +130,7 @@ areaProcess aSettings aid = do
         fromList :: Object o => [o] -> M.Map ObjId o
         fromList = M.fromList . map (\o -> (objId o, o))
     scheduleTick $ AS.tickMilliseconds aSettings
+    broadcastOwnerName state
     loop state
 
 
@@ -130,13 +138,14 @@ loop :: State -> Process ()
 loop state = safeReceive handlers state >>= loop
     where
         prepare h = match (h state)
-        --NOTE: handlers are matched by a type
+        prepareCall h = callResponse (h state)
         handlers = [
             prepare handleTick,
             prepare handleClientCommand,
             prepare handleClientReq,
             prepare handleEnter,
             prepare handleReconnection,
+            prepareCall handleGetOwner,
             prepare handleMonitorNotification,
             matchUnknown (return state)
             ]

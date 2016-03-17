@@ -3,7 +3,7 @@
 module User.External(
     UserArea(..), SyncState(..), SwitchArea(..),
     monitorUser, syncState, switchArea,
-    clientCmd
+    broadcastAreaOwnerName, clientCmd
     ) where
 
 import GHC.Generics (Generic)
@@ -13,7 +13,10 @@ import Control.Applicative ((<$>))
 
 import Data.Aeson (FromJSON, Value, Result(Success), fromJSON)
 import Control.Distributed.Process
+import Control.Distributed.Process.Extras (newTagPool)
 
+import Base.GlobalRegistry (globalWhereIsByPrefix)
+import Broadcaster (broadcast)
 import WS.Connection (Connection)
 import Utils (evaluate)
 import Types
@@ -50,6 +53,14 @@ syncState (UserPid pid) user = send pid $ SyncState user
 
 switchArea :: UserPid -> AreaId -> Process ()
 switchArea (UserPid pid) aid = send pid $ SwitchArea aid
+
+
+broadcastAreaOwnerName :: AreaId -> Maybe UserName -> Process ()
+broadcastAreaOwnerName aid maybeUserName = do
+    spawnLocal $ do
+        userPids <- globalWhereIsByPrefix userPrefix =<< newTagPool
+        broadcast userPids $ AreaOwnerName aid maybeUserName
+    return ()
 
 
 parseClientCmd :: String -> Value -> Result ClientCommand

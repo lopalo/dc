@@ -21,26 +21,26 @@ define(function (require) {
         initialize: function (options) {
             SelectArea.__super__.initialize.call(this);
             this.area = options.area;
-            this.user = options.user;
+            this.worldmap = options.worldmap;
             this.listenTo(this.area, "change:areaId", this.render);
-            this.listenTo(this.user, "change:areas", this.render);
+            this.listenTo(this.worldmap, "change", this.render);
             this.listenTo(this.model, "change:selectedObjectType", this.render);
             this.render();
         },
         render: function () {
             var el = this.$el;
             var gateSelected = this.model.get("selectedObjectType") === "gate";
-            this.$el.parent().toggle(gateSelected);
+            el.parent().toggle(gateSelected);
             if (!gateSelected) return;
             el.empty();
-            _.each(this.user.get("areas"), function (aid) {
+            _.chain(this.worldmap.keys()).sortBy().each(function (aid) {
                 el.append(this.template({
                     v: aid,
                     n: aid.replace("area:", "")
                 }));
             }, this);
-            this.$el.val(this.area.get("areaId"));
-            this.$el.selectpicker("refresh");
+            el.val(this.area.get("areaId"));
+            el.selectpicker("refresh");
         },
         change: function () {
             this.trigger("select", this.$el.val());

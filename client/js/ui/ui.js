@@ -1,9 +1,12 @@
 
 define(function (require) {
     var common = require("./common");
+    var windowsCommon = require("./windows/common");
     var controlMode = require("./control-mode");
     var objectContext = require("./object-context");
-    var MessagesWindow = require("./windows/messages");
+    var messages = require("./windows/messages");
+    var WorldmapWindow = require("./windows/worldmap");
+
 
 
     function setupUI(uiEl, models) {
@@ -46,7 +49,7 @@ define(function (require) {
             el: objectContextEl.find("#ui-select-area"),
             model: models.ui,
             area: models.area,
-            user: models.user
+            worldmap: models.worldmap
         });
         var captureButton = new objectContext.CaptureButton({
             el: objectContextEl.find("#ui-capture"),
@@ -81,24 +84,40 @@ define(function (require) {
 
 
     function setupWindows(windowsEl, models) {
-        var closeButton = new common.CloseButton({
+        new windowsCommon.Header({
+            el: windowsEl.find("#ui-window-header"),
+            model: models.ui,
+        });
+        var closeButton = new windowsCommon.CloseButton({
             el: windowsEl.find("#ui-close-window"),
             model: models.ui,
         });
-        var messagesButton = new common.WindowButton({
+        var messagesButton = new messages.MessagesButton({
             el: windowsEl.find("#ui-open-messages"),
             model: models.ui,
-            windowName: "messages"
+            messages: models.messages
         });
-        var messagesWindow = new MessagesWindow({
+        var messagesWindow = new messages.MessagesWindow({
             el: windowsEl.find("#ui-messages-window"),
             model: models.ui,
             messages: models.messages
         });
+        var worldmapButton = new windowsCommon.WindowButton({
+            el: windowsEl.find("#ui-open-worldmap"),
+            model: models.ui,
+            windowName: "worldmap"
+        });
+        var worldmapWindow = new WorldmapWindow({
+            el: windowsEl.find("#ui-worldmap-window"),
+            model: models.ui,
+            worldmap: models.worldmap
+        });
         return {
             closeButton: closeButton,
             messagesButton: messagesButton,
-            messagesWindow: messagesWindow
+            messagesWindow: messagesWindow,
+            worldmapButton: worldmapButton,
+            worldmapWindow: worldmapWindow
         };
     }
 

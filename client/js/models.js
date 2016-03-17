@@ -5,6 +5,7 @@ define(["underscore", "backbone"], function (_, Backbone) {
     var Area;
     var Message;
     var Messages;
+    var Worldmap;
 
     function ReadOnlyProxy(model) {
         this._model = model;
@@ -20,6 +21,12 @@ define(["underscore", "backbone"], function (_, Backbone) {
     _.extend(ReadOnlyProxy.prototype, Backbone.Events, {
         isInstanceOf: function (constructor) {
             return this._model instanceof constructor;
+        },
+        keys: function () {
+            return this._model.keys();
+        },
+        values: function () {
+            return this._model.values();
         },
         get: function (attr) {
             return this._model.get(attr);
@@ -67,7 +74,7 @@ define(["underscore", "backbone"], function (_, Backbone) {
 
     UI = Backbone.Model.extend({
         controlModes: ["view", "move", "shot"],
-        windows: [null, "messages"],
+        windows: [null, "messages", "worldmap"],
         defaults: function () {
             return {
                 controlModes: this.controlModes,
@@ -87,7 +94,6 @@ define(["underscore", "backbone"], function (_, Backbone) {
         defaults: {
             userId: "",
             name: "",
-            areas: []
         }
     });
 
@@ -119,13 +125,18 @@ define(["underscore", "backbone"], function (_, Backbone) {
         ],
     });
 
+
+    Worldmap = Backbone.Model.extend({
+    });
+
     return {
         ReadOnlyProxy: ReadOnlyProxy,
         ModelStore: ModelStore,
         UI: UI,
         User: User,
         Area: Area,
-        Messages: Messages
+        Messages: Messages,
+        Worldmap: Worldmap
     };
 });
 

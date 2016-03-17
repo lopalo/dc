@@ -12,7 +12,7 @@ import Data.Lens.Strict (Lens, lens, mapLens, (^%=), (%=))
 import Data.Lens.Partial.Common (PartialLens, totalLens, justLens)
 
 import WS.Connection (Connection)
-import Types (UserId, UserMonitorRef, AreaId, Ts)
+import Types (UserId, UserName, UserMonitorRef, AreaId, Ts)
 import Area.Types (ObjId)
 import qualified Area.Objects.User as U
 import qualified Area.Objects.Gate as G
@@ -177,3 +177,10 @@ addSignal signal = signalsL ^%= (|> signal)
 
 addSignalS :: Signal -> StateS ()
 addSignalS signal = void $ signalsL %= (|> signal)
+
+
+ownerName :: State -> Maybe UserName
+ownerName state =
+    let cps = controlPoints state
+        (_, cp) = M.findMin cps
+    in if M.null cps then Nothing else fmap snd $ CP.owner cp

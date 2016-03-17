@@ -27,9 +27,6 @@ define(["mithril", "utils"], function (m, utils) {
                     m("dt", "Global Registry"),
                     m("dd", data["global-registry"]),
 
-                    m("dt", "Global Cache"),
-                    m("dd", data["global-cache"]),
-
                     m("dt", "Logger"),
                     m("dd", data.logger),
                 ];

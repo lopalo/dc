@@ -125,7 +125,7 @@ def insert_control_point(cur, area_id, counter):
               json.dumps(actions),
               CP_SIZE,
               CP_SIZE,
-              None)
+              json.dumps(None))
     cur.execute(INSERT_CP, params)
 
 

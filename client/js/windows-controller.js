@@ -15,6 +15,8 @@ define(function (require) {
             this.listenTo(views.messagesButton, "activateWindow",
                                             this._activateWindow);
             this.listenTo(views.messagesWindow, "send", this._sendMessage);
+            this.listenTo(views.worldmapButton, "activateWindow",
+                                            this._activateWindow);
         },
         destroy: function () {
             this.stopListening();

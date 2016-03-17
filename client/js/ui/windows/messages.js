@@ -6,9 +6,14 @@ define(function (require) {
     require("bootstrap-select");
 
     var common = require("ui/common");
+    var windowsCommon = require("./common");
+
+    var MessagesWindow;
+    var MessagesButton;
 
 
-    var MessagesWindow = common.UIView.extend({
+    MessagesWindow = common.UIView.extend({
+        messageTemplate: _.template("<li><%= name %>: <%= text %></li>"),
         initialize: function (options) {
             MessagesWindow.__super__.initialize.call(this);
             this.messages = options.messages;
@@ -60,17 +65,47 @@ define(function (require) {
             this._scrollToLast();
         },
         _renderMessage: function (m) {
-            var msg = "<li>";
-            msg += m.get("name") + ": ";
-            msg += m.get("text");
-            msg += "</li>";
-            return $(msg);
+            return $(this.messageTemplate(m.attributes));
         },
         _scrollToLast: function () {
             this.messagesEl.scrollTop(this.messagesEl.prop("scrollHeight"));
         }
     });
 
-    return MessagesWindow;
+
+    MessagesButton = windowsCommon.WindowButton.extend({
+        initialize: function (options) {
+            this.msgCountEl = this.$el.find("#ui-message-count");
+            this.count = 0;
+            this.listenTo(options.messages, "update", this.increment);
+            MessagesButton.__super__.initialize.call(
+                this,
+                {windowName: "messages"
+            });
+        },
+        render: function () {
+            MessagesButton.__super__.render.call(this);
+            this.msgCountEl.text(this.count ? this.count : "");
+        },
+        destroy: function () {
+            MessagesButton.__super__.destroy.call(this);
+            this.msgCountEl = null;
+        },
+        click: function () {
+            this.count = 0;
+            MessagesButton.__super__.click.call(this);
+        },
+        increment: function (messages, options) {
+            if (this.model.get("activeWindow") === "messages") return;
+            if (options.changes.added.length > 1) return; // it's initialization
+            this.count += 1;
+            this.render();
+        },
+    });
+
+    return {
+        MessagesWindow: MessagesWindow,
+        MessagesButton: MessagesButton
+    };
 });
 

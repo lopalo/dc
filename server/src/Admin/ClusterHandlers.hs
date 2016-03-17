@@ -45,7 +45,6 @@ getNodeStatus node nodeNames = do
             object [
                 "stats" .= statsView (NA.stats status),
                 "global-registry" .= NA.globalRegistryIsRunning status,
-                "global-cache" .= NA.globalCacheIsRunning status,
                 "logger" .= NA.loggerIsRunning status
                 ]
         statsView stats =

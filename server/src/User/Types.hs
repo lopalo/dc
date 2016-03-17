@@ -50,6 +50,13 @@ instance ToJSON UserMessage where
             ]
 
 
+data AreaOwnerName =
+    AreaOwnerName AreaId (Maybe UserName)
+    deriving (Generic, Typeable)
+
+instance Binary AreaOwnerName
+
+
 data ClientCommand
     = SendUserMessage [UserId] String
     deriving (Generic, Typeable)

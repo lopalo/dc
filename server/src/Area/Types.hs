@@ -30,6 +30,11 @@ data Enter = Enter !UE.UserArea UserPid Bool deriving (Generic, Typeable)
 instance Binary Enter
 
 
+data GetOwner = GetOwner deriving (Generic, Typeable)
+
+instance Binary GetOwner
+
+
 data ClientCommand
     = Echo !String
     | GetObjectsInfo ![ObjId]

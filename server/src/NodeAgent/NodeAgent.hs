@@ -23,7 +23,6 @@ import Control.Distributed.Process.Extras.Call (
 import Types (nodePrefix)
 import Utils (safeReceive, timeoutForCall)
 import qualified Base.GlobalRegistry as GR
-import qualified Base.GlobalCache as GC
 import qualified Base.Logger as L
 
 
@@ -40,7 +39,6 @@ instance Binary WhereIs
 data NodeStatus = NodeStatus {
         stats :: NodeStats,
         globalRegistryIsRunning :: Bool,
-        globalCacheIsRunning :: Bool,
         loggerIsRunning :: Bool
     }
     deriving (Generic, Typeable)
@@ -72,7 +70,6 @@ handleGetNodeStatus _ GetNodeStatus = do
         NodeStatus <$>
         getLocalNodeStats <*>
         GR.isRunning <*>
-        GC.isRunning <*>
         L.isRunning
     return (info, ())
 

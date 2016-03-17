@@ -14,10 +14,6 @@ cluster:
     node-ping-period-milliseconds: 1000
 
 user:
-    areas:
-        - area:alpha
-        - area:beta
-        - area:gamma
     start-area: *start-area
     size: [80, 40]
     speed: 300 # 60 #units per second

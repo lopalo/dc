@@ -3,7 +3,6 @@ define(function (require) {
     var _ = require("underscore");
     var Backbone = require("backbone");
     var Victor = require("victor");
-    var utils = require("utils");
 
     var Camera;
     var StageObject;

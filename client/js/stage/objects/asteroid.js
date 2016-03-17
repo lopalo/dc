@@ -5,7 +5,6 @@ define(function (require) {
     var TweenLite = require("tween-lite");
     var pixi = require("pixi");
 
-    var utils = require("utils");
     var models = require("stage/models");
     var views = require("stage/views");
 

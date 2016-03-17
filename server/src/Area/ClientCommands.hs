@@ -28,6 +28,7 @@ import Area.Vector (
     angle, distanceToSegment
     )
 import Area.Collision (Collision(Collision), rayCollision)
+import Area.Misc (broadcastOwnerName)
 
 
 type Response = Process (Value, State)
@@ -164,17 +165,20 @@ handleClientCommand state (Shoot targetPos, conn) =
             Nothing -> state
     where shooterId = uidByConn conn state
 
-handleClientCommand state (Capture cpid, conn) =
-    return $ (cpPL cpid ^%= capture) state
+handleClientCommand state (Capture cpid, conn) = do
+    broadcastOwnerName state'
+    return state'
     where
         ownerId = uidByConn conn state
+        name = U.name $ userByConn conn state
         capture cp =
             case CP.owner cp of
                 Just _ -> cp
                 Nothing -> cp{
-                    CP.owner=Just ownerId,
+                    CP.owner=Just (ownerId, name),
                     CP.durability=CP.maxDurability cp
                     }
+        state' = (cpPL cpid ^%= capture) state
 
 handleClientCommand state (PullAsteroid aid, conn) =
     let uid = uidByConn conn state

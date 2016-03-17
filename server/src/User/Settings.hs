@@ -11,7 +11,6 @@ import Types (Ts, AreaId, Size)
 
 
 data Settings = Settings {
-    areas :: [AreaId],
     startArea :: AreaId,
     size :: Size,
     speed :: Int,
@@ -24,7 +23,6 @@ instance FromJSON Settings where
 
     parseJSON (Object v) =
         Settings <$>
-        v .: "areas" <*>
         v .: "start-area" <*>
         v .: "size" <*>
         v .: "speed" <*>

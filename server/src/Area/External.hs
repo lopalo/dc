@@ -1,16 +1,24 @@
 
-module Area.External (enter, clientCmd, reconnect) where
+module Area.External (enter, clientCmd, reconnect, getOwners) where
 
 import Control.Applicative ((<$>))
+import qualified Data.Map.Strict as M
 
 import Data.Aeson (FromJSON, Value(Null), Result(Success), fromJSON)
 import Control.Distributed.Process hiding (reconnect)
+import Control.Distributed.Process.Extras (TagPool, newTagPool, getTag)
+import Control.Distributed.Process.Extras.Call (multicall)
 
 import Utils (evaluate)
 import WS.Connection (Connection)
-import Base.GlobalRegistry (globalNSend)
+import Base.GlobalRegistry (globalNSend, globalWhereIsByPrefix)
 import qualified User.External as UE
-import Types (UserId, UserPid(..), AreaId, AreaPid(..), RequestNumber)
+import Types (
+    UserId, UserPid(..), AreaId,
+    AreaPid(..), RequestNumber,
+    AreaOwners, areaPrefix
+    )
+import Utils(timeoutForCall)
 import Area.Types
 
 
@@ -49,3 +57,10 @@ reconnect :: AreaId -> UserId -> Connection -> Process ()
 reconnect areaId userId conn =
     globalNSend (show areaId) (Reconnection userId, conn)
 
+
+getOwners :: TagPool -> Process AreaOwners
+getOwners tagPool = do
+    areaPids <- globalWhereIsByPrefix areaPrefix tagPool
+    tag <- getTag tagPool
+    res <- multicall areaPids GetOwner tag timeoutForCall
+    return $ M.fromList [val | Just val <- res]

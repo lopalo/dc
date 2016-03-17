@@ -4,9 +4,11 @@ import qualified Data.Map.Strict as M
 import System.Random (randomR)
 
 import Data.Lens.Partial.Common ((^%=))
+import Control.Distributed.Process
 
-import Types (UserId, width)
+import Types (UserId, width, userPrefix)
 import Utils (mkRandomGen, choice)
+import qualified User.External as UE
 import qualified Area.Settings as AS
 import Area.State
 import Area.Objects.Gate (pos, size)
@@ -30,3 +32,8 @@ spawnUser uid state =
         if null gs
             then state
             else (userPL uid ^%= modUser) state
+
+
+broadcastOwnerName :: State -> Process ()
+broadcastOwnerName state =
+    UE.broadcastAreaOwnerName (areaId state) (ownerName state)

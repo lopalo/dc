@@ -49,7 +49,7 @@ import Area.Signal (
     AReason(..), DReason(..)
     )
 import Area.Utils (distance)
-import Area.Misc (spawnUser)
+import Area.Misc (spawnUser, broadcastOwnerName)
 import Area.Types (Object(..), Destroyable(..), ObjId(..))
 import qualified Area.Objects.User as U
 import qualified Area.Objects.ControlPoint as CP
@@ -83,6 +83,7 @@ handleTick state TimeTick = do
     when (tnum `rem` syncEveryTick == 0) $ do
         syncUsers state
         saveObjects state
+    when (ownerName state /= ownerName state') (broadcastOwnerName state')
     return state'
 
 

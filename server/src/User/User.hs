@@ -6,6 +6,7 @@ import Prelude hiding (log)
 import Control.Monad (forever, when, unless)
 import Data.Maybe (fromMaybe)
 import Text.Printf (printf)
+import qualified Data.Map.Strict as M
 import qualified Data.Sequence as Seq
 import Data.Foldable (toList)
 
@@ -125,6 +126,22 @@ handleBroadcastUserMessage state (bc, userMsg) = do
     handleUserMessage state userMsg
 
 
+handleAreaOwnerName :: State -> AreaOwnerName -> Process State
+handleAreaOwnerName state (AreaOwnerName aid maybeUserName) = do
+    case connection state of
+        Just conn ->
+            sendCmd conn "update-worldmap" $ M.singleton (show aid) maybeUserName
+        Nothing -> return ()
+    return state{areaOwners=M.insert aid maybeUserName $ areaOwners state}
+
+
+handleBroadcastAreaOwnerName ::
+    State -> (Broadcast, AreaOwnerName) -> Process State
+handleBroadcastAreaOwnerName state (bc, areaOwnerName) = do
+    localBroadcast bc areaOwnerName
+    handleAreaOwnerName state areaOwnerName
+
+
 userProcess :: UserName -> C.Connection -> US.Settings -> Process ()
 userProcess userName conn userSettings = do
     let uid = UserId userName
@@ -139,6 +156,7 @@ userProcess userName conn userSettings = do
     ok <- globalRegister (show uid) pid tagPool
     unless ok terminate
     res <- getUser uid tagPool
+    aOwners <- AE.getOwners tagPool
     let startArea = US.startArea userSettings
         usr = fromMaybe newUser res
         areaId = area usr
@@ -157,12 +175,12 @@ userProcess userName conn userSettings = do
             }
         state = State{
             user=usr,
-            areas=US.areas userSettings,
             settings=userSettings,
             connection=mConn,
             disconnectTs=Nothing,
             reqTagPool=tagPool,
-            userMessages=Seq.empty
+            userMessages=Seq.empty,
+            areaOwners=aOwners
             }
     tryToLinkToArea areaId mConn tagPool
     putUser usr
@@ -188,6 +206,8 @@ loop state = safeReceive handlers state >>= loop
             prepare handleSwitchArea,
             prepare handleMonitorNotification,
             prepare handleReconnection,
+            prepare handleAreaOwnerName,
+            prepare handleBroadcastAreaOwnerName,
             matchUnknown (return state)
             ]
 
@@ -230,14 +250,14 @@ initConnection conn state = do
     makeSelfPid >>= C.setUser conn
     sendCmd conn "init" $ initClientInfo state
     sendCmd conn "add-messages" $ toList $ userMessages state
+    sendCmd conn "update-worldmap" $ M.mapKeys show $ areaOwners state
 
 
 initClientInfo :: State -> Value
 initClientInfo state =
     object [
         "userId" .= userId usr,
-        "name" .= name usr,
-        "areas" .= areas state
+        "name" .= name usr
         ]
     where usr = user state
 

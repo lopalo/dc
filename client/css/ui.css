@@ -25,6 +25,10 @@
     max-width: 50%;
 }
 
+#ui-window-header {
+    float: left;
+}
+
 #ui-window-content {
     float: right;
     margin-bottom: 0%;
