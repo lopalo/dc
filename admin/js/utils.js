@@ -4,8 +4,14 @@ define(["mithril"], function (m) {
     var POLLING_INTERVAL = 1000;
 
     function extend(target, source) {
-        Object.keys(source).map(function (k) {
+        Object.keys(source).forEach(function (k) {
             target[k] = source[k];
+        });
+    }
+
+    function bindAll(obj, keys) {
+        keys.forEach(function (k) {
+            obj[k] = obj[k].bind(obj);
         });
     }
 
@@ -51,18 +57,23 @@ define(["mithril"], function (m) {
         poller.doRequest();
     }
     PollerController.prototype = {
-        updateQuery: function (url, queryData) {
-            this._poller.url = url;
-            this._poller.queryData = queryData;
-        },
         onunload: function () {
             this._poller.stopPolling();
         },
     };
 
+    function boolIcon(value) {
+        if (value) {
+            return m("span.glyphicon glyphicon-ok text-success");
+        }
+        return m("span.glyphicon glyphicon-remove text-danger");
+    }
+
     return {
         extend: extend,
+        bindAll: bindAll,
         urlEncoded: urlEncoded,
+        boolIcon: boolIcon,
         Poller: Poller,
         PollerController: PollerController
     };

@@ -4,3 +4,11 @@
     margin: 1%;
     float: left;
 }
+
+.key {
+    text-align: left !important;
+}
+
+.form-group {
+    padding-right: 8px;
+}

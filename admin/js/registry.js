@@ -3,8 +3,9 @@ define(["mithril", "utils"], function (m, utils) {
     var PollerController = utils.PollerController;
 
 
-    function RegistryController() {
-        PollerController.apply(this, arguments);
+    function RegistryController(url) {
+        utils.bindAll(this, ["setPrefix", "setNode"]);
+        PollerController.call(this, url, this._getQueryData());
     }
     RegistryController.prototype = Object.create(PollerController.prototype);
     utils.extend(RegistryController.prototype, {
@@ -18,7 +19,27 @@ define(["mithril", "utils"], function (m, utils) {
                 },
                 config: utils.urlEncoded
             });
-        }
+        },
+        getPrefix: function () {
+            return localStorage.getItem("registry:prefix") || "";
+        },
+        setPrefix: function (prefix) {
+            localStorage.setItem("registry:prefix", prefix);
+            this._updateQuery();
+        },
+        getNode: function () {
+            return localStorage.getItem("registry:node") || "";
+        },
+        setNode: function (node) {
+            localStorage.setItem("registry:node", node);
+            this._updateQuery();
+        },
+        _getQueryData: function () {
+            return {prefix: this.getPrefix(), node: this.getNode()};
+        },
+        _updateQuery: function () {
+            this._poller.queryData = this._getQueryData();
+        },
     });
 
 
@@ -27,6 +48,24 @@ define(["mithril", "utils"], function (m, utils) {
             return new RegistryController("/cluster/registry");
         },
         view: function (ctrl) {
+            var prefixFilter = m(".form-group", m(".input-group", [
+                m("span.input-group-addon", "Name Prefix"),
+                m("input.form-control", {
+                    oninput: m.withAttr("value", ctrl.setPrefix),
+                    value: ctrl.getPrefix()
+                })
+            ]));
+            var nodeFilter = m(".form-group", m(".input-group", [
+                m("span.input-group-addon", "Node"),
+                m("input.form-control", {
+                    oninput: m.withAttr("value", ctrl.setNode),
+                    value: ctrl.getNode()
+                })
+
+            ]));
+            var filters = m("form.form-inline", [prefixFilter, nodeFilter]);
+
+
             var thead = m("thead", m("tr", [
                 m("th", "Name"),
                 m("th", "Node"),
@@ -49,7 +88,9 @@ define(["mithril", "utils"], function (m, utils) {
                 return m("tr", [name, nodeId, uptime, kill]);
             });
             var tbody = m("tbody", rows);
-            return m("table.table stripped", [thead, tbody]);
+            var table = m("table.table stripped", [thead, tbody]);
+            var page = m("div", [filters, table]);
+            return page;
         }
     };
 

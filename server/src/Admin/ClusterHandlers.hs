@@ -2,6 +2,7 @@
 
 module Admin.ClusterHandlers (clusterHandlers) where
 
+import Data.Tuple.Utils (snd3)
 import qualified Data.Map.Strict as M
 
 import Data.Aeson (object, (.=))
@@ -60,11 +61,16 @@ getNodeStatus node nodeNames = do
 
 getRegistry :: LocalNode -> NodeNames -> ActionM ()
 getRegistry node nodeNames = do
-    registry <- execProcess node $ GR.getNameList "" =<< newTagPool
+    namePrefix <- param "prefix" `rescue` \_ -> return ""
+    nodeSelector <- param "node" `rescue` \_ -> return ""
+    registry <- execProcess node $ GR.getNameList namePrefix =<< newTagPool
     now <- liftIO milliseconds
     let nodeName = (nodeNames M.!) . processNodeId
         uptime ts = show $ now - ts
-    json [(name, nodeName pid, uptime ts) | (name, pid, ts) <- registry]
+        nodeFilter = (nodeSelector ==) . snd3
+        res = [(name, nodeName pid, uptime ts) | (name, pid, ts) <- registry]
+        res' = if null nodeSelector then res else filter nodeFilter res
+    json res'
 
 
 
