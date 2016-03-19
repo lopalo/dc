@@ -12,8 +12,7 @@ import Types (Ts)
 
 data Settings = Settings {
     gateFieldRadius :: Float,
-    shotDamage :: Int,
-    shotDistance :: Float,
+    shot :: ShotSettings,
     asteroidPullSpeed :: Float,
     routeFilterThreshold :: Float,
     tickMilliseconds :: Ts,
@@ -27,8 +26,7 @@ instance FromJSON Settings where
     parseJSON (Object v) =
         Settings <$>
         v .: "gate-field-radius" <*>
-        v .: "shot-damage" <*>
-        v .: "shot-distance" <*>
+        v .: "shot" <*>
         v .: "asteroid-pull-speed" <*>
         v .: "route-filter-threshold" <*>
         v .: "tick-milliseconds" <*>
@@ -36,4 +34,21 @@ instance FromJSON Settings where
         v .: "log-every-tick" <*>
         v .: "sync-every-tick"
     parseJSON _ = mzero
+
+
+data ShotSettings = ShotSettings {
+    shotDamage :: Int,
+    shotDistance :: Float,
+    shotCooldownMilliseconds :: Ts
+    }
+
+instance FromJSON ShotSettings where
+
+    parseJSON (Object v) =
+        ShotSettings <$>
+        v .: "damage" <*>
+        v .: "distance" <*>
+        v .: "cooldown-milliseconds"
+    parseJSON _ = mzero
+
 

@@ -58,7 +58,8 @@ handleEnter state (Enter ua userPid login, conn)
                 U.size=UE.size ua,
                 U.kills=UE.kills ua,
                 U.deaths=UE.deaths ua,
-                U.lastAttacker=Nothing
+                U.lastAttacker=Nothing,
+                U.nextShootTs=0
                 }
             insUsr = usersL ^%= insertUser user
             reason = if login then LogIn else Entry

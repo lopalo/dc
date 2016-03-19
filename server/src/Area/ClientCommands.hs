@@ -117,6 +117,13 @@ handleClientCommand state (Shoot targetPos, conn) =
         case state ^. userPL shooterId of
             Just shooter ->
                 let sett = settings state
+                    cooldown = AS.shotCooldownMilliseconds $ AS.shot sett
+                    now = currentTs state
+
+                    shotAllowed = U.nextShootTs shooter <= now
+                    shotCooldown =
+                        userPL shooterId ^%= \u ->
+                            u{U.nextShootTs=now + cooldown}
 
                     rGen = mkRandomGen shooterId $ tickNumber state
                     (t, _) = randomR (-0.5, 0.5) rGen
@@ -124,7 +131,7 @@ handleClientCommand state (Shoot targetPos, conn) =
                     widthV = fromPolar dWidth $ U.angle shooter
                     shooterPos = toPos $ fromPos (U.pos shooter) `add` widthV
 
-                    rayDist = AS.shotDistance sett
+                    rayDist = AS.shotDistance $ AS.shot sett
                     rayAngle =
                         angle $ fromPos targetPos `sub` fromPos shooterPos
                     rayV = fromPolar rayDist rayAngle
@@ -132,7 +139,7 @@ handleClientCommand state (Shoot targetPos, conn) =
                     ray = rayCollision (UId shooterId) shooterPos targetPos'
 
                     addSig pos = addSignal $ Shot shooterPos pos
-                    damage = AS.shotDamage sett
+                    damage = AS.shotDamage $ AS.shot sett
 
                     dmgTarget (UId uid) =
                         userFieldPL uid durabilityL ^-= damage
@@ -151,17 +158,23 @@ handleClientCommand state (Shoot targetPos, conn) =
                     updTargetActions (UId uid) = cancelUserAction uid replace
                     updTargetActions _ = id
                 in
-                    case ray $ colliders state of
-                        Just (Collision _ targetId targetPos'') ->
-                            let
-                                fs = [
-                                    dmgTarget targetId,
-                                    updTargetAttacker targetId,
-                                    updTargetActions targetId,
-                                    addSig targetPos''
-                                    ]
-                            in foldr ($) state fs
-                        Nothing -> addSig targetPos' state
+                    if shotAllowed
+                        then
+                            case ray $ colliders state of
+                                Just (Collision _ targetId targetPos'') ->
+                                    foldr ($) state [
+                                        shotCooldown,
+                                        dmgTarget targetId,
+                                        updTargetAttacker targetId,
+                                        updTargetActions targetId,
+                                        addSig targetPos''
+                                        ]
+                                Nothing ->
+                                    foldr ($) state [
+                                        shotCooldown,
+                                        addSig targetPos'
+                                        ]
+                        else state
             Nothing -> state
     where shooterId = uidByConn conn state
 

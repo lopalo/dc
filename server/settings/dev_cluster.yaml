@@ -23,8 +23,10 @@ user:
 
 area:
     gate-field-radius: 700
-    shot-damage: 10
-    shot-distance: 1200
+    shot:
+        damage: 10
+        distance: 1200
+        cooldown-milliseconds: 2000
     asteroid-pull-speed: 50 # 60 #units per second
     route-filter-threshold: 10 #units
     tick-milliseconds: 50

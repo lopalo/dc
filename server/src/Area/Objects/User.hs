@@ -5,7 +5,7 @@ module Area.Objects.User where
 import Data.Aeson (object, (.=))
 import Data.Lens.Strict (Lens, lens)
 
-import Types (UserId, UserName, UserMonitorRef, UserPid, Size(Size))
+import Types (UserId, UserName, UserMonitorRef, UserPid, Size(Size), Ts)
 import WS.Connection (Connection)
 import qualified User.External as UE
 import Area.Types (
@@ -34,7 +34,8 @@ data User = User {
     size :: !Size,
     kills :: !Int,
     deaths :: !Int,
-    lastAttacker :: Maybe UserId
+    lastAttacker :: Maybe UserId,
+    nextShootTs :: Ts
     }
 
 
