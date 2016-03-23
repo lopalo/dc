@@ -14,6 +14,7 @@ RUN sudo add-apt-repository ppa:hvr/ghc -y
 RUN apt-get update
 
 RUN apt-get install zlib1g-dev -y
+RUN apt-get install libleveldb1 libleveldb-dev libsnappy1 libsnappy-dev -y
 
 RUN apt-get install python -y
 RUN apt-get install python-pip -y

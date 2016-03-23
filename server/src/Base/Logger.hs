@@ -13,8 +13,6 @@ import qualified Control.Exception as Ex
 import Data.String.Utils (join)
 
 import Control.Distributed.Process
-import Database.SQLite3 (SQLError)
-import Database.SQLite.Simple (FormatError, ResultError)
 
 import Types (LogLevel(..))
 import qualified Settings as S
@@ -82,10 +80,7 @@ logException x = [
         Handler (\(ex :: Ex.ErrorCall) -> logEx ex),
         Handler (\(ex :: Ex.IOException) -> logEx ex),
         Handler (\(ex :: Ex.AssertionFailed) -> logEx ex),
-        Handler (\(ex :: Ex.ArithException) -> logEx ex),
-        Handler (\(ex :: SQLError) -> logEx ex),
-        Handler (\(ex :: FormatError) -> logEx ex),
-        Handler (\(ex :: ResultError) -> logEx ex)
+        Handler (\(ex :: Ex.ArithException) -> logEx ex)
         ]
     where
         logEx :: Show b => b -> Process a

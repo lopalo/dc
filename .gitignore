@@ -3,6 +3,7 @@
 *.pyc
 *logs
 */__pycache__
+dbs
 *.db
 *.db-journal
 .cabal-sandbox

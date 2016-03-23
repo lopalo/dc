@@ -7,12 +7,13 @@ import Control.Monad (mzero)
 import qualified Data.Map.Strict as M
 import qualified Data.ByteString.Char8 as B
 
-import Data.Aeson (FromJSON(parseJSON), Value(Object), (.:))
+import Data.Aeson (FromJSON(parseJSON), Object, Value(Object), (.:))
 import Data.Aeson.Types (Parser)
 import Control.Distributed.Process
 import Network.Transport (EndPointAddress(EndPointAddress))
 
-import Types (NodeName, NodeNames, LogLevel)
+import Types (ServiceId, NodeName, NodeNames, LogLevel, ServiceType(..))
+import qualified DB.Settings
 import qualified Area.Settings
 import qualified User.Settings
 import qualified HTTP.Settings
@@ -22,6 +23,7 @@ import qualified Admin.Settings
 data Settings = Settings {
     log :: LogSettings,
     cluster :: ClusterSettings,
+    db :: DB.Settings.Settings,
     user :: User.Settings.Settings,
     area :: Area.Settings.Settings,
     http :: HTTP.Settings.Settings,
@@ -35,6 +37,7 @@ instance FromJSON Settings where
         Settings <$>
         v .: "log" <*>
         v .: "cluster" <*>
+        v .: "db" <*>
         v .: "user" <*>
         v .: "area" <*>
         v .: "http" <*>
@@ -92,28 +95,32 @@ instance FromJSON NodeSettings where
     parseJSON _ = mzero
 
 
-data ServiceSettings
-    = DB {ident :: String, path :: String}
-    | WS {ident :: String, host :: String, port :: Int}
-    | HTTP {ident :: String, host :: String, port :: Int}
-    | Admin {ident :: String, host :: String, port :: Int}
-    | Area {ident :: String}
-    | NodeAgent {ident :: String}
-    | LogAggregator {ident :: String}
+
+
+data ServiceSettings = ServiceSettings {
+    serviceType :: ServiceType,
+    ident :: ServiceId,
+    options :: Object
+    }
+
 
 instance FromJSON ServiceSettings where
 
     parseJSON (Object v) = do
-        sType <- v .: "type" :: Parser String
+        typeName <- v .: "type" :: Parser String
         i <- v .: "ident" :: Parser String
-        case sType of
-            "db" -> DB i <$> v .: "path"
-            "ws" -> WS i <$> v .: "host" <*> v .: "port"
-            "http" -> HTTP i <$> v .: "host" <*> v .: "port"
-            "admin" -> Admin i <$> v .: "host" <*> v .: "port"
-            "area" -> return $ Area i
-            "log-aggregator" -> return $ LogAggregator i
-            _ -> mzero
+        let
+            sType =
+                case typeName of
+                    "area-db" -> AreaDB
+                    "user-db" -> UserDB
+                    "ws" -> WS
+                    "http" -> HTTP
+                    "admin" -> Admin
+                    "area" -> Area
+                    "log-aggregator" -> LogAggregator
+                    _ -> Unknown
+        return $ ServiceSettings sType i v
     parseJSON _ = mzero
 
 

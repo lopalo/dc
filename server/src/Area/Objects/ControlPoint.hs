@@ -5,25 +5,18 @@ module Area.Objects.ControlPoint where
 import GHC.Generics (Generic)
 import Data.Binary (Binary)
 import Data.Typeable (Typeable)
-
-import Data.Maybe (fromMaybe)
+import Control.Monad (mzero)
 import Control.Applicative ((<$>), (<*>))
-import Data.Text.Lazy.Encoding (encodeUtf8, decodeUtf8)
 
-import Database.SQLite.Simple (FromRow(fromRow), ToRow(toRow), field)
-import Database.SQLite.Simple.ToField (toField)
-import Database.SQLite.Simple.Internal (RowParser)
-import Data.Aeson (encode, decode, object, (.=))
+import Data.Aeson (Value(Object), object, (.=), (.:), (.:?), (.!=))
 
-import Types (UserId(UserId), UserName, Size(Size), width)
-import Area.Types (
-    Object(..), Destroyable(..),
-    Pos(Pos), Angle, ObjId(CPId)
-    )
+import Types (UserId, UserName, Size, width)
+import DB.Types (Persistent(toDB, fromDB))
+import Area.Types (Object(..), Destroyable(..), Pos, Angle, ObjId)
 import Area.Action (
     Active(..),
-    Action(EternalRotation, MoveCircularTrajectory),
-    eternalRotation, moveCircularTrajectory, publicAction
+    Action(EternalRotation),
+    eternalRotation, publicAction
     )
 import Area.Collision (Collidable(collider), Collider(Circular))
 
@@ -44,52 +37,33 @@ data ControlPoint = ControlPoint {
 instance Binary ControlPoint
 
 
-instance FromRow ControlPoint where
+instance Persistent ControlPoint where
 
-    fromRow = do
-        field :: RowParser String -- area field
-        ident_ <- CPId <$> field
-        name_ <- field
-        pos_ <- Pos <$> field <*> field
-        angle_ <- field
-        maxDurability_ <- field
-        durability_ <- field
-        Just actions_ <- decode . encodeUtf8 <$> field
-        size_ <- Size <$> field <*> field
-        maybeOwner <- decode . encodeUtf8 <$> field
-        return ControlPoint{
-            ident=ident_,
-            name=name_,
-            pos=pos_,
-            angle=angle_,
-            maxDurability=maxDurability_,
-            durability=durability_,
-            actions=actions_,
-            size=size_,
-            owner=fromMaybe Nothing maybeOwner
-            }
-
-instance ToRow ControlPoint where
-
-    toRow cp = [
-            toField ident_,
-            toField $ name cp,
-            toField x,
-            toField y,
-            toField $ angle cp,
-            toField $ maxDurability cp,
-            toField $ durability cp,
-            toField actions_,
-            toField w,
-            toField h,
-            toField owner_
+    toDB cp =
+        object [
+            "id" .= ident cp,
+            "name" .= name cp,
+            "pos" .= pos cp,
+            "angle" .= angle cp,
+            "max-durability" .= maxDurability cp,
+            "durability" .= durability cp,
+            "actions" .= actions cp,
+            "size" .= size cp,
+            "owner" .= owner cp
             ]
-        where
-            CPId ident_ = ident cp
-            Pos x y = pos cp
-            Size w h = size cp
-            actions_ = decodeUtf8 $ encode $ actions cp
-            owner_ = decodeUtf8 $ encode $ owner cp
+
+    fromDB (Object v) =
+        ControlPoint <$>
+        v .: "id" <*>
+        v .: "name" <*>
+        v .: "pos" <*>
+        v .:? "angle" .!= 0 <*>
+        v .: "max-durability" <*>
+        v .: "durability" <*>
+        v .:? "actions" .!= [] <*>
+        v .: "size" <*>
+        v .:? "owner" .!= Nothing
+    fromDB _ = mzero
 
 
 instance Object ControlPoint where

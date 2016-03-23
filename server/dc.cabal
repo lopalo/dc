@@ -42,8 +42,7 @@ Executable dc
         websockets == 0.9.5.0,
         containers == 0.5.5.1,
         yaml == 0.8.14,
-        direct-sqlite == 2.3.14,
-        sqlite-simple == 0.4.8.0,
+        leveldb-haskell == 0.6.3,
         scotty == 0.10.2,
         wai-middleware-static == 0.7.0.1
     Hs-Source-Dirs: src

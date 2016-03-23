@@ -20,7 +20,7 @@ import Control.Distributed.Process.Extras.Call (
     callResponse, callTimeout, multicall
     )
 
-import Types (nodePrefix)
+import Types (ServiceType(NodeAgent), prefix)
 import Utils (safeReceive, timeoutForCall)
 import qualified Base.GlobalRegistry as GR
 import qualified Base.Logger as L
@@ -77,7 +77,7 @@ handleGetNodeStatus _ GetNodeStatus = do
 distributedRequest ::
     (Serializable a, Serializable b) => a -> TagPool -> Process [b]
 distributedRequest msg tagPool = do
-    nodeAgentPids <- GR.globalWhereIsByPrefix nodePrefix tagPool
+    nodeAgentPids <- GR.globalWhereIsByPrefix (prefix NodeAgent) tagPool
     tag <- getTag tagPool
     res <- multicall nodeAgentPids msg tag timeoutForCall
     return [val | Just val <- res]

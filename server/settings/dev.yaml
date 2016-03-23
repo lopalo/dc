@@ -1,6 +1,9 @@
-start-area: &start-area area:alpha
 ws-addresses: &ws-addresses
     - [dc-dev-host-example.net, &ws-port-1 10501]
+
+cluster:
+    respawn-delay-milliseconds: [500, 1200]
+    node-ping-period-milliseconds: 1000
 
 log:
     log-level: Debug
@@ -8,12 +11,11 @@ log:
     logFile: null
     aggregator-name: null
 
-cluster:
-    respawn-delay-milliseconds: [500, 1200]
-    node-ping-period-milliseconds: 1000
+db:
+    db-dir: ../dbs/dev
 
 user:
-    start-area: *start-area
+    start-area: alpha
     size: [80, 40]
     speed: 300 # 60 #units per second
     init-durability: 100
@@ -47,33 +49,42 @@ nodes:
         node-host: localhost
         node-port: 10500
         services:
-            - type: db
-              ident: db #NOTE: hardcoded singleton
-              path: ../dbs/dev.db
+            - type: user-db
+              ident: "[0-1]|a"
 
             - type: ws
-              ident: ws:1
+              ident: one
               host: 0.0.0.0
               port: *ws-port-1
 
             - type: http
-              ident: http:1
+              ident: one
               host: 0.0.0.0
               port: 10502
 
             - type: admin
-              ident: admin
+              ident: one
               host: 0.0.0.0
               port: 10503
 
-            - type: area
-              ident: *start-area
+
+            - type: area-db
+              ident: "alpha|a"
+
+            - type: area-db
+              ident: "beta|a"
+
+            - type: area-db
+              ident: "gamma|a"
 
             - type: area
-              ident: area:beta
+              ident: alpha
 
             - type: area
-              ident: area:gamma
+              ident: beta
+
+            - type: area
+              ident: gamma
 
 
 

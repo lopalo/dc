@@ -7,7 +7,7 @@ import Control.Monad (mzero)
 
 import Data.Aeson (FromJSON(parseJSON), Value(Object), (.:))
 
-import Types (Ts, AreaId, Size)
+import Types (Ts, AreaId(AreaId), Size)
 
 
 data Settings = Settings {
@@ -23,7 +23,7 @@ instance FromJSON Settings where
 
     parseJSON (Object v) =
         Settings <$>
-        v .: "start-area" <*>
+        (AreaId <$> v .: "start-area") <*>
         v .: "size" <*>
         v .: "speed" <*>
         v .: "init-durability" <*>

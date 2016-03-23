@@ -16,10 +16,10 @@ import Control.Distributed.Process.Extras (newTagPool)
 import Control.Distributed.Process.Extras.Call (callResponse)
 
 import WS.Connection (Connection, setArea)
-import qualified DB.DB as DB
+import qualified DB.AreaDB as DB
 import Utils (milliseconds, safeReceive, evaluate)
 import qualified Area.Settings as AS
-import Types (AreaId, AreaPid(..), UserName)
+import Types (ServiceId, AreaId(..), AreaPid(..), UserName)
 import qualified User.External as UE
 import qualified Area.Objects.User as U
 import Area.Utils (sendCmd)
@@ -106,8 +106,8 @@ handleGetOwner state _ =
     return ((areaId state, ownerName state), state)
 
 
-areaProcess :: AS.Settings -> AreaId -> Process ()
-areaProcess aSettings aid = do
+areaProcess :: AS.Settings -> ServiceId -> Process ()
+areaProcess aSettings ident = do
     objects <- DB.getAreaObjects aid =<< newTagPool
     now <- liftIO milliseconds
     let state = State{
@@ -133,6 +133,7 @@ areaProcess aSettings aid = do
     scheduleTick $ AS.tickMilliseconds aSettings
     broadcastOwnerName state
     loop state
+    where aid = AreaId ident
 
 
 loop :: State -> Process ()

@@ -28,7 +28,7 @@ import qualified WS.Connection as C
 import qualified User.Settings as US
 import qualified Area.External as AE
 import qualified User.External as UE
-import DB.DB (putUser, getUser)
+import DB.UserDB (putUser, getUser)
 import User.Types
 import User.State
 import User.ClientCommands (handleClientCommand)
@@ -90,7 +90,7 @@ handleSyncState state (UE.SyncState ua) = do
             kills=UE.kills ua,
             deaths=UE.deaths ua
             }
-    putUser usr'
+    putUser usr' $ reqTagPool state
     log Debug $ printf "User '%s' synchronized" $ show $ userId usr'
     return state{user=usr'}
 
@@ -183,7 +183,7 @@ userProcess userName conn userSettings = do
             areaOwners=aOwners
             }
     tryToLinkToArea areaId mConn tagPool
-    putUser usr
+    putUser usr tagPool
     initConnection conn state
     userPid <- makeSelfPid
     AE.enter areaId (userArea usr) userPid True conn

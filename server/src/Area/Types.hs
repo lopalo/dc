@@ -11,7 +11,10 @@ import Data.String.Utils (startswith)
 import Data.Aeson (Value, ToJSON, toJSON, FromJSON, parseJSON)
 import Data.Lens.Strict (Lens, lens)
 
-import Types (UserId(..), UserPid(..), AreaId, delIdPrefix, userPrefix)
+import Types (
+    UserId(..), UserPid(..), ServiceType(User),
+    AreaId, delIdPrefix, prefix
+    )
 import qualified User.External as UE
 
 
@@ -85,7 +88,7 @@ instance Show ObjId where
 instance Read ObjId where
 
     readsPrec _ str
-        | userPrefix `startswith` str = [(UId (read str), "")]
+        | prefix User `startswith` str = [(UId (read str), "")]
         | "gate:" `startswith` str = [(GateId ("gate" `delIdPrefix` str), "")]
         | "asteroid:" `startswith` str =
             [(AsteroidId ("asteroid" `delIdPrefix` str), "")]

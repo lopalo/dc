@@ -1,7 +1,9 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Main where
 
 import Prelude hiding (log)
-import Control.Monad (forever, when)
+import Control.Monad (forever, when, void, mzero)
 import Data.Maybe (isNothing)
 import System.Environment (getArgs)
 import Data.Map.Strict ((!))
@@ -13,10 +15,13 @@ import Control.Distributed.Process.Extras.Time (milliSeconds)
 import Control.Distributed.Process.Extras.Timer (sleep)
 import Network.Transport.TCP (createTransport, defaultTCPParameters)
 import qualified Control.Distributed.Process.Node as Node
+import qualified Data.Aeson as Aeson
+import Data.Aeson (object, (.:))
+import Data.Aeson.Types (parse)
 import Data.Yaml (ParseException, decodeFileEither)
 
 import Utils (sleepSeconds)
-import Types (NodeName, LogLevel(..), nodePrefix)
+import Types (NodeName, LogLevel(..), ServiceType(..), prefix)
 import Base.Logger (loggerProcess, log)
 import Base.GlobalRegistry (
     globalRegistryProcess,
@@ -24,7 +29,8 @@ import Base.GlobalRegistry (
     globalWhereIs
     )
 import Area.Area (areaProcess)
-import DB.DB (dbProcess)
+import DB.AreaDB (areaDBProcess)
+import DB.UserDB (userDBProcess)
 import HTTP.HTTP (httpProcess)
 import WS.WS (wsProcess)
 import Admin.Admin (adminProcess)
@@ -37,7 +43,8 @@ startNode ::
     Node.LocalNode -> S.Settings -> NodeName -> Process ()
 startNode node settings nodeName = do
     let services = S.services $  S.nodes settings ! nodeName
-        nodeService = S.NodeAgent $ nodePrefix ++ nodeName
+        Aeson.Object emptyOptions = object []
+        nodeService = S.ServiceSettings NodeAgent nodeName emptyOptions
         services' = nodeService : services
         logSettings = S.log settings
     logSender <- createSender (S.logAggregatorName logSettings) nodeName
@@ -53,39 +60,56 @@ spawnService ::
 spawnService node settings tagPool serviceSettings = do
     let delayR = S.respawnDelayMilliseconds $ S.cluster settings
         randomDelay = liftIO $ randomRIO delayR
+        serviceType = S.serviceType serviceSettings
         ident = S.ident serviceSettings
-        service =
-            case serviceSettings of
-                S.DB{S.path=path} -> dbProcess path
-                S.WS{S.host=host, S.port=port} ->
-                    wsProcess settings node host port
-                S.HTTP{S.host=host, S.port=port} ->
-                    httpProcess (S.http settings) host port
-                S.Admin{S.host=host, S.port=port} ->
-                    adminProcess settings node host port
-                S.Area{} ->
-                    areaProcess (S.area settings) (read ident)
-                S.NodeAgent{} -> nodeAgentProcess
-                S.LogAggregator{} -> logAggregatorProcess
+        options = S.options serviceSettings
+        name = prefix serviceType ++ ident
+
+        initService AreaDB opts =
+            return $ areaDBProcess (S.db settings) ident
+        initService UserDB _ =
+            return $ userDBProcess (S.db settings) ident
+        initService WS opts = do
+            host <- opts .: "host"
+            port <- opts .: "port"
+            return $ wsProcess settings node host port
+        initService HTTP opts = do
+            host <- opts .: "host"
+            port <- opts .: "port"
+            return $ httpProcess (S.http settings) host port
+        initService Admin opts = do
+            host <- opts .: "host"
+            port <- opts .: "port"
+            return $ adminProcess settings node host port
+        initService Area _ =
+            return $ areaProcess (S.area settings) ident
+        initService NodeAgent _ =
+            return nodeAgentProcess
+        initService LogAggregator _ =
+            return logAggregatorProcess
+        initService _ _ = mzero
+
         wait = randomDelay >>= sleep . milliSeconds
-        serviceLoop = do
+        serviceLoop service = do
             wait
             forever $ do
-                --log Debug $ "Try to start service: " ++ ident
-                maybePid <- globalWhereIs ident tagPool --optimization
+                --log Debug $ "Try to start service: " ++ name
+                maybePid <- globalWhereIs name tagPool --optimization
                 when (isNothing maybePid) $ do
-                    servicePids <- distributedWhereIs ident tagPool
+                    servicePids <- distributedWhereIs name tagPool
                     --reduces probability of conflicts during disconnection
                     when (null servicePids) $ do
                         pid <- getSelfPid
-                        ok <- globalRegister ident pid tagPool
+                        ok <- globalRegister name pid tagPool
                         when ok $ do
-                            log Info $ "Start service: " ++ ident
+                            log Info $ "Start service: " ++ name
                             service
                 wait
-        spawnLoop = spawnLocal $ serviceLoop `finally` spawnLoop
-    spawnLoop
-    return ()
+        spawnLoop service =
+            spawnLocal $ serviceLoop service `finally` spawnLoop service
+    case parse (initService serviceType) options of
+        Aeson.Success service -> void $ spawnLoop service
+        Aeson.Error err -> log Error $ "Service init error: " ++ err
 
 
 main :: IO ()

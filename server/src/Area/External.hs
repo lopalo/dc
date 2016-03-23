@@ -15,8 +15,8 @@ import Base.GlobalRegistry (globalNSend, globalWhereIsByPrefix)
 import qualified User.External as UE
 import Types (
     UserId, UserPid(..), AreaId,
-    AreaPid(..), RequestNumber,
-    AreaOwners, areaPrefix
+    AreaPid(..), ServiceType(Area),
+    RequestNumber, AreaOwners, prefix
     )
 import Utils(timeoutForCall)
 import Area.Types
@@ -60,7 +60,7 @@ reconnect areaId userId conn =
 
 getOwners :: TagPool -> Process AreaOwners
 getOwners tagPool = do
-    areaPids <- globalWhereIsByPrefix areaPrefix tagPool
+    areaPids <- globalWhereIsByPrefix (prefix Area) tagPool
     tag <- getTag tagPool
     res <- multicall areaPids GetOwner tag timeoutForCall
     return $ M.fromList [val | Just val <- res]

@@ -1,10 +1,10 @@
 #!/bin/bash
-DB=../server/dbs/dev.db
+DB_DIR=../server/dbs/dev
 
 cd "$(dirname "$0")"
-touch $DB &&
-rm $DB &&
-./create_db $DB &&
-./generate_area_objects $DB alpha &&
-./generate_area_objects $DB beta &&
-./generate_area_objects $DB gamma
+rm -rf $DB_DIR
+mkdir -p $DB_DIR
+./create_db $DB_DIR "user[0-1]|a" &&
+./generate_area_objects $DB_DIR "alpha|a" &&
+./generate_area_objects $DB_DIR "beta|a" &&
+./generate_area_objects $DB_DIR "gamma|a"

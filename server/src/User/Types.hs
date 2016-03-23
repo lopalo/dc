@@ -6,12 +6,16 @@ import GHC.Generics (Generic)
 import Data.Binary (Binary)
 import Data.Typeable (Typeable)
 import Control.Applicative ((<$>), (<*>))
+import Control.Monad (mzero)
 
-import Data.Aeson (ToJSON, toJSON, object, (.=))
-import Database.SQLite.Simple (FromRow(fromRow), ToRow(toRow), field)
+import Data.Aeson (
+    ToJSON(toJSON), Value(Object),
+    object, (.=), (.:), (.:?), (.!=)
+    )
 
 import qualified WS.Connection as C
-import Types (UserId(..), UserName, AreaId(AreaId), Size(Size))
+import DB.Types (Persistent(toDB, fromDB))
+import Types (UserId(..), UserName, AreaId, Size)
 
 
 ----messages----
@@ -82,43 +86,32 @@ data User = User {
 instance Binary User
 
 
-instance FromRow User where
+instance Persistent User where
 
-    fromRow =
-        let
-            idField = UserId <$> field
-            areaField = AreaId <$> field
-            sizeField = Size <$> field <*> field
-        in
-            User <$>
-            idField <*>
-            field <*>
-            areaField <*>
-            field <*>
-            field <*>
-            field <*>
-            sizeField <*>
-            field <*>
-            field
+    toDB u =
+        object [
+            "id" .= userId u,
+            "name" .= name u,
+            "area" .= area u,
+            "speed" .= speed u,
+            "max-durability" .= maxDurability u,
+            "durability" .= durability u,
+            "size" .= size u,
+            "kills" .= kills u,
+            "deaths" .= deaths u
+            ]
 
+    fromDB (Object v) =
+        User <$>
+        v .: "id" <*>
+        v .: "name" <*>
+        v .: "area" <*>
+        v .: "speed" <*>
+        v .: "max-durability" <*>
+        v .: "durability" <*>
+        v .: "size" <*>
+        v .:? "kills" .!= 0 <*>
+        v .:? "deaths" .!= 0
+    fromDB _ = mzero
 
-instance ToRow User where
-
-    toRow u =
-        toRow (
-            uid,
-            name u,
-            aid,
-            speed u,
-            maxDurability u,
-            durability u,
-            w,
-            h,
-            kills u,
-            deaths u
-            )
-        where
-            UserId uid = userId u
-            AreaId aid = area u
-            Size w h = size u
 

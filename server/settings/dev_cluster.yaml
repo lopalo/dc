@@ -1,4 +1,3 @@
-start-area: &start-area area:alpha
 ws-addresses: &ws-addresses
     - [dc-dev-host-example.net, &ws-port-1 10611]
     - [dc-dev-host-example.net, &ws-port-2 10612]
@@ -13,8 +12,11 @@ cluster:
     respawn-delay-milliseconds: [500, 1200]
     node-ping-period-milliseconds: 1000
 
+db:
+    db-dir: ../dbs/dev
+
 user:
-    start-area: *start-area
+    start-area: alpha
     size: [80, 40]
     speed: 300 # 60 #units per second
     init-durability: 100
@@ -51,51 +53,60 @@ nodes:
         services:
 
             - type: ws
-              ident: ws:1
+              ident: one
               host: 0.0.0.0
               port: *ws-port-1
 
             - type: http
-              ident: http:1
+              ident: one
               host: 0.0.0.0
               port: 10621
 
             - type: admin
-              ident: admin
+              ident: one
               host: 0.0.0.0
               port: 10622
 
             - type: area
-              ident: *start-area
+              ident: alpha
 
             - type: area
-              ident: area:beta
+              ident: beta
 
     second:
         node-host: localhost
         node-port: 10602
         services:
-            - type: db
-              ident: db #NOTE: hardcoded singleton
+            - type: user-db
+              ident: "[0-1]|a"
               path: ../dbs/dev.db
 
+            - type: area-db
+              ident: "alpha|a"
+
+            - type: area-db
+              ident: "beta|a"
+
+            - type: area-db
+              ident: "gamma|a"
+
             - type: ws
-              ident: ws:2
+              ident: two
               host: 0.0.0.0
               port: *ws-port-2
 
             - type: area
-              ident: area:beta
+              ident: beta
 
     third:
         node-host: localhost
         node-port: 10603
         services:
             - type: area
-              ident: *start-area
+              ident: alpha
 
             - type: area
-              ident: area:gamma
+              ident: gamma
 
 
 

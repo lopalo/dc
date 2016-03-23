@@ -5,19 +5,14 @@ module Area.Objects.Asteroid where
 import GHC.Generics (Generic)
 import Data.Binary (Binary)
 import Data.Typeable (Typeable)
-
+import Control.Monad (mzero)
 import Control.Applicative ((<$>), (<*>))
-import Data.Text.Lazy.Encoding (encodeUtf8, decodeUtf8)
 
-import Database.SQLite.Simple (FromRow(fromRow), ToRow(toRow), field)
-import Database.SQLite.Simple.Internal (RowParser)
-import Data.Aeson (encode, decode, object, (.=))
+import Data.Aeson (Value(Object), object, (.=), (.:), (.:?), (.!=))
 
-import Types (Size(Size), width)
-import Area.Types (
-    Object(..), Destroyable(..),
-    Pos(Pos), Angle, ObjId(AsteroidId)
-    )
+import Types (Size, width)
+import DB.Types (Persistent(toDB, fromDB))
+import Area.Types (Object(..), Destroyable(..), Pos, Angle, ObjId)
 import Area.Action (
     Active(..),
     Action(EternalRotation, MoveCircularTrajectory, MoveDistance),
@@ -42,49 +37,31 @@ data Asteroid = Asteroid {
 instance Binary Asteroid
 
 
-instance FromRow Asteroid where
+instance Persistent Asteroid where
 
-    fromRow = do
-        field :: RowParser String -- area field
-        ident_ <- AsteroidId <$> field
-        name_ <- field
-        pos_ <- Pos <$> field <*> field
-        angle_ <- field
-        maxDurability_ <- field
-        durability_ <- field
-        Just actions_ <- decode . encodeUtf8 <$> field
-        size_ <- Size <$> field <*> field
-        return Asteroid{
-            ident=ident_,
-            name=name_,
-            pos=pos_,
-            angle=angle_,
-            maxDurability=maxDurability_,
-            durability=durability_,
-            actions=actions_,
-            size=size_
-            }
+    toDB ast =
+        object [
+            "id" .= ident ast,
+            "name" .= name ast,
+            "pos" .= pos ast,
+            "angle" .= angle ast,
+            "max-durability" .= maxDurability ast,
+            "durability" .= durability ast,
+            "actions" .= actions ast,
+            "size" .= size ast
+            ]
 
-instance ToRow Asteroid where
-
-    toRow ast =
-        toRow (
-            ident_,
-            name ast,
-            x,
-            y,
-            angle ast,
-            maxDurability ast,
-            durability ast,
-            actions_,
-            w,
-            h
-            )
-        where
-            AsteroidId ident_ = ident ast
-            Pos x y = pos ast
-            Size w h = size ast
-            actions_ = decodeUtf8 $ encode $ actions ast
+    fromDB (Object v) =
+        Asteroid <$>
+        v .: "id" <*>
+        v .: "name" <*>
+        v .: "pos" <*>
+        v .:? "angle" .!= 0 <*>
+        v .: "max-durability" <*>
+        v .: "durability" <*>
+        v .:? "actions" .!= [] <*>
+        v .: "size"
+    fromDB _ = mzero
 
 
 instance Object Asteroid where

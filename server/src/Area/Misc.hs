@@ -6,7 +6,7 @@ import System.Random (randomR)
 import Data.Lens.Partial.Common ((^%=))
 import Control.Distributed.Process
 
-import Types (UserId, width, userPrefix)
+import Types (UserId, width)
 import Utils (mkRandomGen, choice)
 import qualified User.External as UE
 import qualified Area.Settings as AS

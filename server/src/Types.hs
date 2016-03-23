@@ -23,19 +23,10 @@ delIdPrefix :: String -> String -> String
 delIdPrefix = delPrefix ":"
 
 
-areaPrefix :: String
-areaPrefix = "area:"
-
-
-userPrefix :: String
-userPrefix = "user:"
-
-
-nodePrefix :: String
-nodePrefix = "node:"
-
-
 type Ts = Int -- absolute time in milliseconds
+
+
+type ServiceId = String
 
 
 type NodeName = String
@@ -62,7 +53,7 @@ instance Binary UserId
 
 instance Show UserId where
 
-    show (UserId str) = userPrefix ++ str
+    show (UserId str) = prefix User ++ str
 
 instance Read UserId where
 
@@ -88,7 +79,7 @@ instance Binary AreaId
 
 instance Show AreaId where
 
-    show (AreaId str) = areaPrefix ++ str
+    show (AreaId str) = prefix Area ++ str
 
 instance Read AreaId where
 
@@ -130,4 +121,37 @@ instance FromJSON Size where
     parseJSON val = do
         (w, h) <- parseJSON val
         return (Size w h)
+
+
+data ServiceType
+    = AreaDB
+    | UserDB
+    | WS
+    | HTTP
+    | Admin
+    | Area
+    | User
+    | NodeAgent
+    | LogAggregator
+    | Unknown
+    deriving (Eq, Ord)
+
+
+servicePrefixes :: M.Map ServiceType String
+servicePrefixes = M.fromList [
+    (AreaDB, "area-db:"),
+    (UserDB, "user-db:"),
+    (WS, "ws:"),
+    (HTTP, "http:"),
+    (Admin, "admin:"),
+    (Area, "area:"),
+    (User, "user:"),
+    (NodeAgent, "node:"),
+    (LogAggregator, "log-aggregator:")
+    ]
+
+
+prefix :: ServiceType -> String
+prefix = (servicePrefixes M.!)
+
 

@@ -20,7 +20,7 @@ import Broadcaster (broadcast)
 import WS.Connection (Connection)
 import Utils (evaluate)
 import Types
-import User.Types
+import User.Types hiding (User)
 
 
 data UserArea = UserArea {
@@ -58,7 +58,7 @@ switchArea (UserPid pid) aid = send pid $ SwitchArea aid
 broadcastAreaOwnerName :: AreaId -> Maybe UserName -> Process ()
 broadcastAreaOwnerName aid maybeUserName = do
     spawnLocal $ do
-        userPids <- globalWhereIsByPrefix userPrefix =<< newTagPool
+        userPids <- globalWhereIsByPrefix (prefix User) =<< newTagPool
         broadcast userPids $ AreaOwnerName aid maybeUserName
     return ()
 

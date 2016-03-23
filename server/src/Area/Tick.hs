@@ -28,7 +28,7 @@ import Data.Aeson (ToJSON, Value, object, (.=))
 import Types (Ts, LogLevel(..))
 import Utils (milliseconds)
 import Base.Logger (log)
-import qualified DB.DB as DB
+import qualified DB.AreaDB as DB
 import qualified WS.Connection as C
 import qualified Area.Settings as AS
 import Area.Action (
