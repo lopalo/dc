@@ -10,26 +10,30 @@ import GHC.Generics (Generic)
 import Data.Binary (Binary)
 import Data.Typeable (Typeable)
 import Prelude hiding (log)
+import Control.Applicative ((<$>))
 import Control.Monad (forever)
-import Data.ByteString (isPrefixOf)
+import Data.ByteString (ByteString, isPrefixOf)
+import Data.ByteString.Char8 (pack)
+import qualified Data.Set as Set
 
 import Control.Distributed.Process
 import Control.Distributed.Process.Extras (TagPool, getTag, newTagPool)
 import Control.Distributed.Process.Extras.Call (callResponse, callTimeout)
 import Database.LevelDB.Base (
-    DB, BatchOp(Put), write,
+    DB, BatchOp(Put, Del), write,
     defaultReadOptions, defaultWriteOptions
     )
 import Database.LevelDB.Iterator (createIter, releaseIter)
 import Database.LevelDB.Streaming (
-    KeyRange(AllKeys), Direction(Asc), entrySlice
+    KeyRange(AllKeys), Direction(Asc),
+    entrySlice, keySlice
     )
 import qualified Data.Stream.Monadic as Stream
 
 import Base.GlobalRegistry (globalWhereIs)
 import Base.Logger (log)
 import Types (ServiceId, AreaId(..), LogLevel(..), ServiceType(AreaDB), prefix)
-import Utils (safeReceive, timeoutForCall)
+import Utils (safeReceive, timeoutForCall, milliseconds)
 import Area.Types (objId)
 import Area.Objects.Gate (Gate)
 import Area.Objects.Asteroid (Asteroid)
@@ -60,6 +64,8 @@ data PutAreaObjects =
 instance Binary PutAreaObjects
 
 
+updateTsKey :: ByteString
+updateTsKey = "update-timestamp"
 
 
 areaDBProcess :: DS.Settings -> ServiceId -> Process ()
@@ -80,12 +86,12 @@ loop db = forever $ safeReceive handlers ()
 
 handleGetAreaObjects :: DB -> GetAreaObjects -> Process (AreaObjects, ())
 handleGetAreaObjects db GetAreaObjects = do
-    objs <- bracket makeIter releaseIter handleIter
+    objs <- bracket makeIter releaseIter getObjects
     return (objs, ())
     where
         emptyObjects = AreaObjects [] [] []
         makeIter = createIter db defaultReadOptions
-        handleIter i =
+        getObjects i =
             Stream.foldl' handleEntry emptyObjects $ entrySlice i AllKeys Asc
 
         handleEntry objs (k, v)
@@ -100,14 +106,32 @@ handleGetAreaObjects db GetAreaObjects = do
 
 handlePutAreaObjects :: DB -> PutAreaObjects -> Process ()
 handlePutAreaObjects db (PutAreaObjects objects) = do
-    write db defaultWriteOptions $ concat batch
-    where
+    let makeIter = createIter db defaultReadOptions
+        getObjectsKeys i =
+            let slice = keySlice i AllKeys Asc
+                handleKey k
+                    | "gate:" `isPrefixOf` k = True
+                    | "asteroid:" `isPrefixOf` k = True
+                    | "cp:" `isPrefixOf` k = True
+                    | otherwise = False
+                slice' = Stream.filter handleKey slice
+            in Set.fromList <$> Stream.toList slice'
+    objKeys <- bracket makeIter releaseIter getObjectsKeys
+    ts <- liftIO milliseconds
+    let updateTs = Put updateTsKey $ pack $ show ts
+        metaBatch = [updateTs]
         putOp obj = Put (key $ objId obj) (toByteString obj)
-        batch = [
-            map putOp $ gates objects,
-            map putOp $ asteroids objects,
-            map putOp $ controlPoints objects
-            ]
+        batch =
+            concat [
+                map putOp $ gates objects,
+                map putOp $ asteroids objects,
+                map putOp $ controlPoints objects,
+                metaBatch
+                ]
+        objKeys' = Set.fromList $ (\(Put k _) -> k) <$> batch
+        delKeys = objKeys Set.\\ objKeys'
+        batch' = (Del <$> Set.toList delKeys) ++ batch
+    write db defaultWriteOptions batch'
 
 
 getDBForArea :: AreaId -> TagPool -> Process ProcessId

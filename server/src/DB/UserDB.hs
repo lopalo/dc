@@ -7,12 +7,13 @@ import Data.Binary (Binary)
 import Data.Typeable (Typeable)
 import Prelude hiding (log)
 import Control.Monad (forever)
+import Data.ByteString.Char8 (pack)
 
 import Control.Distributed.Process
 import Control.Distributed.Process.Extras (TagPool, getTag)
 import Control.Distributed.Process.Extras.Call (callResponse, callTimeout)
 import Database.LevelDB.Base (
-    DB, get, put,
+    DB, BatchOp(Put), get, write,
     defaultReadOptions, defaultWriteOptions
     )
 
@@ -22,7 +23,7 @@ import Types (
     UserId(..), ServiceId,
     ServiceType(UserDB), LogLevel(Error), prefix
     )
-import Utils (safeReceive, timeoutForCall)
+import Utils (safeReceive, timeoutForCall, milliseconds)
 import User.Types (User, userId)
 import DB.Utils (dbProcess, key)
 import DB.Types (Persistent(fromByteString, toByteString))
@@ -37,6 +38,10 @@ instance Binary GetUser
 data PutUser = PutUser User deriving (Generic, Typeable)
 
 instance Binary PutUser
+
+
+updateTsKeyPrefix :: String
+updateTsKeyPrefix = "update-timestamp:"
 
 
 userDBProcess :: DS.Settings -> ServiceId -> Process ()
@@ -63,7 +68,14 @@ handleGetUser db (GetUser uid) = do
 
 handlePutUser :: DB -> PutUser -> Process ()
 handlePutUser db (PutUser user) = do
-    put db defaultWriteOptions (key $ userId user) (toByteString user)
+    ts <- liftIO milliseconds
+    let uid = userId user
+        UserId ident = uid
+        batch = [
+            Put (key uid) (toByteString user),
+            Put (key $ updateTsKeyPrefix ++ ident) (pack $ show ts)
+            ]
+    write db defaultWriteOptions batch
 
 
 getDBForUser :: UserId -> TagPool -> Process ProcessId
