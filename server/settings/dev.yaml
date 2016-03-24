@@ -50,7 +50,10 @@ nodes:
         node-port: 10500
         services:
             - type: user-db
-              ident: "[0-1]|a"
+              ident: "[0-2]|a"
+
+            - type: user-db
+              ident: "[1-2]|a"
 
             - type: ws
               ident: one

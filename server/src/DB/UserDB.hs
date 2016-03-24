@@ -8,6 +8,7 @@ import Data.Typeable (Typeable)
 import Prelude hiding (log)
 import Control.Monad (forever)
 import Data.ByteString.Char8 (pack)
+import Data.String.Utils (split, startswith)
 
 import Control.Distributed.Process
 import Control.Distributed.Process.Extras (TagPool, getTag)
@@ -16,18 +17,28 @@ import Database.LevelDB.Base (
     DB, BatchOp(Put), get, write,
     defaultReadOptions, defaultWriteOptions
     )
+import Data.Digest.CRC32 (crc32)
 
-import Base.GlobalRegistry (globalWhereIsByPrefix)
+import Base.GlobalRegistry (getNameList)
 import Base.Logger (log)
 import Types (
-    UserId(..), ServiceId,
-    ServiceType(UserDB), LogLevel(Error), prefix
+    UserId(..), ServiceId, ServiceType(UserDB),
+    LogLevel(Error), prefix, delIdPrefix
     )
 import Utils (safeReceive, timeoutForCall, milliseconds)
 import User.Types (User, userId)
 import DB.Utils (dbProcess, key)
 import DB.Types (Persistent(fromByteString, toByteString))
 import qualified DB.Settings as DS
+
+
+type ShardNumber = Int
+
+
+type ShardAmount = Int
+
+
+type ShardInfo = (ShardNumber, ShardAmount)
 
 
 data GetUser = GetUser UserId deriving (Generic, Typeable)
@@ -80,12 +91,36 @@ handlePutUser db (PutUser user) = do
 
 getDBForUser :: UserId -> TagPool -> Process ProcessId
 getDBForUser (UserId uid) tagPool = do
-    res <- globalWhereIsByPrefix (prefix UserDB) tagPool
+    let namePair (name, pid, _) = (name, pid)
+    res <- fmap (map namePair) (getNameList (prefix UserDB) tagPool)
     case res of
-        [dbPid] -> return dbPid
-        _ -> do
-            log Error $ "Cannot get db for user " ++ uid
+        [] -> do
+            log Error $ "There is no user db" ++ uid
             terminate
+        nameList -> do
+            let name = fst $ head $ nameList
+                (_, amount) = getShardInfo name
+                hash = fromIntegral $ crc32 $ key uid
+                number = hash `rem` amount
+                shard = shardName (number, amount)
+            case map snd $ filter (startswith shard . fst) nameList of
+                [dbPid] -> return dbPid
+                _ -> do
+                    log Error $ "Cannot get db for user " ++ uid
+                    terminate
+
+
+getShardInfo :: String -> ShardInfo
+getShardInfo name =
+    let dbId = delIdPrefix (init $ prefix UserDB) name
+        [shardInfo, _] = split "|" dbId;
+        [number, amount] = split "-" $ tail $ init shardInfo;
+    in (read number, read amount)
+
+
+shardName :: ShardInfo -> String
+shardName (number, amount) =
+    prefix UserDB ++ "[" ++ show number ++ "-" ++ show amount ++ "]"
 
 
 --external interface

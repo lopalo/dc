@@ -4,7 +4,7 @@ DB_DIR=../server/dbs/dev
 cd "$(dirname "$0")"
 rm -rf $DB_DIR
 mkdir -p $DB_DIR
-./create_db $DB_DIR "user[0-1]|a" &&
+./create_db $DB_DIR "user[0-2]|a" "user[1-2]|a" &&
 ./generate_area_objects $DB_DIR "alpha|a" &&
 ./generate_area_objects $DB_DIR "beta|a" &&
 ./generate_area_objects $DB_DIR "gamma|a"
