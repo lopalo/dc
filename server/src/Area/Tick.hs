@@ -288,10 +288,11 @@ syncUsers state = mapM_ sync us
 
 
 saveObjects :: State -> Process ()
-saveObjects state = DB.putAreaObjects (areaId state) objs
+saveObjects state = DB.putAreaObjects (areaId state) minReplicas objs
     where
         g getter = M.elems $ getter state
         objs = DB.AreaObjects (g gates) (g asteroids) (g controlPoints)
+        minReplicas = minDBReplicas state
 
 
 broadcastCmd :: ToJSON a => State -> String -> a -> Process ()

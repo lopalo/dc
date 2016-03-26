@@ -51,6 +51,7 @@ type ControlPoints = M.Map ObjId CP.ControlPoint
 data State = State {
     areaId :: !AreaId,
     settings :: !Settings,
+    minDBReplicas :: !Int,
     tickNumber :: !Int,
     currentTs :: !Ts,
     users :: !Users,

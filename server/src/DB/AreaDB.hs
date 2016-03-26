@@ -11,16 +11,19 @@ import Data.Binary (Binary)
 import Data.Typeable (Typeable)
 import Prelude hiding (log)
 import Control.Applicative ((<$>))
-import Control.Monad (forever)
+import Control.Monad (forever, when)
+import Data.Maybe (fromMaybe)
 import Data.ByteString (ByteString, isPrefixOf)
-import Data.ByteString.Char8 (pack)
+import Data.ByteString.Char8 (pack, unpack)
 import qualified Data.Set as Set
 
 import Control.Distributed.Process
 import Control.Distributed.Process.Extras (TagPool, getTag, newTagPool)
-import Control.Distributed.Process.Extras.Call (callResponse, callTimeout)
+import Control.Distributed.Process.Extras.Call (
+    callResponse, callTimeout, multicall
+    )
 import Database.LevelDB.Base (
-    DB, BatchOp(Put, Del), write,
+    DB, BatchOp(Put, Del), get, write,
     defaultReadOptions, defaultWriteOptions
     )
 import Database.LevelDB.Iterator (createIter, releaseIter)
@@ -30,9 +33,12 @@ import Database.LevelDB.Streaming (
     )
 import qualified Data.Stream.Monadic as Stream
 
-import Base.GlobalRegistry (globalWhereIs)
+import Base.GlobalRegistry (globalWhereIsByPrefix)
 import Base.Logger (log)
-import Types (ServiceId, AreaId(..), LogLevel(..), ServiceType(AreaDB), prefix)
+import Types (
+    Ts, ServiceId, AreaId(..), LogLevel(..),
+    ServiceType(AreaDB), prefix
+    )
 import Utils (safeReceive, timeoutForCall, milliseconds)
 import Area.Types (objId)
 import Area.Objects.Gate (Gate)
@@ -57,6 +63,11 @@ data GetAreaObjects = GetAreaObjects deriving (Generic, Typeable)
 instance Binary GetAreaObjects
 
 
+data GetUpdateTs = GetUpdateTs deriving (Generic, Typeable)
+
+instance Binary GetUpdateTs
+
+
 data PutAreaObjects =
     PutAreaObjects AreaObjects
     deriving (Generic, Typeable)
@@ -79,6 +90,7 @@ loop db = forever $ safeReceive handlers ()
         prepareCall h = callResponse (h db)
         handlers = [
             prepare handlePutAreaObjects,
+            prepareCall handleGetUpdateTs,
             prepareCall handleGetAreaObjects,
             matchUnknown (return ())
             ]
@@ -102,6 +114,12 @@ handleGetAreaObjects db GetAreaObjects = do
             | "cp:" `isPrefixOf` k =
                 objs{controlPoints=fromByteString v : controlPoints objs}
             | otherwise = objs
+
+
+handleGetUpdateTs :: DB -> GetUpdateTs -> Process (Ts, ())
+handleGetUpdateTs db GetUpdateTs = do
+    res <- get db defaultReadOptions updateTsKey
+    return (fromMaybe 0 $ read . unpack <$> res, ())
 
 
 handlePutAreaObjects :: DB -> PutAreaObjects -> Process ()
@@ -134,33 +152,42 @@ handlePutAreaObjects db (PutAreaObjects objects) = do
     write db defaultWriteOptions batch'
 
 
-getDBForArea :: AreaId -> TagPool -> Process ProcessId
-getDBForArea (AreaId aid) tagPool = do
-    let name = prefix AreaDB ++ aid ++ "|a"
-    res <- globalWhereIs name tagPool
-    case res of
-        Just dbPid -> return dbPid
-        Nothing -> do
-            log Error $ "There is no db for area " ++ aid
-            terminate
+getDBForArea :: AreaId -> Int -> TagPool -> Process [ProcessId]
+getDBForArea (AreaId aid) minReplicas tagPool = do
+    let pr = prefix AreaDB ++ aid ++ "|"
+    res <- globalWhereIsByPrefix pr tagPool
+    if length res < minReplicas
+        then do
+            log Error $ "Not enough db replicas for area " ++ aid
+            return []
+        else
+            return res
 
 
 --external interface
 
 
-getAreaObjects :: AreaId -> TagPool -> Process AreaObjects
-getAreaObjects aid tagPool = do
-    pid <- getDBForArea aid tagPool
+getAreaObjects :: AreaId -> Int -> TagPool -> Process AreaObjects
+getAreaObjects aid minReplicas tagPool = do
+    dbPids <- getDBForArea aid minReplicas tagPool
+    when (null dbPids) terminate
     tag <- getTag tagPool
-    Just res <- callTimeout pid GetAreaObjects tag timeoutForCall
+    tsList <- multicall dbPids GetUpdateTs tag timeoutForCall
+    let (_, pid) = maximum $ zip tsList dbPids :: (Maybe Ts, ProcessId)
+    tag' <- getTag tagPool
+    Just res <- callTimeout pid GetAreaObjects tag' timeoutForCall
     return res
 
 
-putAreaObjects :: AreaId -> AreaObjects -> Process ()
-putAreaObjects aid objs = do
+putAreaObjects :: AreaId -> Int -> AreaObjects -> Process ()
+putAreaObjects aid minReplicas objs = do
+    areaPid <- getSelfPid
     spawnLocal $ do
-        pid <- getDBForArea aid =<< newTagPool
-        send pid $ PutAreaObjects objs
+        dbPids <- getDBForArea aid minReplicas =<< newTagPool
+        when (null dbPids) $ do
+            exit areaPid ("No db replicas" :: String)
+            terminate
+        mapM_ (\pid -> send pid $ PutAreaObjects objs) dbPids
     return ()
 
 

@@ -21,6 +21,7 @@ user:
     init-durability: 100
     logout-seconds: 10
     period-milliseconds: 1000
+    min-db-replicas: 1
 
 area:
     gate-field-radius: 700
@@ -82,12 +83,15 @@ nodes:
 
             - type: area
               ident: alpha
+              min-db-replicas: 1
 
             - type: area
               ident: beta
+              min-db-replicas: 1
 
             - type: area
               ident: gamma
+              min-db-replicas: 1
 
 
 

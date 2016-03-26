@@ -81,8 +81,9 @@ spawnService node settings tagPool serviceSettings = do
             host <- opts .: "host"
             port <- opts .: "port"
             return $ adminProcess settings node host port
-        initService Area _ =
-            return $ areaProcess (S.area settings) ident
+        initService Area opts = do
+            minReplicas <- opts .: "min-db-replicas"
+            return $ areaProcess (S.area settings) ident minReplicas
         initService NodeAgent _ =
             return nodeAgentProcess
         initService LogAggregator _ =

@@ -106,13 +106,14 @@ handleGetOwner state _ =
     return ((areaId state, ownerName state), state)
 
 
-areaProcess :: AS.Settings -> ServiceId -> Process ()
-areaProcess aSettings ident = do
-    objects <- DB.getAreaObjects aid =<< newTagPool
+areaProcess :: AS.Settings -> ServiceId -> Int -> Process ()
+areaProcess aSettings ident minReplicas = do
+    objects <- DB.getAreaObjects aid minReplicas =<< newTagPool
     now <- liftIO milliseconds
     let state = State{
             areaId=aid,
             settings=aSettings,
+            minDBReplicas=minReplicas,
             tickNumber=0,
             currentTs=now,
             users=us,

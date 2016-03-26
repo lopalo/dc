@@ -16,7 +16,8 @@ data Settings = Settings {
     speed :: Int,
     initDurability :: Int,
     logoutSeconds :: Int,
-    periodMilliseconds :: Ts
+    periodMilliseconds :: Ts,
+    minDBReplicas :: Int
     }
 
 instance FromJSON Settings where
@@ -28,6 +29,7 @@ instance FromJSON Settings where
         v .: "speed" <*>
         v .: "init-durability" <*>
         v .: "logout-seconds" <*>
-        v .: "period-milliseconds"
+        v .: "period-milliseconds" <*>
+        v .: "min-db-replicas"
     parseJSON _ = mzero
 

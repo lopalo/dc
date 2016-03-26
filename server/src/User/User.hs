@@ -90,7 +90,8 @@ handleSyncState state (UE.SyncState ua) = do
             kills=UE.kills ua,
             deaths=UE.deaths ua
             }
-    putUser usr' $ reqTagPool state
+        minReplicas = US.minDBReplicas $ settings state
+    putUser usr' minReplicas $ reqTagPool state
     log Debug $ printf "User '%s' synchronized" $ show $ userId usr'
     return state{user=usr'}
 
@@ -145,6 +146,7 @@ handleBroadcastAreaOwnerName state (bc, areaOwnerName) = do
 userProcess :: UserName -> C.Connection -> US.Settings -> Process ()
 userProcess userName conn userSettings = do
     let uid = UserId userName
+        minReplicas = US.minDBReplicas userSettings
     tagPool <- newTagPool
     maybeUserPid <- globalWhereIs (show uid) tagPool
     case maybeUserPid of
@@ -155,7 +157,7 @@ userProcess userName conn userSettings = do
     pid <- getSelfPid
     ok <- globalRegister (show uid) pid tagPool
     unless ok terminate
-    res <- getUser uid tagPool
+    res <- getUser uid minReplicas tagPool
     aOwners <- AE.getOwners tagPool
     let startArea = US.startArea userSettings
         usr = fromMaybe newUser res
@@ -183,7 +185,7 @@ userProcess userName conn userSettings = do
             areaOwners=aOwners
             }
     tryToLinkToArea areaId mConn tagPool
-    putUser usr tagPool
+    putUser usr minReplicas tagPool
     initConnection conn state
     userPid <- makeSelfPid
     AE.enter areaId (userArea usr) userPid True conn
