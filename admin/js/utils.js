@@ -4,6 +4,7 @@ define(["mithril"], function (m) {
     var POLLING_INTERVAL = 1000;
 
     function extend(target, source) {
+        //Partially emulates Object.assign from ES6
         Object.keys(source).forEach(function (k) {
             target[k] = source[k];
         });
@@ -24,17 +25,17 @@ define(["mithril"], function (m) {
 
 
     function Poller(url, queryData) {
+        this.url = m.prop(url);
+        this.queryData = m.prop(queryData);
         this.data = m.prop(null);
-        this.url = url;
-        this.queryData = queryData;
         this._intervalId = null;
     }
     Poller.prototype = {
         doRequest: function () {
             m.request({
                 method: "GET",
-                url: this.url,
-                data: this.queryData,
+                url: this.url(),
+                data: this.queryData(),
                 serialize: function (data) {
                     return m.route.buildQueryString(data);
                 },
@@ -59,7 +60,7 @@ define(["mithril"], function (m) {
     PollerController.prototype = {
         onunload: function () {
             this._poller.stopPolling();
-        },
+        }
     };
 
     function boolIcon(value) {

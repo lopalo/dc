@@ -84,6 +84,9 @@ define(function (require) {
         getUserId: function () {
             return this._models.roModels.user.get("userId");
         },
+        getControlMode: function () {
+            return this._models.models.ui.get("controlMode");
+        },
         isSelf: function (id) {
             return this.getUserId() === id;
         },
@@ -154,8 +157,7 @@ define(function (require) {
                 this._models.models.ui.set("activeWindow", null);
                 return;
             }
-            var ui = this._models.models.ui;
-            switch (ui.get("controlMode")) {
+            switch (this.getControlMode()) {
                 case "shot":
                     break;
                 case "view":
@@ -181,7 +183,7 @@ define(function (require) {
             this._unselectStageObject();
             var cameraPos = this._stageController.getCameraPos();
             pos.add(cameraPos).invertY();
-            switch (this._models.models.ui.get("controlMode")) {
+            switch (this.getControlMode()) {
                 case "shot":
                     this._connection.send("area.shoot", pos.toArray());
                     break;
@@ -196,7 +198,7 @@ define(function (require) {
         _backgroundMouseMove: function (pos) {
             if (this._windowIsActive()) return;
             pos = new Victor(pos.x, pos.y);
-            switch (this._models.models.ui.get("controlMode")) {
+            switch (this.getControlMode()) {
                 case "view":
                     if (this._cursorPos === null) {
                         this._cursorPos = pos;
@@ -213,7 +215,7 @@ define(function (require) {
         },
         _backgroundMouseUp: function () {
             if (this._windowIsActive()) return;
-            if (this._models.models.ui.get("controlMode") !== "move") return;
+            if (this.getControlMode() !== "move") return;
             var cameraPos = this._stageController.getCameraPos();
             var positions = _.map(this._cursorPath, function (pos) {
                 return pos.add(cameraPos).invertY().toArray();

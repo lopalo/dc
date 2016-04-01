@@ -4,8 +4,12 @@ define(["mithril", "utils"], function (m, utils) {
 
 
     function RegistryController(url) {
+        var queryData = {
+            prefix: this.getPrefix(),
+            node: this.getNode()
+        };
         utils.bindAll(this, ["setPrefix", "setNode"]);
-        PollerController.call(this, url, this._getQueryData());
+        PollerController.call(this, url, queryData);
     }
     RegistryController.prototype = Object.create(PollerController.prototype);
     utils.extend(RegistryController.prototype, {
@@ -25,21 +29,15 @@ define(["mithril", "utils"], function (m, utils) {
         },
         setPrefix: function (prefix) {
             localStorage.setItem("registry:prefix", prefix);
-            this._updateQuery();
+            this._poller.queryData().prefix = prefix;
         },
         getNode: function () {
             return localStorage.getItem("registry:node") || "";
         },
         setNode: function (node) {
             localStorage.setItem("registry:node", node);
-            this._updateQuery();
-        },
-        _getQueryData: function () {
-            return {prefix: this.getPrefix(), node: this.getNode()};
-        },
-        _updateQuery: function () {
-            this._poller.queryData = this._getQueryData();
-        },
+            this._poller.queryData().node = node;
+        }
     });
 
 

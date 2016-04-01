@@ -19,13 +19,15 @@ define(function (require) {
         },
         deleteStageObject: function (ident) {
         },
+        getSelectedObjectId: function () {
+            return this._models.models.ui.get("selectedObjectId");
+        },
         _capture: function () {
-            var ident = this._models.models.ui.get("selectedObjectId");
-            this._connection.send("area.capture", ident);
+            this._connection.send("area.capture", this.getSelectedObjectId());
         },
         _pullAsteroid: function () {
-            var ident = this._models.models.ui.get("selectedObjectId");
-            this._connection.send("area.pull-asteroid", ident);
+            this._connection.send("area.pull-asteroid",
+                                  this.getSelectedObjectId());
         },
         _enterArea: function (areaId) {
             this._stageController.enterArea();
