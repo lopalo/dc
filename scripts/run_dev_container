@@ -8,4 +8,3 @@ docker run \
     -p 10503:10503 \
     -v $DIR:/dc \
     -t -i dc:dev scripts/run_dev_server
-#TODO: use docker-compose

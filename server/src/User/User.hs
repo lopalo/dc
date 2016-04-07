@@ -147,6 +147,7 @@ userProcess :: UserName -> C.Connection -> US.Settings -> Process ()
 userProcess userName conn userSettings = do
     let uid = UserId userName
         minReplicas = US.minDBReplicas userSettings
+        onDBError = C.sendErrorAndClose conn "Cannot load user from DB"
     tagPool <- newTagPool
     maybeUserPid <- globalWhereIs (show uid) tagPool
     case maybeUserPid of
@@ -157,7 +158,7 @@ userProcess userName conn userSettings = do
     pid <- getSelfPid
     ok <- globalRegister (show uid) pid tagPool
     unless ok terminate
-    res <- getUser uid minReplicas tagPool
+    res <- getUser uid minReplicas tagPool `onException` onDBError
     aOwners <- AE.getOwners tagPool
     let startArea = US.startArea userSettings
         usr = fromMaybe newUser res

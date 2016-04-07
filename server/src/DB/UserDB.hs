@@ -71,10 +71,9 @@ userDBProcess settings ident = dbProcess loop settings $ "user" ++ ident
 loop :: DB -> Process ()
 loop db = forever $ safeReceive handlers ()
     where
-        prepare h = match (h db)
         prepareCall h = callResponse (h db)
         handlers = [
-            prepare handlePutUser,
+            prepareCall handlePutUser,
             prepareCall handleGetUpdateTs,
             prepareCall handleGetUser,
             matchUnknown (return ())
@@ -94,7 +93,7 @@ handleGetUpdateTs db (GetUpdateTs (UserId ident)) = do
     where updateTsKey = key $ updateTsKeyPrefix ++ ident
 
 
-handlePutUser :: DB -> PutUser -> Process ()
+handlePutUser :: DB -> PutUser -> Process (Bool, ())
 handlePutUser db (PutUser user) = do
     ts <- liftIO milliseconds
     let uid = userId user
@@ -104,30 +103,26 @@ handlePutUser db (PutUser user) = do
             Put (key $ updateTsKeyPrefix ++ ident) (pack $ show ts)
             ]
     write db defaultWriteOptions batch
+    return (True, ())
 
 
-getDBForUser :: UserId -> Int -> TagPool -> Process [ProcessId]
-getDBForUser (UserId uid) minReplicas tagPool = do
+getDBForUser :: UserId -> TagPool -> Process [ProcessId]
+getDBForUser (UserId uid) tagPool = do
     let namePair (name, pid, _) = (name, pid)
     res <- fmap (map namePair) (getNameList (prefix UserDB) tagPool)
     case res of
         [] -> do
             log Error $ "There is no user db" ++ uid
             terminate
-        nameList -> do
-            let name = fst $ head $ nameList
+        nameList ->
+            let name = fst $ head nameList
                 (_, amount) = getShardInfo name
                 hash = fromIntegral $ crc32 $ key uid
                 number = hash `rem` amount
                 shardPrefix = shardName (number, amount) ++ "|"
                 f = startswith shardPrefix . fst
                 dbPids = map snd $ filter f nameList
-            if length dbPids < minReplicas
-                then do
-                    log Error $ "Not enough db replicas for user " ++ uid
-                    return []
-                else
-                    return dbPids
+            in return dbPids
 
 
 getShardInfo :: String -> ShardInfo
@@ -143,16 +138,26 @@ shardName (number, amount) =
     prefix UserDB ++ "[" ++ show number ++ "-" ++ show amount ++ "]"
 
 
+replicaAmountError :: UserId -> Process ()
+replicaAmountError (UserId uid) =
+    log Error $ "Not enough db replicas for user " ++ uid
+
+
 --external interface
 
 
 getUser :: UserId -> Int -> TagPool -> Process (Maybe User)
 getUser uid minReplicas tagPool = do
-    dbPids <- getDBForUser uid minReplicas tagPool
-    when (null dbPids) terminate
+    dbPids <- getDBForUser uid tagPool
     tag <- getTag tagPool
     tsList <- multicall dbPids (GetUpdateTs uid) tag timeoutForCall
-    let (_, pid) = maximum $ zip tsList dbPids :: (Maybe Ts, ProcessId)
+    let dbTsList = zip tsList dbPids :: [(Maybe Ts, ProcessId)]
+        dbTsList' = [(ts, p) | (Just ts, p) <- dbTsList]
+        (_, pid) = maximum dbTsList'
+        failure = length dbTsList' < minReplicas
+    when failure $ do
+        replicaAmountError uid
+        terminate
     tag' <- getTag tagPool
     Just res <- callTimeout pid (GetUser uid) tag' timeoutForCall
     return res
@@ -162,10 +167,12 @@ putUser :: User -> Int -> TagPool -> Process ()
 putUser user minReplicas tagPool = do
     userPid <- getSelfPid
     spawnLocal $ do
-        dbPids <- getDBForUser (userId user) minReplicas tagPool
-        when (null dbPids) $ do
+        dbPids <- getDBForUser (userId user) tagPool
+        tag <- getTag tagPool
+        responses <- multicall dbPids (PutUser user) tag timeoutForCall
+        let failure = length [True | Just True <- responses] < minReplicas
+        when failure $ do
             exit userPid ("No db replicas" :: String)
-            terminate
-        mapM_ (\pid -> send pid $ PutUser user) dbPids
+            replicaAmountError $ userId user
     return ()
 

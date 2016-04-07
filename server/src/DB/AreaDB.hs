@@ -86,10 +86,9 @@ areaDBProcess = dbProcess loop
 loop :: DB -> Process ()
 loop db = forever $ safeReceive handlers ()
     where
-        prepare h = match (h db)
         prepareCall h = callResponse (h db)
         handlers = [
-            prepare handlePutAreaObjects,
+            prepareCall handlePutAreaObjects,
             prepareCall handleGetUpdateTs,
             prepareCall handleGetAreaObjects,
             matchUnknown (return ())
@@ -122,7 +121,7 @@ handleGetUpdateTs db GetUpdateTs = do
     return (fromMaybe 0 $ read . unpack <$> res, ())
 
 
-handlePutAreaObjects :: DB -> PutAreaObjects -> Process ()
+handlePutAreaObjects :: DB -> PutAreaObjects -> Process (Bool, ())
 handlePutAreaObjects db (PutAreaObjects objects) = do
     let makeIter = createIter db defaultReadOptions
         getObjectsKeys i =
@@ -150,18 +149,18 @@ handlePutAreaObjects db (PutAreaObjects objects) = do
         delKeys = objKeys Set.\\ objKeys'
         batch' = (Del <$> Set.toList delKeys) ++ batch
     write db defaultWriteOptions batch'
+    return (True, ())
 
 
-getDBForArea :: AreaId -> Int -> TagPool -> Process [ProcessId]
-getDBForArea (AreaId aid) minReplicas tagPool = do
-    let pr = prefix AreaDB ++ aid ++ "|"
-    res <- globalWhereIsByPrefix pr tagPool
-    if length res < minReplicas
-        then do
-            log Error $ "Not enough db replicas for area " ++ aid
-            return []
-        else
-            return res
+getDBForArea :: AreaId -> TagPool -> Process [ProcessId]
+getDBForArea (AreaId aid) tagPool =
+    globalWhereIsByPrefix pr tagPool
+    where pr = prefix AreaDB ++ aid ++ "|"
+
+
+replicaAmountError :: AreaId -> Process ()
+replicaAmountError (AreaId aid) =
+    log Error $ "Not enough db replicas for area " ++ aid
 
 
 --external interface
@@ -169,11 +168,16 @@ getDBForArea (AreaId aid) minReplicas tagPool = do
 
 getAreaObjects :: AreaId -> Int -> TagPool -> Process AreaObjects
 getAreaObjects aid minReplicas tagPool = do
-    dbPids <- getDBForArea aid minReplicas tagPool
-    when (null dbPids) terminate
+    dbPids <- getDBForArea aid tagPool
     tag <- getTag tagPool
     tsList <- multicall dbPids GetUpdateTs tag timeoutForCall
-    let (_, pid) = maximum $ zip tsList dbPids :: (Maybe Ts, ProcessId)
+    let dbTsList = zip tsList dbPids :: [(Maybe Ts, ProcessId)]
+        dbTsList' = [(ts, p) | (Just ts, p) <- dbTsList]
+        (_, pid) = maximum dbTsList'
+        failure = length dbTsList' < minReplicas
+    when failure $ do
+        replicaAmountError aid
+        terminate
     tag' <- getTag tagPool
     Just res <- callTimeout pid GetAreaObjects tag' timeoutForCall
     return res
@@ -183,11 +187,14 @@ putAreaObjects :: AreaId -> Int -> AreaObjects -> Process ()
 putAreaObjects aid minReplicas objs = do
     areaPid <- getSelfPid
     spawnLocal $ do
-        dbPids <- getDBForArea aid minReplicas =<< newTagPool
-        when (null dbPids) $ do
+        tagPool <- newTagPool
+        dbPids <- getDBForArea aid tagPool
+        tag <- getTag tagPool
+        responses <- multicall dbPids (PutAreaObjects objs) tag timeoutForCall
+        let failure = length [True | Just True <- responses] < minReplicas
+        when failure $ do
             exit areaPid ("No db replicas" :: String)
-            terminate
-        mapM_ (\pid -> send pid $ PutAreaObjects objs) dbPids
+            replicaAmountError aid
     return ()
 
 
