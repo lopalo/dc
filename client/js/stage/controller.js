@@ -161,8 +161,18 @@ define(function (require) {
                 this._addObject(data);
             }, this);
         },
-        _handleTick: function (data) {
-            if (this._area.get("areaId") !== data.areaId) return;
+        _handleTick: function (parts) {
+            var push = Array.prototype.push;
+            var areaId = this._area.get("areaId");
+            var data = {objects: [], signals: []};
+            _.each(parts, function (part) {
+                if (areaId !== part.areaId) return;
+                data.areaId = part.areaId;
+                data.timestamp = part.timestamp;
+                push.apply(data.objects, part.objects);
+                push.apply(data.signals, part.signals);
+            });
+
             this._saveServerTime(data.timestamp);
             this._tickQueue.push(data);
             this._tickCheck();

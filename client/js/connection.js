@@ -10,6 +10,7 @@ define(["backbone", "json!settings.json"], function (Backbone, settings) {
         this._requestCounter = 1;
         this._inputQueue = [];
         this._checkInputId = null;
+        this._multipartCommands = {};
         this.connected = false;
         this.lastError = "";
         _.bindAll(this, "_checkInput", "close");
@@ -70,6 +71,7 @@ define(["backbone", "json!settings.json"], function (Backbone, settings) {
         _checkInput: function () {
             var inputQueue = this._inputQueue;
             var period = checkPeriod;
+            var multipartCommands = this._multipartCommands
             var data;
             var cmd;
             var body;
@@ -83,6 +85,21 @@ define(["backbone", "json!settings.json"], function (Backbone, settings) {
                 data = inputQueue.shift();
                 cmd = data[0];
                 body = data[1];
+                if (cmd === "begin-multipart") {
+                    cmd = body;
+                    multipartCommands[cmd] = [];
+                    continue;
+                }
+                if (multipartCommands[cmd]) {
+                    multipartCommands[cmd].push(body);
+                    continue;
+                }
+                if (cmd === "end-multipart") {
+                    cmd = body;
+                    body = multipartCommands[cmd];
+                    delete multipartCommands[cmd];
+                    if (!body || _.isEmpty(body)) continue;
+                }
                 if (cmd === "error") {
                     this.lastError = body;
                 }

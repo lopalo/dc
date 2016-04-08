@@ -2,8 +2,9 @@
 
 module WS.Connection (
     acceptConnection, InputHandler, Connection,
-    sendCmd, sendResponse, broadcastCmd, setUser,
-    setArea, close, monitorConnection,
+    sendCmd, sendResponse, broadcastCmd,
+    broadcastBeginMultipart, broadcastEndMultipart,
+    setUser, setArea, close, monitorConnection,
     checkMonitorNotification, sendErrorAndClose
     ) where
 
@@ -99,6 +100,15 @@ broadcastCmd connections cmd body = do
     evaluate body
     broadcast (map output connections) payload
     where payload = encode (cmd, body)
+
+
+broadcastBeginMultipart :: [Connection] -> String -> Process ()
+broadcastBeginMultipart connections =
+    broadcastCmd connections "begin-multipart"
+
+
+broadcastEndMultipart :: [Connection] -> String -> Process ()
+broadcastEndMultipart connections = broadcastCmd connections "end-multipart"
 
 
 setUser :: Connection -> UserPid -> Process ()

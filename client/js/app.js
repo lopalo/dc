@@ -46,9 +46,9 @@ define(function (require) {
         connection.once("error", connection.close);
     }
 
-    function onTimeout(connection) {
+    function onTimeout() {
         $("#connect-error").html("Connection timeout").show();
-        $("#connect").one("click", _.partial(connect, connection));
+        $("#connect").one("click", connect);
     }
 
     function initGame(connection) {
@@ -62,7 +62,7 @@ define(function (require) {
         var error = connection.lastError || "Disconnection";
         $("#connect-form").show();
         $("#connect-error").html(error).show();
-        $("#connect").one("click", _.partial(connect, connection));
+        $("#connect").one("click", connect);
     }
 
     return runApp;

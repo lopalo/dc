@@ -60,6 +60,9 @@ data TimeTick = TimeTick deriving (Generic, Typeable)
 instance Binary TimeTick
 
 
+type BroadcastData = (Value, [C.Connection])
+
+
 scheduleTick :: Ts -> Process ProcessId
 scheduleTick ms = do
     selfPid <- getSelfPid
@@ -74,7 +77,7 @@ handleTick state TimeTick = do
         (broadcastData, state') = runState (calculateTick now) state
         aid = areaId state'
     case broadcastData of
-        Just bd -> broadcastCmd state "tick" bd
+        Just bd -> broadcastState bd
         Nothing -> return ()
     let logEveryTick = (AS.logEveryTick . settings) state
         syncEveryTick = (AS.syncEveryTick . settings) state
@@ -87,7 +90,7 @@ handleTick state TimeTick = do
     return state'
 
 
-calculateTick :: Ts -> StateS (Maybe Value)
+calculateTick :: Ts -> StateS (Maybe BroadcastData)
 calculateTick ts = do
     previousTs <- gets currentTs
     modify $ \s -> s{currentTs=ts}
@@ -100,7 +103,7 @@ calculateTick ts = do
     broadcastEveryTick <- gets $ AS.broadcastEveryTick . settings
     let broadcast = tnum `rem` broadcastEveryTick == 0
     if broadcast
-        then liftM Just (tickData ts)
+        then liftM Just (getBroadcastData ts)
         else return Nothing
 
 
@@ -256,11 +259,12 @@ handleSignal (MoveAsteroid aid targetPos) = do
 handleSignal signal = return $ Just signal
 
 
-tickData :: Ts -> StateS Value
-tickData ts = do
+getBroadcastData :: Ts -> StateS BroadcastData
+getBroadcastData ts = do
     aid <- gets areaId
     signals <- access signalsForBroadcastL
     signalsForBroadcastL ~= Seq.empty
+    connections <- gets $ M.keys . connectionIndex . users
     state <- get
     let
         res =
@@ -277,7 +281,17 @@ tickData ts = do
             g asteroids,
             g controlPoints
             ]
-    return res
+    return (res, connections)
+
+
+broadcastState :: BroadcastData -> Process ()
+broadcastState db = do
+    C.broadcastBeginMultipart connections cmd
+    C.broadcastCmd connections cmd $ fst db
+    C.broadcastEndMultipart connections cmd
+    where
+        connections = snd db
+        cmd = "area.tick"
 
 
 syncUsers :: State -> Process ()
@@ -294,9 +308,4 @@ saveObjects state = DB.putAreaObjects (areaId state) minReplicas objs
         objs = DB.AreaObjects (g gates) (g asteroids) (g controlPoints)
         minReplicas = minDBReplicas state
 
-
-broadcastCmd :: ToJSON a => State -> String -> a -> Process ()
-broadcastCmd state cmd = C.broadcastCmd (M.keys cs) ("area." ++ cmd)
-    where
-        cs = connectionIndex . users $ state
 
