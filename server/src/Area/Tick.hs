@@ -48,9 +48,9 @@ import Area.Signal (
     Signal(Appearance, Disappearance, MoveAsteroid),
     AReason(..), DReason(..)
     )
-import Area.Utils (distance)
+import Area.Utils (distance, groupCells, groupByCells)
 import Area.Misc (spawnUser, broadcastOwnerName)
-import Area.Types (Object(..), Destroyable(..), ObjId(..))
+import Area.Types (Object(..), Destroyable(..), ObjId(..), Pos)
 import qualified Area.Objects.User as U
 import qualified Area.Objects.ControlPoint as CP
 import qualified User.External as UE
@@ -60,7 +60,10 @@ data TimeTick = TimeTick deriving (Generic, Typeable)
 instance Binary TimeTick
 
 
-type BroadcastData = (Value, [C.Connection])
+type BroadcastData = [(Value, [C.Connection])]
+
+
+type BG = ([Value], [C.Connection])
 
 
 scheduleTick :: Ts -> Process ProcessId
@@ -262,36 +265,61 @@ handleSignal signal = return $ Just signal
 getBroadcastData :: Ts -> StateS BroadcastData
 getBroadcastData ts = do
     aid <- gets areaId
-    signals <- access signalsForBroadcastL
+    signals <- gets $ toList . signalsForBroadcast
     signalsForBroadcastL ~= Seq.empty
     connections <- gets $ M.keys . connectionIndex . users
+    cellSize <- gets $ AS.broadcastCellSize . settings
     state <- get
-    let
-        res =
-            object [
-                "areaId" .= aid,
-                "objects" .= concat objects,
-                "signals" .= toList signals,
-                "timestamp" .= ts
-                ]
-        g getter = map tickClientInfo $ M.elems $ getter state
-        objects = [
-            g (usersData . users),
+    let g getter = map tickClientInfo $ M.elems $ getter state
+        commonObjects = [
             g gates,
-            g asteroids,
             g controlPoints
             ]
-    return (res, connections)
+        commonPayload =
+            object [
+                "areaId" .= aid,
+                "objects" .= concat commonObjects,
+                "signals" .= signals,
+                "timestamp" .= ts
+                ]
+
+        reducer (objects, connections') obj =
+            (tickClientInfo obj : objects, connections')
+        userReducer (objects, connections') user =
+            (tickClientInfo user : objects, U.connection user : connections')
+        group ::
+            Object o => (BG -> o -> BG) -> [o] -> M.Map Pos BG -> M.Map Pos BG
+        group = groupByCells cellSize ([], [])
+
+        groups =
+            foldr ($) M.empty [
+                group userReducer $ M.elems $ usersData $ users $ state,
+                group reducer $ M.elems $ asteroids $ state
+                ]
+        broadcastGroup (center, field) =
+            let objects = fst center
+                payload =
+                    object [
+                        "areaId" .= aid,
+                        "objects" .= objects,
+                        "timestamp" .= ts
+                        ]
+            in (payload, concat $ map snd field)
+        bd = map broadcastGroup $ groupCells groups
+        bd' = (commonPayload, connections) : bd
+    return bd'
 
 
 broadcastState :: BroadcastData -> Process ()
-broadcastState db = do
+broadcastState bd = do
     C.broadcastBeginMultipart connections cmd
-    C.broadcastCmd connections cmd $ fst db
+    mapM_ sendPart bd
     C.broadcastEndMultipart connections cmd
     where
-        connections = snd db
+        connections = concat $ map snd bd
         cmd = "area.tick"
+        sendPart (payload, connections') =
+            C.broadcastCmd connections' cmd payload
 
 
 syncUsers :: State -> Process ()

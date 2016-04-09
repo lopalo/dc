@@ -17,7 +17,7 @@ db:
 user:
     start-area: alpha
     size: [80, 40]
-    speed: 300 # 60 #units per second
+    speed: 300 # 60 # units per second
     init-durability: 100
     logout-seconds: 10
     period-milliseconds: 1000
@@ -29,8 +29,11 @@ area:
         damage: 10
         distance: 1200
         cooldown-milliseconds: 100
-    asteroid-pull-speed: 50 # 60 #units per second
-    route-filter-threshold: 10 #units
+    asteroid-pull-speed: 60 # units per second
+    route-filter-threshold: 10 # units
+
+    broadcast-cell-size: 1000 # units
+
     tick-milliseconds: 50
     broadcast-every-tick: 1 # 4
     log-every-tick: 1000

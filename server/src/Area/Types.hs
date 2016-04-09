@@ -105,13 +105,16 @@ instance FromJSON ObjId where
         return (read str)
 
 
-class Object o where
+class Positioned p where
+
+    getPos :: p -> Pos
+
+    setPos :: Pos -> p -> p
+
+
+class Positioned o => Object o where
 
     objId :: o -> ObjId
-
-    getPos :: o -> Pos
-
-    setPos :: Pos -> o -> o
 
     getAngle :: o -> Angle
 

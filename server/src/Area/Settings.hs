@@ -15,6 +15,7 @@ data Settings = Settings {
     shot :: ShotSettings,
     asteroidPullSpeed :: Float,
     routeFilterThreshold :: Float,
+    broadcastCellSize :: Int,
     tickMilliseconds :: Ts,
     broadcastEveryTick :: Int,
     logEveryTick :: Int,
@@ -29,6 +30,7 @@ instance FromJSON Settings where
         v .: "shot" <*>
         v .: "asteroid-pull-speed" <*>
         v .: "route-filter-threshold" <*>
+        v .: "broadcast-cell-size" <*>
         v .: "tick-milliseconds" <*>
         v .: "broadcast-every-tick" <*>
         v .: "log-every-tick" <*>

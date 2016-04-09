@@ -169,8 +169,8 @@ define(function (require) {
                 if (areaId !== part.areaId) return;
                 data.areaId = part.areaId;
                 data.timestamp = part.timestamp;
-                push.apply(data.objects, part.objects);
-                push.apply(data.signals, part.signals);
+                push.apply(data.objects, part.objects || []);
+                push.apply(data.signals, part.signals || []);
             });
 
             this._saveServerTime(data.timestamp);

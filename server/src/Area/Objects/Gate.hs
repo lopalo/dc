@@ -12,7 +12,7 @@ import Data.Aeson (Value(Object), object, (.=), (.:), (.:?), (.!=))
 
 import Types (Size)
 import DB.Types (Persistent(toDB, fromDB))
-import Area.Types (Object(..), Pos, Angle, ObjId)
+import Area.Types (Positioned(..), Object(..), Pos, Angle, ObjId)
 import Area.Action (Active(..), Action(EternalRotation), eternalRotation)
 
 
@@ -52,13 +52,16 @@ instance Persistent Gate where
     fromDB _ = mzero
 
 
-instance Object Gate where
-
-    objId = ident
+instance Positioned Gate where
 
     getPos = pos
 
     setPos p gate = gate{pos=p}
+
+
+instance Object Gate where
+
+    objId = ident
 
     getAngle = angle
 

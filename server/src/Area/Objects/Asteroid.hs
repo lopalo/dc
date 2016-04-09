@@ -12,7 +12,10 @@ import Data.Aeson (Value(Object), object, (.=), (.:), (.:?), (.!=))
 
 import Types (Size, width)
 import DB.Types (Persistent(toDB, fromDB))
-import Area.Types (Object(..), Destroyable(..), Pos, Angle, ObjId)
+import Area.Types (
+    Positioned(..), Object(..), Destroyable(..),
+    Pos, Angle, ObjId
+    )
 import Area.Action (
     Active(..),
     Action(EternalRotation, MoveCircularTrajectory, MoveDistance),
@@ -64,14 +67,19 @@ instance Persistent Asteroid where
     fromDB _ = mzero
 
 
+instance Positioned Asteroid where
+
+    getPos = pos
+
+    setPos p ast = ast{pos=p}
+
+
 instance Object Asteroid where
 
     objId = ident
 
-    getPos = pos
-    setPos p ast = ast{pos=p}
-
     getAngle = angle
+
     setAngle a ast = ast{angle=a}
 
     initClientInfo ast =

@@ -12,7 +12,10 @@ import Data.Aeson (Value(Object), object, (.=), (.:), (.:?), (.!=))
 
 import Types (UserId, UserName, Size, width)
 import DB.Types (Persistent(toDB, fromDB))
-import Area.Types (Object(..), Destroyable(..), Pos, Angle, ObjId)
+import Area.Types (
+    Positioned(..), Object(..), Destroyable(..),
+    Pos, Angle, ObjId
+    )
 import Area.Action (
     Active(..),
     Action(EternalRotation),
@@ -66,14 +69,19 @@ instance Persistent ControlPoint where
     fromDB _ = mzero
 
 
+instance Positioned ControlPoint where
+
+    getPos = pos
+
+    setPos p cp = cp{pos=p}
+
+
 instance Object ControlPoint where
 
     objId = ident
 
-    getPos = pos
-    setPos p cp = cp{pos=p}
-
     getAngle = angle
+
     setAngle a cp = cp{angle=a}
 
     initClientInfo cp =

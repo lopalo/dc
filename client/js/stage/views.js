@@ -160,7 +160,6 @@ define(function (require) {
 
 
     ObjectLayer = Layer.extend({
-        //TODO: culling
         addEffect: function (effectContainer, tween) {
             var container = this._container;
             var onComplete = function () {

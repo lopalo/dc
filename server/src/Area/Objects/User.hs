@@ -9,7 +9,7 @@ import Types (UserId, UserName, UserMonitorRef, UserPid, Size(Size), Ts)
 import WS.Connection (Connection)
 import qualified User.External as UE
 import Area.Types (
-    Object(..), Destroyable(..),
+    Positioned(..), Object(..), Destroyable(..),
     Pos, Angle, ObjId(UId),
     )
 import Area.Action (
@@ -39,13 +39,16 @@ data User = User {
     }
 
 
-instance Object User where
-
-    objId = UId . userId
+instance Positioned User where
 
     getPos = pos
 
     setPos p user = user{pos=p}
+
+
+instance Object User where
+
+    objId = UId . userId
 
     getAngle = angle
 
