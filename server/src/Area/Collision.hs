@@ -1,13 +1,15 @@
 
 module Area.Collision where
 
-import Data.List (minimumBy)
+import Data.List (foldl', minimumBy)
+import qualified Data.Map.Strict as M
 import qualified Data.Set as Set
 
 import Data.Aeson (ToJSON, toJSON)
 
-import Area.Types (Object, ObjId, Pos)
+import Area.Types (Object, ObjId, Pos(Pos), Positioned(..))
 import Area.Vector
+import Area.Grid (cellPos)
 
 
 class Object o => Collidable o where
@@ -36,7 +38,16 @@ instance Ord Collider where
 
     c <= c' = objId c <= objId c'
 
-type Colliders = Set.Set Collider
+
+instance Positioned Collider where
+
+    getPos segment@Segment{} = startPosition segment
+    getPos c = position c
+
+    setPos _ c = c
+
+
+type Colliders = M.Map Pos [Set.Set Collider]
 
 
 data Collision = Collision ObjId ObjId Pos
@@ -58,11 +69,7 @@ type Collisions = Set.Set Collision
 
 
 emptyColliders :: Colliders
-emptyColliders = Set.empty
-
-
-addCollider :: Collidable c => c -> Colliders -> Colliders
-addCollider obj = Set.insert (collider obj)
+emptyColliders = M.empty
 
 
 collisionPair :: Collision -> (ObjId, ObjId)
@@ -92,22 +99,52 @@ checkCollision c@Segment{} c'@Circular{} =
             else Nothing
 
 
-findCollisions :: Collider -> Colliders -> Collisions
-findCollisions coll = Set.foldl check Set.empty
-    --TODO: split it to broad and narrow phases
+insertCollision ::
+    Collider -> Set.Set Collision -> Collider -> Set.Set Collision
+insertCollision coll collisions coll' =
+    case checkCollision coll coll' of
+        Just pos ->
+            Set.insert (Collision (objId coll) (objId coll') pos) collisions
+        Nothing -> collisions
+
+
+findAllCollisions :: Colliders -> Collisions
+findAllCollisions colliderGroups = foldl' Set.union Set.empty groupCollisions
     where
-        check collisions coll' =
-            case checkCollision coll coll' of
-                Just pos ->
-                    Set.insert
-                        (Collision (objId coll) (objId coll') pos)
-                        collisions
-                Nothing -> collisions
+        groupCollisions = map checkGroup $ M.elems colliderGroups
+        checkGroup field@(center:_) =
+            let colliders = foldl' Set.union Set.empty field
+                checkCollider collisions' coll =
+                    Set.foldl (insertCollision coll) collisions' colliders
+            in Set.foldl checkCollider Set.empty center
+        checkGroup [] = Set.empty
 
 
-rayCollision :: ObjId -> Pos -> Pos -> Colliders -> Maybe Collision
-rayCollision ident start end colliders =
-    let collisions = findCollisions (Segment ident start end) colliders
+findColliderCollisions :: Int -> Collider -> Colliders -> Collisions
+findColliderCollisions cellSize coll cellColliders =
+    Set.foldl (insertCollision coll) Set.empty colliders
+    where
+        positions =
+            case coll of
+                Segment{startPosition=Pos sx sy, endPosition=Pos ex ey} ->
+                    let rx = range (ex - sx)
+                        ry = range (ey - sy)
+                        range delta =
+                            let end = delta `quot` cellSize + unit
+                                unit = signum delta
+                            in map (* cellSize) [-unit, 0 .. end]
+                    in [Pos (sx + ix) (sy + iy) | ix <- rx, iy <- ry]
+                _ -> [position coll]
+        findCellGroup = flip (M.findWithDefault []) cellColliders
+        findCellGroup' = findCellGroup . cellPos cellSize
+        cells = concat $ map findCellGroup' positions
+        colliders = foldl' Set.union Set.empty cells
+
+
+rayCollision :: Int -> ObjId -> Pos -> Pos -> Colliders -> Maybe Collision
+rayCollision cellSize ident start end colliders =
+    let segment = Segment ident start end
+        collisions = findColliderCollisions cellSize segment colliders
         startV = fromPos start
         comp a b = dist a `compare` dist b
         dist (Collision _ _ p) = len (fromPos p `sub` startV)

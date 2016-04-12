@@ -33,6 +33,7 @@ area:
     route-filter-threshold: 10 # units
 
     broadcast-cell-size: 1000 # units
+    collision-cell-size: 300 # units
 
     tick-milliseconds: 50
     broadcast-every-tick: 1 # 4

@@ -41,14 +41,16 @@ import Area.Action (
     )
 import Area.State
 import Area.Collision (
-    Collision, emptyColliders, addCollider,
-    findCollisions, collisionPair
+    Collidable, Collision, Collider,
+    collider, emptyColliders,
+    findAllCollisions, collisionPair
     )
 import Area.Signal (
     Signal(Appearance, Disappearance, MoveAsteroid),
     AReason(..), DReason(..)
     )
-import Area.Utils (distance, groupCells, groupByCells)
+import Area.Utils (distance)
+import Area.Grid (groupCells, groupByCells)
 import Area.Misc (spawnUser, broadcastOwnerName)
 import Area.Types (Object(..), Destroyable(..), ObjId(..), Pos)
 import qualified Area.Objects.User as U
@@ -64,6 +66,9 @@ type BroadcastData = [(Value, [C.Connection])]
 
 
 type BG = ([Value], [C.Connection])
+
+
+type CG = M.Map Pos (Set.Set Collider)
 
 
 scheduleTick :: Ts -> Process ProcessId
@@ -136,21 +141,21 @@ handleActions previousTs= do
 
 handleCollisions :: StateS ()
 handleCollisions = do
-    collidersL ~= emptyColliders
-    addColliders $ usersL >>> usersDataL
-    addColliders asteroidsL
-    addColliders controlPointsL
-    colliders_ <- access collidersL
-    let
-        find collisions collider =
-            let collisions' = findCollisions collider colliders_
-            in Set.union collisions collisions'
-        collisions'' = Set.foldl find Set.empty colliders_
-    mapM_ handleCollision $ Set.toAscList collisions''
+    cellSize <- gets $ AS.collisionCellSize . settings
+    state <- get
+    let group :: Collidable c => [c] -> CG -> CG
+        group = groupByCells cellSize Set.empty $ flip $ Set.insert . collider
+        g getter = M.elems $ getter state
+        colliderGroups =
+            groupCells $ foldr ($) M.empty [
+                group $ g $ usersData . users,
+                group $ g asteroids,
+                group $ g controlPoints
+                ]
+        collisions = findAllCollisions colliderGroups
+    collidersL ~= colliderGroups
+    mapM_ handleCollision $ Set.toAscList collisions
     return ()
-    where
-        addColliders lens = M.elems <$> access lens >>= mapM_ addColl
-        addColl obj = collidersL %= addCollider obj
 
 
 handleCollision :: Collision -> StateS()
@@ -291,12 +296,13 @@ getBroadcastData ts = do
             Object o => (BG -> o -> BG) -> [o] -> M.Map Pos BG -> M.Map Pos BG
         group = groupByCells cellSize ([], [])
 
+        gg getter = M.elems $ getter state
         groups =
             foldr ($) M.empty [
-                group userReducer $ M.elems $ usersData $ users $ state,
-                group reducer $ M.elems $ asteroids $ state
+                group userReducer $ gg $ usersData . users,
+                group reducer $ gg asteroids
                 ]
-        broadcastGroup (center, field) =
+        broadcastGroup field@(center:_) =
             let objects = fst center
                 payload =
                     object [
@@ -305,7 +311,8 @@ getBroadcastData ts = do
                         "timestamp" .= ts
                         ]
             in (payload, concat $ map snd field)
-        bd = map broadcastGroup $ groupCells groups
+        broadcastGroup [] = (object [], [])
+        bd = map broadcastGroup $ M.elems $ groupCells groups
         bd' = (commonPayload, connections) : bd
     return bd'
 
@@ -316,7 +323,7 @@ broadcastState bd = do
     mapM_ sendPart bd
     C.broadcastEndMultipart connections cmd
     where
-        connections = concat $ map snd bd
+        connections = snd $ head bd
         cmd = "area.tick"
         sendPart (payload, connections') =
             C.broadcastCmd connections' cmd payload

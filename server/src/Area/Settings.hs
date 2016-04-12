@@ -16,6 +16,7 @@ data Settings = Settings {
     asteroidPullSpeed :: Float,
     routeFilterThreshold :: Float,
     broadcastCellSize :: Int,
+    collisionCellSize :: Int,
     tickMilliseconds :: Ts,
     broadcastEveryTick :: Int,
     logEveryTick :: Int,
@@ -31,6 +32,7 @@ instance FromJSON Settings where
         v .: "asteroid-pull-speed" <*>
         v .: "route-filter-threshold" <*>
         v .: "broadcast-cell-size" <*>
+        v .: "collision-cell-size" <*>
         v .: "tick-milliseconds" <*>
         v .: "broadcast-every-tick" <*>
         v .: "log-every-tick" <*>

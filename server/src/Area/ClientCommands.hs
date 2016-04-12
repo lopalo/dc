@@ -132,11 +132,13 @@ handleClientCommand state (Shoot targetPos, conn) =
                     shooterPos = toPos $ fromPos (U.pos shooter) `add` widthV
 
                     rayDist = AS.shotDistance $ AS.shot sett
+                    cellSize = AS.collisionCellSize sett
                     rayAngle =
                         angle $ fromPos targetPos `sub` fromPos shooterPos
                     rayV = fromPolar rayDist rayAngle
                     targetPos' = toPos $ fromPos shooterPos `add` rayV
-                    ray = rayCollision (UId shooterId) shooterPos targetPos'
+                    sid = UId shooterId
+                    ray = rayCollision cellSize sid shooterPos targetPos'
 
                     addSig pos = addSignal $ Shot shooterPos pos
                     damage = AS.shotDamage $ AS.shot sett

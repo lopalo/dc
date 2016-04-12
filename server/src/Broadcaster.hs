@@ -15,8 +15,9 @@ data Broadcast = Broadcast [ProcessId] deriving (Generic, Typeable)
 instance Binary Broadcast
 
 
-broadcast :: Serializable a => [ProcessId] -> a -> Process ()
-broadcast pids payload = mapM_ s $ M.elems groupedPids
+brokenBroadcast :: Serializable a => [ProcessId] -> a -> Process ()
+brokenBroadcast pids payload = mapM_ s $ M.elems groupedPids
+    --TODO: fix
     where
         groupedPids = foldl group M.empty pids
         group groups pid =
@@ -31,4 +32,11 @@ broadcast pids payload = mapM_ s $ M.elems groupedPids
 localBroadcast :: Serializable a => Broadcast -> a -> Process ()
 localBroadcast (Broadcast localPids) payload =
     mapM_ (`unsafeSend` payload) localPids
+
+
+broadcast :: Serializable a => [ProcessId] -> a -> Process ()
+broadcast pids payload =
+    --TODO: delete
+    mapM_ (`send` payload) pids
+
 
