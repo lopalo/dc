@@ -5,7 +5,7 @@ import Control.Distributed.Process
 import User.Types
 import User.State
 import Base.GlobalRegistry (globalMultiWhereIs)
-import Broadcaster (broadcast)
+import Base.Broadcaster (broadcast)
 
 
 handleClientCommand :: State -> ClientCommand -> Process State

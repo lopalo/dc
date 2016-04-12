@@ -22,6 +22,7 @@ import Control.Distributed.Process.Extras.Call (
 
 import Types (ServiceType(NodeAgent), prefix)
 import Utils (safeReceive, timeoutForCall)
+import qualified Base.Broadcaster as B
 import qualified Base.GlobalRegistry as GR
 import qualified Base.Logger as L
 
@@ -38,6 +39,7 @@ instance Binary WhereIs
 
 data NodeStatus = NodeStatus {
         stats :: NodeStats,
+        broadcasterIsRunning :: Bool,
         globalRegistryIsRunning :: Bool,
         loggerIsRunning :: Bool
     }
@@ -69,6 +71,7 @@ handleGetNodeStatus _ GetNodeStatus = do
     info <-
         NodeStatus <$>
         getLocalNodeStats <*>
+        B.isRunning <*>
         GR.isRunning <*>
         L.isRunning
     return (info, ())

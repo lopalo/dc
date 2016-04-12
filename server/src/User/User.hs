@@ -23,7 +23,6 @@ import Types (
     )
 import Base.GlobalRegistry (globalRegister, globalWhereIs)
 import Base.Logger (log)
-import Broadcaster (Broadcast, localBroadcast)
 import qualified WS.Connection as C
 import qualified User.Settings as US
 import qualified Area.External as AE
@@ -120,13 +119,6 @@ handleUserMessage state userMsg = do
     return state{userMessages=userMessages state Seq.|> userMsg}
 
 
-handleBroadcastUserMessage ::
-    State -> (Broadcast, UserMessage) -> Process State
-handleBroadcastUserMessage state (bc, userMsg) = do
-    localBroadcast bc userMsg
-    handleUserMessage state userMsg
-
-
 handleAreaOwnerName :: State -> AreaOwnerName -> Process State
 handleAreaOwnerName state (AreaOwnerName aid maybeUserName) = do
     case connection state of
@@ -134,13 +126,6 @@ handleAreaOwnerName state (AreaOwnerName aid maybeUserName) = do
             sendCmd conn "update-worldmap" $ M.singleton (show aid) maybeUserName
         Nothing -> return ()
     return state{areaOwners=M.insert aid maybeUserName $ areaOwners state}
-
-
-handleBroadcastAreaOwnerName ::
-    State -> (Broadcast, AreaOwnerName) -> Process State
-handleBroadcastAreaOwnerName state (bc, areaOwnerName) = do
-    localBroadcast bc areaOwnerName
-    handleAreaOwnerName state areaOwnerName
 
 
 userProcess :: UserName -> C.Connection -> US.Settings -> Process ()
@@ -205,12 +190,10 @@ loop state = safeReceive handlers state >>= loop
             prepare handleSyncState,
             prepare handleClientCommand,
             prepare handleUserMessage,
-            prepare handleBroadcastUserMessage,
             prepare handleSwitchArea,
             prepare handleMonitorNotification,
             prepare handleReconnection,
             prepare handleAreaOwnerName,
-            prepare handleBroadcastAreaOwnerName,
             matchUnknown (return state)
             ]
 

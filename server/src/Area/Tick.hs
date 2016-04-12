@@ -23,7 +23,7 @@ import Data.Lens.Partial.Common (getPL, (^%=), (^-=), (^+=))
 import Control.Distributed.Process
 import Control.Distributed.Process.Extras.Time (TimeUnit(..))
 import Control.Distributed.Process.Extras.Timer (sleepFor)
-import Data.Aeson (ToJSON, Value, object, (.=))
+import Data.Aeson (Value, object, (.=))
 
 import Types (Ts, LogLevel(..))
 import Utils (milliseconds)
@@ -42,8 +42,7 @@ import Area.Action (
 import Area.State
 import Area.Collision (
     Collidable, Collision, Collider,
-    collider, emptyColliders,
-    findAllCollisions, collisionPair
+    collider, findAllCollisions, collisionPair
     )
 import Area.Signal (
     Signal(Appearance, Disappearance, MoveAsteroid),

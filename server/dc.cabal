@@ -16,6 +16,7 @@ Executable dc
         -rtsopts
         -with-rtsopts=-N
         -Wall --enable warnings
+        -fno-warn-unused-do-bind
     Build-Depends:
         SHA == 1.6.4,
         random >= 1.0.0.0,

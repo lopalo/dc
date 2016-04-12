@@ -22,6 +22,7 @@ import Data.Yaml (ParseException, decodeFileEither)
 
 import Utils (sleepSeconds)
 import Types (NodeName, LogLevel(..), ServiceType(..), prefix)
+import Base.Broadcaster (broadcasterProcess)
 import Base.Logger (loggerProcess, log)
 import Base.GlobalRegistry (
     globalRegistryProcess,
@@ -33,6 +34,8 @@ import DB.AreaDB (areaDBProcess)
 import DB.UserDB (userDBProcess)
 import HTTP.HTTP (httpProcess)
 import WS.WS (wsProcess)
+import WS.Connection (connectionBroadcastHandlers)
+import User.External (userBroadcastHandlers)
 import Admin.Admin (adminProcess)
 import NodeAgent.NodeAgent (nodeAgentProcess, distributedWhereIs)
 import LogAggregator.LogAggregator (logAggregatorProcess, createSender)
@@ -47,10 +50,15 @@ startNode node settings nodeName = do
         nodeService = S.ServiceSettings NodeAgent nodeName emptyOptions
         services' = nodeService : services
         logSettings = S.log settings
+        broadcastHandlers = [
+            connectionBroadcastHandlers,
+            userBroadcastHandlers
+            ]
     logSender <- createSender (S.logAggregatorName logSettings) nodeName
     spawnLocal $ loggerProcess logSettings logSender
     log Info $ "Start node: " ++ nodeName
     tagPool <- newTagPool
+    spawnLocal $ broadcasterProcess $ concat broadcastHandlers
     spawnLocal $ globalRegistryProcess settings
     mapM_ (spawnService node settings tagPool) services'
 

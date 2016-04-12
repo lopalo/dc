@@ -5,7 +5,8 @@ module WS.Connection (
     sendCmd, sendResponse, broadcastCmd,
     broadcastBeginMultipart, broadcastEndMultipart,
     setUser, setArea, close, monitorConnection,
-    checkMonitorNotification, sendErrorAndClose
+    checkMonitorNotification, sendErrorAndClose,
+    connectionBroadcastHandlers
     ) where
 
 import GHC.Generics (Generic)
@@ -23,7 +24,7 @@ import Control.Distributed.Process.Extras.Timer (sleepFor)
 import qualified Control.Distributed.Process.Node as Node
 import qualified Network.WebSockets as WS
 
-import Broadcaster (broadcast, localBroadcast)
+import Base.Broadcaster (broadcast, prepareHandler)
 import Types (RequestNumber, UserPid(..), AreaPid, LogLevel(..))
 import Utils (evaluate)
 import Base.Logger (log)
@@ -44,15 +45,11 @@ acceptConnection node inputHandler pending = do
     wsConn <- WS.acceptRequest pending
     outputPid <-
         Node.forkProcess node $ do
-            let handleSingle bs =
+            let handleOutput bs =
                     liftIO $ WS.sendTextData wsConn (bs :: LB.ByteString)
-                handleBroadcast (bc, bs) = do
-                    localBroadcast bc bs
-                    handleSingle bs
                 outputLoop =
                     forever $ receiveWait [
-                        match handleBroadcast,
-                        match handleSingle
+                        match handleOutput
                         ]
             outputLoop `finally` log Debug "Connection: output closed"
     Node.runProcess node $ do
@@ -80,6 +77,11 @@ acceptConnection node inputHandler pending = do
                 uncurry (inputHandler inputData conn) state'
                 inputLoop state'
         link outputPid >> inputLoop (Nothing, Nothing) `finally` final
+
+
+handleBroadcastOutput ::
+    (LB.ByteString -> Process()) -> LB.ByteString -> Process ()
+handleBroadcastOutput = ($)
 
 
 --external interface
@@ -137,3 +139,8 @@ monitorConnection conn = void $ monitor $ output conn
 checkMonitorNotification :: Connection -> ProcessMonitorNotification -> Bool
 checkMonitorNotification conn (ProcessMonitorNotification _ pid _) =
     output conn == pid
+
+
+connectionBroadcastHandlers :: [Match ()]
+connectionBroadcastHandlers = [prepareHandler handleBroadcastOutput]
+

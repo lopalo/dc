@@ -30,6 +30,9 @@ define(["mithril", "utils"], function (m, utils) {
                     m(".panel-body", statViewBody)
                 );
                 var baseViewBody = [
+                    m("dt.key", "Broadcaster"),
+                    m("dd", utils.boolIcon(data.broadcaster)),
+
                     m("dt.key", "Global Registry"),
                     m("dd", utils.boolIcon(data["global-registry"])),
 

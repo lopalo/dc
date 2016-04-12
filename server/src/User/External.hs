@@ -3,7 +3,8 @@
 module User.External(
     UserArea(..), SyncState(..), SwitchArea(..),
     monitorUser, syncState, switchArea,
-    broadcastAreaOwnerName, clientCmd
+    broadcastAreaOwnerName, clientCmd,
+    userBroadcastHandlers
     ) where
 
 import GHC.Generics (Generic)
@@ -16,7 +17,7 @@ import Control.Distributed.Process
 import Control.Distributed.Process.Extras (newTagPool)
 
 import Base.GlobalRegistry (globalWhereIsByPrefix)
-import Broadcaster (broadcast)
+import Base.Broadcaster (broadcast, prepareHandler)
 import WS.Connection (Connection)
 import Utils (evaluate)
 import Types
@@ -74,7 +75,7 @@ load constructor body = constructor <$> fromJSON body
 
 clientCmd ::
     UserPid -> String -> Value -> RequestNumber -> Connection -> Process ()
-clientCmd (UserPid pid) cmd body req conn = do
+clientCmd (UserPid pid) cmd body req _ = do
     let Success parsed = parseClientCmd cmd body
     evaluate parsed
     case req of
@@ -82,5 +83,20 @@ clientCmd (UserPid pid) cmd body req conn = do
         _ -> send pid (parsed, req)
 
 
+handleBroadcastUserMessage ::
+    (UserMessage -> Process ()) -> UserMessage -> Process ()
+handleBroadcastUserMessage = ($)
+
+
+handleBroadcastAreaOwnerName ::
+    (AreaOwnerName -> Process ()) -> AreaOwnerName -> Process ()
+handleBroadcastAreaOwnerName = ($)
+
+
+userBroadcastHandlers :: [Match ()]
+userBroadcastHandlers = [
+    prepareHandler handleBroadcastUserMessage,
+    prepareHandler handleBroadcastAreaOwnerName
+    ]
 
 
