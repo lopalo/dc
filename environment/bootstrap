@@ -14,6 +14,7 @@ apt-get install zlib1g-dev -y
 apt-get install libleveldb1 libleveldb-dev libsnappy1 libsnappy-dev -y
 
 apt-get install python -y
+apt-get install python-dev -y
 apt-get install python-pip -y
 cd /dc/environment
 pip install -r py_requirements.txt

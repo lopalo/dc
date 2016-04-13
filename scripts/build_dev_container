@@ -1,3 +1,3 @@
 #!/bin/bash
 cd "$(dirname "$0")/.."
-docker build -t dc:dev .
+docker build -t dc:dev -f environment/Dockerfile .
