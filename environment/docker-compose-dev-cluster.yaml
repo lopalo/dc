@@ -1,0 +1,29 @@
+version: '2'
+services:
+    first-node:
+        container_name: first-node
+        image: dc:dev
+        ports:
+            - "10611:10611"
+            - "10621:10621"
+            - "10622:10622"
+        volumes:
+            - "..:/dc"
+        working_dir: /dc/server/src
+        command: runghc Main.hs ../settings/dev_cluster.yaml first
+    second-node:
+        container_name: second-node
+        image: dc:dev
+        ports:
+            - "10612:10612"
+        volumes:
+            - "..:/dc"
+        working_dir: /dc/server/src
+        command: runghc Main.hs ../settings/dev_cluster.yaml second
+    third-node:
+        container_name: third-node
+        image: dc:dev
+        volumes:
+            - "..:/dc"
+        working_dir: /dc/server/src
+        command: runghc Main.hs ../settings/dev_cluster.yaml third

@@ -54,7 +54,7 @@ admin:
 
 nodes:
     first:
-        node-host: localhost
+        node-host: first-node
         node-port: 10601
         services:
 
@@ -82,7 +82,7 @@ nodes:
               min-db-replicas: 1
 
     second:
-        node-host: localhost
+        node-host: second-node
         node-port: 10602
         services:
             - type: user-db
@@ -110,7 +110,7 @@ nodes:
               min-db-replicas: 1
 
     third:
-        node-host: localhost
+        node-host: third-node
         node-port: 10603
         services:
             - type: area
