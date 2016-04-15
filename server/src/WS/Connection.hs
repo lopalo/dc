@@ -14,11 +14,12 @@ import Data.Binary (Binary)
 import Data.Typeable (Typeable)
 import Prelude hiding (log)
 import Control.Monad (forever, void)
+import Control.Monad.Catch (finally)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as LB
 
 import Data.Aeson (ToJSON, encode)
-import Control.Distributed.Process
+import Control.Distributed.Process hiding (finally)
 import Control.Distributed.Process.Extras.Time (TimeUnit(..))
 import Control.Distributed.Process.Extras.Timer (sleepFor)
 import qualified Control.Distributed.Process.Node as Node

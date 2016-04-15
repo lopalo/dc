@@ -4,6 +4,7 @@ module User.User (userProcess) where
 
 import Prelude hiding (log)
 import Control.Monad (forever, when, unless)
+import Control.Monad.Catch (onException)
 import Data.Maybe (fromMaybe)
 import Text.Printf (printf)
 import qualified Data.Map.Strict as M
@@ -11,7 +12,7 @@ import qualified Data.Sequence as Seq
 import Data.Foldable (toList)
 
 import Data.Aeson (ToJSON, Value, object, (.=))
-import Control.Distributed.Process hiding (reconnect)
+import Control.Distributed.Process hiding (reconnect, onException)
 import Control.Distributed.Process.Extras (TagPool, newTagPool)
 import Control.Distributed.Process.Extras.Time (TimeUnit(..))
 import Control.Distributed.Process.Extras.Timer (sleepFor)

@@ -5,6 +5,7 @@ module Base.Logger (loggerProcess, isRunning, log, logException) where
 import Prelude hiding (log)
 import Control.Applicative ((<$>))
 import Control.Monad (when, forever)
+import Control.Monad.Catch (finally)
 import Data.Maybe (isJust)
 import System.IO (IOMode(AppendMode), openFile, hClose, hPutStrLn)
 import Data.Time.Clock (getCurrentTime)
@@ -12,7 +13,7 @@ import Data.Time.Format (formatTime, defaultTimeLocale)
 import qualified Control.Exception as Ex
 import Data.String.Utils (join)
 
-import Control.Distributed.Process
+import Control.Distributed.Process hiding (finally)
 
 import Types (LogLevel(..))
 import qualified Settings as S
@@ -59,7 +60,12 @@ format :: LogLevel -> String -> Process String
 format level txt = do
     now <- liftIO getCurrentTime
     let time = formatTime defaultTimeLocale "%c" now
-        msg = join " | " [show level, time, txt]
+        msg = join " | " [formatedLevel , time, txt]
+        formatedLevel =
+            let maxL = maximum $ map (length . show) [Error ..]
+                levelStr = show level
+                spaces = replicate (maxL - length levelStr) ' '
+            in levelStr ++ spaces
     return msg
 
 

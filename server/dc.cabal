@@ -25,6 +25,7 @@ Executable dc
         base == 4.7.0.2,
         time >= 1.5,
         mtl == 2.1.2,
+        exceptions,
         text >= 0.11.0.0,
         digest == 0.0.1.2,
         bytestring == 0.10.4.0,

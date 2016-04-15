@@ -99,7 +99,7 @@ instance Binary AreaPid
 
 
 data LogLevel = Error | Info | Debug
-    deriving (Generic, Typeable, Show, Eq, Ord)
+    deriving (Generic, Typeable, Show, Eq, Ord, Enum, Bounded)
 
 instance Binary LogLevel
 

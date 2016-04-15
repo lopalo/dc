@@ -4,12 +4,13 @@ module Main where
 
 import Prelude hiding (log)
 import Control.Monad (forever, when, void, mzero)
+import Control.Monad.Catch (finally)
 import Data.Maybe (isNothing)
 import System.Environment (getArgs)
 import Data.Map.Strict ((!))
 import System.Random (randomRIO)
 
-import Control.Distributed.Process
+import Control.Distributed.Process hiding (finally)
 import Control.Distributed.Process.Extras (TagPool, newTagPool)
 import Control.Distributed.Process.Extras.Time (milliSeconds)
 import Control.Distributed.Process.Extras.Timer (sleep)
@@ -73,7 +74,7 @@ spawnService node settings tagPool serviceSettings = do
         options = S.options serviceSettings
         name = prefix serviceType ++ ident
 
-        initService AreaDB opts =
+        initService AreaDB _ =
             return $ areaDBProcess (S.db settings) ident
         initService UserDB _ =
             return $ userDBProcess (S.db settings) ident

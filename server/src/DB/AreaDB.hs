@@ -26,7 +26,7 @@ import Database.LevelDB.Base (
     DB, BatchOp(Put, Del), get, write,
     defaultReadOptions, defaultWriteOptions
     )
-import Database.LevelDB.Iterator (createIter, releaseIter)
+import Database.LevelDB.Iterator (withIter)
 import Database.LevelDB.Streaming (
     KeyRange(AllKeys), Direction(Asc),
     entrySlice, keySlice
@@ -97,11 +97,10 @@ loop db = forever $ safeReceive handlers ()
 
 handleGetAreaObjects :: DB -> GetAreaObjects -> Process (AreaObjects, ())
 handleGetAreaObjects db GetAreaObjects = do
-    objs <- bracket makeIter releaseIter getObjects
+    objs <- withIter db defaultReadOptions getObjects
     return (objs, ())
     where
         emptyObjects = AreaObjects [] [] []
-        makeIter = createIter db defaultReadOptions
         getObjects i =
             Stream.foldl' handleEntry emptyObjects $ entrySlice i AllKeys Asc
 
@@ -123,7 +122,7 @@ handleGetUpdateTs db GetUpdateTs = do
 
 handlePutAreaObjects :: DB -> PutAreaObjects -> Process (Bool, ())
 handlePutAreaObjects db (PutAreaObjects objects) = do
-    let makeIter = createIter db defaultReadOptions
+    let
         getObjectsKeys i =
             let slice = keySlice i AllKeys Asc
                 handleKey k
@@ -133,7 +132,7 @@ handlePutAreaObjects db (PutAreaObjects objects) = do
                     | otherwise = False
                 slice' = Stream.filter handleKey slice
             in Set.fromList <$> Stream.toList slice'
-    objKeys <- bracket makeIter releaseIter getObjectsKeys
+    objKeys <- withIter db defaultReadOptions getObjectsKeys
     ts <- liftIO milliseconds
     let updateTs = Put updateTsKey $ pack $ show ts
         metaBatch = [updateTs]
