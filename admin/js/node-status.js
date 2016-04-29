@@ -46,10 +46,10 @@ define(["mithril", "utils"], function (m, utils) {
                 );
                 return m("div", [statsView, baseView]);
             }
-            var nodeStatusMap = ctrl.data();
-            var viewList = Object.keys(nodeStatusMap).map(function (name) {
-                var nodeStatus = nodeStatusMap[name];
-                var head = m(".panel-heading", name);
+            var viewList = ctrl.data().map(function (pair) {
+                var nodeName = pair[0];
+                var nodeStatus = pair[1];
+                var head = m(".panel-heading", nodeName);
                 var body;
                 if (nodeStatus === null) {
                     return m(".panel panel-danger node-status", [head]);

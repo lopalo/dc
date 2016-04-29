@@ -4,12 +4,17 @@ define(["mithril", "utils"], function (m, utils) {
 
 
     function RegistryController(url) {
-        var queryData = {
-            prefix: this.getPrefix(),
-            node: this.getNode()
+        this.prefix = utils.storageItem("registry:prefix", "");
+        this.node = utils.storageItem("registry:node", "");
+        this._queryData = {
+            prefix: this.prefix(),
+            node: this.node()
         };
         utils.bindAll(this, ["setPrefix", "setNode"]);
-        PollerController.call(this, url, queryData);
+        PollerController.call(
+            this, url, this._queryData,
+            "registry:polling-enabled"
+        );
     }
     RegistryController.prototype = Object.create(PollerController.prototype);
     utils.extend(RegistryController.prototype, {
@@ -24,19 +29,15 @@ define(["mithril", "utils"], function (m, utils) {
                 config: utils.urlEncoded
             });
         },
-        getPrefix: function () {
-            return localStorage.getItem("registry:prefix") || "";
-        },
         setPrefix: function (prefix) {
-            localStorage.setItem("registry:prefix", prefix);
-            this._poller.queryData().prefix = prefix;
-        },
-        getNode: function () {
-            return localStorage.getItem("registry:node") || "";
+            this.prefix(prefix);
+            this._queryData.prefix = prefix;
+            this.doRequest();
         },
         setNode: function (node) {
-            localStorage.setItem("registry:node", node);
-            this._poller.queryData().node = node;
+            this.node(node);
+            this._queryData.node = node;
+            this.doRequest();
         }
     });
 
@@ -50,18 +51,30 @@ define(["mithril", "utils"], function (m, utils) {
                 m("span.input-group-addon", "Name Prefix"),
                 m("input.form-control", {
                     oninput: m.withAttr("value", ctrl.setPrefix),
-                    value: ctrl.getPrefix()
+                    value: ctrl.prefix()
                 })
             ]));
             var nodeFilter = m(".form-group", m(".input-group", [
                 m("span.input-group-addon", "Node"),
                 m("input.form-control", {
                     oninput: m.withAttr("value", ctrl.setNode),
-                    value: ctrl.getNode()
+                    value: ctrl.node()
                 })
 
             ]));
-            var filters = m("form.form-inline", [prefixFilter, nodeFilter]);
+            var polling = JSON.parse(ctrl.pollingEnabled()) ? " active" : "";
+            var pollingToggle = m(".form-group", m(".input-group", [
+                m("button", {
+                    class: "form-cotnrol btn btn-default" + polling,
+                    type: "button",
+                    onclick: ctrl.togglePolling,
+                }, "Auto Refresh")
+            ]));
+            var control = m("form.form-inline", [
+                prefixFilter,
+                nodeFilter,
+                pollingToggle
+            ]);
 
 
             var thead = m("thead", m("tr", [
@@ -87,7 +100,7 @@ define(["mithril", "utils"], function (m, utils) {
             });
             var tbody = m("tbody", rows);
             var table = m("table.table stripped", [thead, tbody]);
-            var page = m("div", [filters, table]);
+            var page = m("div", [control, table]);
             return page;
         }
     };

@@ -1,11 +1,26 @@
 
+.sidebar-nav .active {
+    text-decoration: none;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.sidebar-nav .nav-section {
+    border-left: thick solid rgba(255, 255, 255, 0.2);
+}
+
+
+.sidebar-nav .nav-section.active {
+    border-left: thick solid #fff;
+}
+
 
 .node-status {
     margin: 1%;
     float: left;
 }
 
-.key {
+dt.key {
     text-align: left !important;
 }
 

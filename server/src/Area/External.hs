@@ -1,24 +1,28 @@
+{-# LANGUAGE DeriveGeneric, DeriveDataTypeable #-}
 
-module Area.External (enter, clientCmd, reconnect, getOwners) where
+module Area.External (
+    enter, clientCmd, reconnect,
+    getOwners, getAreaStatus
+    ) where
 
 import Control.Applicative ((<$>))
 import qualified Data.Map.Strict as M
 
 import Data.Aeson (FromJSON, Value(Null), Result(Success), fromJSON)
 import Control.Distributed.Process hiding (reconnect)
-import Control.Distributed.Process.Extras (TagPool, newTagPool, getTag)
-import Control.Distributed.Process.Extras.Call (multicall)
+import Control.Distributed.Process.Serializable (Serializable)
+import Control.Distributed.Process.Extras (TagPool)
 
 import Utils (evaluate)
 import WS.Connection (Connection)
-import Base.GlobalRegistry (globalNSend, globalWhereIsByPrefix)
+import Base.GlobalRegistry (globalNSend, multicallByPrefix)
 import qualified User.External as UE
 import Types (
     UserId, UserPid(..), AreaId,
     AreaPid(..), ServiceType(Area),
-    RequestNumber, AreaOwners, prefix
+    RequestNumber, AreaOwners, AreaStatus,
+    prefix
     )
-import Utils(timeoutForCall)
 import Area.Types
 
 
@@ -58,9 +62,14 @@ reconnect areaId userId conn =
     globalNSend (show areaId) (Reconnection userId, conn)
 
 
+distributedRequest ::
+    (Serializable a, Serializable b) => a -> TagPool -> Process [b]
+distributedRequest = multicallByPrefix $ prefix Area
+
+
 getOwners :: TagPool -> Process AreaOwners
-getOwners tagPool = do
-    areaPids <- globalWhereIsByPrefix (prefix Area) tagPool
-    tag <- getTag tagPool
-    res <- multicall areaPids GetOwner tag timeoutForCall
-    return $ M.fromList [val | Just val <- res]
+getOwners tagPool = M.fromList <$> distributedRequest GetOwner tagPool
+
+
+getAreaStatus :: TagPool -> Process [AreaStatus]
+getAreaStatus = distributedRequest GetAreaStatus

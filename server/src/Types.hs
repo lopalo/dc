@@ -123,6 +123,17 @@ instance FromJSON Size where
         return (Size w h)
 
 
+data AreaStatus = AreaStatus {
+        statusAreaId :: AreaId,
+        userAmount :: Int,
+        objectAmount :: Int,
+        tickDurationMs :: Int
+    }
+    deriving (Generic, Typeable)
+
+instance Binary AreaStatus
+
+
 data ServiceType
     = AreaDB
     | UserDB

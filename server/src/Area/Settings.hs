@@ -20,7 +20,8 @@ data Settings = Settings {
     tickMilliseconds :: Ts,
     broadcastEveryTick :: Int,
     logEveryTick :: Int,
-    syncEveryTick :: Int
+    syncEveryTick :: Int,
+    tickDurationHistorySize :: Int
     }
 
 instance FromJSON Settings where
@@ -36,7 +37,8 @@ instance FromJSON Settings where
         v .: "tick-milliseconds" <*>
         v .: "broadcast-every-tick" <*>
         v .: "log-every-tick" <*>
-        v .: "sync-every-tick"
+        v .: "sync-every-tick" <*>
+        v .: "tick-duration-history-size"
     parseJSON _ = mzero
 
 

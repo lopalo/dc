@@ -19,7 +19,7 @@ import WS.Connection (Connection, setArea)
 import qualified DB.AreaDB as DB
 import Utils (milliseconds, safeReceive, evaluate)
 import qualified Area.Settings as AS
-import Types (ServiceId, AreaId(..), AreaPid(..), UserName)
+import Types (ServiceId, AreaId(..), AreaPid(..), UserName, AreaStatus(..))
 import qualified User.External as UE
 import qualified Area.Objects.User as U
 import Area.Utils (sendCmd)
@@ -106,6 +106,27 @@ handleGetOwner state _ =
     return ((areaId state, ownerName state), state)
 
 
+handleGetAreaStatus ::
+    State -> GetAreaStatus -> Process (AreaStatus, State)
+handleGetAreaStatus state _ =
+    return (res, state)
+    where
+        amount getter = M.size $ getter state
+        usrAmount = amount (usersData . users)
+        amountLst = [
+            usrAmount,
+            amount gates,
+            amount asteroids,
+            amount controlPoints
+            ]
+        res = AreaStatus{
+            statusAreaId=areaId state,
+            userAmount=usrAmount,
+            objectAmount=sum amountLst,
+            tickDurationMs=maximum $ tickDurations state
+            }
+
+
 areaProcess :: AS.Settings -> ServiceId -> Int -> Process ()
 areaProcess aSettings ident minReplicas = do
     objects <- DB.getAreaObjects aid minReplicas =<< newTagPool
@@ -115,6 +136,7 @@ areaProcess aSettings ident minReplicas = do
             settings=aSettings,
             minDBReplicas=minReplicas,
             tickNumber=0,
+            tickDurations=[],
             currentTs=now,
             users=us,
             gates=fromList $ DB.gates objects,
@@ -149,6 +171,7 @@ loop state = safeReceive handlers state >>= loop
             prepare handleEnter,
             prepare handleReconnection,
             prepareCall handleGetOwner,
+            prepareCall handleGetAreaStatus,
             prepare handleMonitorNotification,
             matchUnknown (return state)
             ]

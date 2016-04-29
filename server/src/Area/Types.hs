@@ -38,6 +38,11 @@ data GetOwner = GetOwner deriving (Generic, Typeable)
 instance Binary GetOwner
 
 
+data GetAreaStatus = GetAreaStatus deriving (Generic, Typeable)
+
+instance Binary GetAreaStatus
+
+
 data ClientCommand
     = Echo !String
     | GetObjectsInfo ![ObjId]

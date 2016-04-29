@@ -13,6 +13,7 @@ import Web.Scotty hiding (settings)
 import qualified Settings as S
 import qualified Admin.Settings as AS
 import Admin.ClusterHandlers (clusterHandlers)
+import Admin.AreaHandlers (areaHandlers)
 
 
 adminProcess :: S.Settings -> LocalNode -> String -> Int -> Process ()
@@ -24,6 +25,7 @@ adminProcess settings node host port = liftIO $ do
     scotty port $ do
         middleware $ staticPolicy (uiPrefix >-> addBase uiDir)
         clusterHandlers node nodeNames
+        areaHandlers node
         get "/" $ redirect "/ui/index.html"
 
 

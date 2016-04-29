@@ -7,20 +7,19 @@
         <title>DC Admin</title>
 
         <link href="/ui/css/vendors/bootstrap.min.css" rel="stylesheet">
+        <link href="/ui/css/vendors/simple-sidebar.css" rel="stylesheet">
         <link rel="stylesheet" href="css/main.css">
         <script data-main="js/main" src="js/vendors/require.min.js"></script>
     </head>
-    <nav class="navbar navbar-inverse navbar-static-top">
-        <div class="container">
-            <div class="navbar-header">
-                <a class="navbar-brand" href="/">DC Admin</a>
+
+    <body>
+        <div id="wrapper">
+            <div id="sidebar-wrapper">
+                <div id="navbar"></div>
             </div>
-            <div id="navbar" class="collapse navbar-collapse">
-                <ul class="nav navbar-nav"></ul>
+            <div id="page-content-wrapper">
+                <div id="page" class="container-fluid"></div>
             </div>
         </div>
-    </nav>
-    <body>
-        <div id="page" class="container"></div>
     </body>
 </html>

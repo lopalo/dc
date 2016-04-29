@@ -3,8 +3,9 @@
 module Base.GlobalRegistry (
     RegistrationFailure(RegistrationFailure),
     globalRegistryProcess, isRunning,
-    getNameList, globalRegister, globalWhereIs,
-    globalMultiWhereIs, globalWhereIsByPrefix, globalNSend
+    getNameList, getVisibleNodes, globalRegister, globalWhereIs,
+    globalMultiWhereIs, globalWhereIsByPrefix, globalNSend,
+    multicallByPrefix
     ) where
 
 import GHC.Generics (Generic)
@@ -22,12 +23,14 @@ import qualified Data.Trie as T
 import Control.Distributed.Process
 import Control.Distributed.Process.Serializable (Serializable)
 import Control.Distributed.Process.Extras (TagPool, newTagPool, getTag)
-import Control.Distributed.Process.Extras.Call (callResponse, callTimeout)
+import Control.Distributed.Process.Extras.Call (
+    callResponse, callTimeout, multicall
+    )
 import Control.Distributed.Process.Extras.Time (TimeUnit(..))
 import Control.Distributed.Process.Extras.Timer (sleepFor)
 
 
-import Types (NodeNames, Ts, LogLevel(..))
+import Types (NodeName, NodeNames, Ts, LogLevel(..))
 import qualified Settings as S
 import Utils (safeReceive, timeoutForCall, milliseconds)
 import Base.Logger (log)
@@ -79,6 +82,11 @@ instance Binary WhereIsByPrefix
 data GetNameList = GetNameList String deriving (Generic, Typeable)
 
 instance Binary GetNameList
+
+
+data GetVisibleNodes = GetVisibleNodes deriving (Generic, Typeable)
+
+instance Binary GetVisibleNodes
 
 
 data RegistrationFailure =
@@ -179,6 +187,7 @@ loop state = safeReceive handlers state >>= loop
             prepare handlePing,
             prepare handleMerge,
             prepare handleNodeMonitorNotification,
+            prepareCall handleGetVisibleNodes,
             matchUnknown (return state)
             ]
 
@@ -287,6 +296,16 @@ handleGetNameList state (GetNameList prefix) = return (map f nameList, state)
         f (name, (ts, pid)) = (toString name, pid, ts)
 
 
+handleGetVisibleNodes ::
+    State -> GetVisibleNodes ->
+    Process ((NodeName, M.Map NodeName Bool), State)
+handleGetVisibleNodes state _ = do
+    selfNodeId <- getSelfNode
+    return ((name selfNodeId, M.mapKeys name $ visibleNodes state), state)
+    where
+        name = (nodeNames state M.!)
+
+
 runPing :: Ts -> [NodeId] -> Process ProcessId
 runPing ms nodeIds = do
     selfPid <- getSelfPid
@@ -316,6 +335,10 @@ getNameList :: String -> TagPool -> Process NameList
 getNameList prefix = request (GetNameList prefix)
 
 
+getVisibleNodes :: TagPool -> Process (NodeName, M.Map NodeName Bool)
+getVisibleNodes = request GetVisibleNodes
+
+
 globalRegister :: String -> ProcessId -> TagPool -> Process Bool
 globalRegister name pid = request (Register name pid)
 
@@ -332,6 +355,15 @@ globalWhereIs name tagPool = do
 
 globalWhereIsByPrefix :: String -> TagPool -> Process [ProcessId]
 globalWhereIsByPrefix prefix = request (WhereIsByPrefix prefix)
+
+
+multicallByPrefix ::
+    (Serializable a, Serializable b) => String -> a -> TagPool -> Process [b]
+multicallByPrefix prefix msg tagPool = do
+    nodeAgentPids <- globalWhereIsByPrefix prefix tagPool
+    tag <- getTag tagPool
+    res <- multicall nodeAgentPids msg tag timeoutForCall
+    return [val | Just val <- res]
 
 
 globalNSend :: Serializable a => String -> a -> Process ()

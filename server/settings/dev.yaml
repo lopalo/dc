@@ -39,6 +39,7 @@ area:
     broadcast-every-tick: 1 # 4
     log-every-tick: 1000
     sync-every-tick: 100
+    tick-duration-history-size: 100
 
 http:
     client-dir: ../../client

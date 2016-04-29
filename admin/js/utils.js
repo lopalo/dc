@@ -3,6 +3,7 @@ define(["mithril"], function (m) {
 
     var POLLING_INTERVAL = 1000;
 
+
     function extend(target, source) {
         //Partially emulates Object.assign from ES6
         Object.keys(source).forEach(function (k) {
@@ -10,11 +11,13 @@ define(["mithril"], function (m) {
         });
     }
 
+
     function bindAll(obj, keys) {
         keys.forEach(function (k) {
             obj[k] = obj[k].bind(obj);
         });
     }
+
 
     function urlEncoded(xhr) {
         xhr.setRequestHeader(
@@ -24,14 +27,35 @@ define(["mithril"], function (m) {
     }
 
 
-    function Poller(url, queryData) {
+    function storageItem(key, defaultValue) {
+        function setter(value) {
+            if (value === undefined) {
+                value = localStorage.getItem(key);
+                if (value === null) {
+                    return defaultValue;
+                }
+                return value;
+            }
+            localStorage.setItem(key, value);
+        }
+        return setter;
+    }
+
+
+    function Poller(url, queryData, pollingEnabledKey) {
         this.url = m.prop(url);
         this.queryData = m.prop(queryData);
         this.data = m.prop(null);
+        this.pollingEnabled = storageItem(
+            pollingEnabledKey || "polling-enabled",
+            JSON.stringify(true)
+        );
         this._intervalId = null;
     }
     Poller.prototype = {
-        doRequest: function () {
+        doRequest: function (force) {
+            var enabled = JSON.parse(this.pollingEnabled());
+            if (!enabled && this.data() !== null && !force) return;
             m.request({
                 method: "GET",
                 url: this.url(),
@@ -43,7 +67,7 @@ define(["mithril"], function (m) {
             }).then(this.data);
         },
         startPolling: function () {
-            var func = this.doRequest.bind(this);
+            var func = this.doRequest.bind(this, false);
             this._intervalId = window.setInterval(func, POLLING_INTERVAL);
         },
         stopPolling: function () {
@@ -51,17 +75,29 @@ define(["mithril"], function (m) {
         }
     };
 
-    function PollerController(url, queryData) {
-        var poller = this._poller = new Poller(url, queryData);
+
+    function PollerController(url, queryData, pollingEnabledKey) {
+        var poller = new Poller(url, queryData, pollingEnabledKey);
+        this._poller = poller;
         this.data = poller.data;
+        this.pollingEnabled = poller.pollingEnabled;
         poller.startPolling();
         poller.doRequest();
+        bindAll(this, ["togglePolling"]);
     }
     PollerController.prototype = {
         onunload: function () {
             this._poller.stopPolling();
+        },
+        togglePolling: function () {
+            var newVal = !JSON.parse(this.pollingEnabled());
+            this.pollingEnabled(JSON.stringify(newVal));
+        },
+        doRequest: function () {
+            this._poller.doRequest(true);
         }
     };
+
 
     function boolIcon(value) {
         if (value) {
@@ -72,6 +108,7 @@ define(["mithril"], function (m) {
 
     return {
         extend: extend,
+        storageItem: storageItem,
         bindAll: bindAll,
         urlEncoded: urlEncoded,
         boolIcon: boolIcon,

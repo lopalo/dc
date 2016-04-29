@@ -2,7 +2,9 @@
 
 module Admin.ClusterHandlers (clusterHandlers) where
 
-import Data.Tuple.Utils (snd3)
+import Data.Function (on)
+import Data.List (sortBy)
+import Data.Tuple.Utils (fst3, snd3)
 import qualified Data.Map.Strict as M
 
 import Data.Aeson (object, (.=))
@@ -23,6 +25,7 @@ clusterHandlers node nodeNames = do
     g "registry" $ getRegistry node nodeNames
     p "kill-process-by-name" $ killProcessByName node
     g "node-status" $ getNodeStatus node nodeNames
+    g "mesh" $ getClusterMesh node nodeNames
     where
         g = get . prfx
         p = post . prfx
@@ -38,7 +41,7 @@ getNodeStatus node nodeNames = do
                 name = nodeNames M.! nodeId
                 view = statusView status
             in M.insert name (Just view) res'
-    json res''
+    json $ sortBy (compare `on` fst) (M.toList res'')
     where
         res = foldl insertNothing M.empty $ M.elems nodeNames
         insertNothing res' name = M.insert name Nothing res'
@@ -59,6 +62,10 @@ getNodeStatus node nodeNames = do
                 ]
 
 
+getClusterMesh :: LocalNode -> NodeNames -> ActionM ()
+getClusterMesh node _ =
+    json =<< execProcess node (NA.getClusterMesh =<< newTagPool)
+
 
 getRegistry :: LocalNode -> NodeNames -> ActionM ()
 getRegistry node nodeNames = do
@@ -67,11 +74,10 @@ getRegistry node nodeNames = do
     registry <- execProcess node $ GR.getNameList namePrefix =<< newTagPool
     now <- liftIO milliseconds
     let nodeName = (nodeNames M.!) . processNodeId
-        uptime ts = show $ now - ts
         nodeFilter = (nodeSelector ==) . snd3
-        res = [(name, nodeName pid, uptime ts) | (name, pid, ts) <- registry]
+        res = [(name, nodeName pid, now - ts) | (name, pid, ts) <- registry]
         res' = if null nodeSelector then res else filter nodeFilter res
-    json res'
+    json $ sortBy (compare `on` fst3) res'
 
 
 

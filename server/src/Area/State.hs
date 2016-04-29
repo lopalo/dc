@@ -53,6 +53,7 @@ data State = State {
     settings :: !Settings,
     minDBReplicas :: !Int,
     tickNumber :: !Int,
+    tickDurations :: ![Ts],
     currentTs :: !Ts,
     users :: !Users,
     gates :: !Gates,
@@ -69,6 +70,10 @@ type StateS a = S.State State a
 
 tickNumberL :: Lens State Int
 tickNumberL = lens tickNumber (\v s -> s{tickNumber=v})
+
+
+tickDurationsL :: Lens State [Ts]
+tickDurationsL = lens tickDurations (\v s -> s{tickDurations=v})
 
 
 usersL :: Lens State Users

@@ -108,7 +108,9 @@ calculateTick ts = do
     tnum <- access tickNumberL
     tickNumberL += 1
     broadcastEveryTick <- gets $ AS.broadcastEveryTick . settings
+    tickDurationHistorySize <- gets $ AS.tickDurationHistorySize . settings
     let broadcast = tnum `rem` broadcastEveryTick == 0
+    tickDurationsL %= (take tickDurationHistorySize) . (ts - previousTs :)
     if broadcast
         then liftM Just (getBroadcastData ts)
         else return Nothing
@@ -117,7 +119,7 @@ calculateTick ts = do
 handleActions :: Ts -> StateS ()
 handleActions previousTs= do
     ts <- gets currentTs
-    let
+    let time = Time{timestamp=ts, timeDelta=ts - previousTs}
         handleActive lens = do
             actives <- access lens
             signals <- access signalsL
@@ -131,7 +133,6 @@ handleActions previousTs= do
             let (active', newSignals) = runWriter $ applyActions time active
                 res' = M.insert ident active' res
             in (res', signals Seq.>< newSignals)
-        time = Time{timestamp=ts, timeDelta=ts - previousTs}
     handleActive $ usersL >>> usersDataL
     handleActive gatesL
     handleActive asteroidsL

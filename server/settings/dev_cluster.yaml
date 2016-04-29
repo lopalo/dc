@@ -40,7 +40,7 @@ area:
     broadcast-every-tick: 1 # 4
     log-every-tick: 1000
     sync-every-tick: 100
-
+    tick-duration-history-size: 100
 
 http:
     client-dir: ../../client
@@ -57,7 +57,6 @@ nodes:
         node-host: first-node
         node-port: 10601
         services:
-
             - type: ws
               ident: one
               host: 0.0.0.0
@@ -83,22 +82,10 @@ nodes:
 
     second:
         node-host: second-node
-        node-port: 10602
+        node-port: 10601
         services:
-            - type: user-db
-              ident: "[0-2]|a"
-
-            - type: user-db
-              ident: "[1-2]|a"
-
             - type: area-db
               ident: "alpha|a"
-
-            - type: area-db
-              ident: "beta|a"
-
-            - type: area-db
-              ident: "gamma|a"
 
             - type: ws
               ident: two
@@ -111,7 +98,7 @@ nodes:
 
     third:
         node-host: third-node
-        node-port: 10603
+        node-port: 10601
         services:
             - type: area
               ident: alpha
@@ -120,6 +107,26 @@ nodes:
             - type: area
               ident: gamma
               min-db-replicas: 1
+
+    fourth:
+        node-host: fourth-node
+        node-port: 10601
+        services:
+            - type: user-db
+              ident: "[0-2]|a"
+
+            - type: area-db
+              ident: "beta|a"
+
+    fifth:
+        node-host: fifth-node
+        node-port: 10601
+        services:
+            - type: user-db
+              ident: "[1-2]|a"
+
+            - type: area-db
+              ident: "gamma|a"
 
 
 
