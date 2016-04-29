@@ -8,6 +8,7 @@ ENV CABAL_VERSION 1.20
 
 COPY ${PROJECT_ROOT_DIR} /dc
 
+RUN apt-get update
 RUN apt-get install software-properties-common -y
 RUN sudo add-apt-repository ppa:hvr/ghc -y
 RUN apt-get update

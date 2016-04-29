@@ -33,6 +33,7 @@ Executable dc
         ghc-prim == 0.3.1.0,
         data-lens == 2.10.5,
         binary == 0.7.1.0,
+        directory <= 1.2.5.1,
         MissingH == 1.2.1.0,
         network == 2.6.*,
         distributed-process == 0.6.1,
