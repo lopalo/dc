@@ -25,6 +25,7 @@ import Utils (safeReceive)
 import qualified Base.Broadcaster as B
 import qualified Base.GlobalRegistry as GR
 import qualified Base.Logger as L
+import qualified Settings as S
 
 
 data GetNodeStatus = GetNodeStatus deriving (Generic, Typeable)
@@ -53,10 +54,14 @@ data NodeStatus = NodeStatus {
 instance Binary NodeStatus
 
 
-nodeAgentProcess :: Process ()
-nodeAgentProcess = do
+type State = (TagPool, S.ServiceSettings -> Process ())
+
+
+nodeAgentProcess :: (TagPool -> S.ServiceSettings -> Process ()) -> Process ()
+nodeAgentProcess spawnService = do
     tagPool <- newTagPool
-    let prepareCall h = callResponse (h tagPool)
+    let state = (tagPool, spawnService tagPool)
+        prepareCall h = callResponse (h state)
         handlers = [
             prepareCall handleWhereIs,
             prepareCall handleGetNodeStatus,
@@ -66,13 +71,13 @@ nodeAgentProcess = do
     forever $ safeReceive handlers ()
 
 
-handleWhereIs :: TagPool -> WhereIs -> Process (Maybe ProcessId, ())
-handleWhereIs tagPool (WhereIs name) = do
+handleWhereIs :: State -> WhereIs -> Process (Maybe ProcessId, ())
+handleWhereIs (tagPool, _) (WhereIs name) = do
     maybePid <- GR.globalWhereIs name tagPool
     return (maybePid, ())
 
 
-handleGetNodeStatus :: TagPool -> GetNodeStatus -> Process (NodeStatus, ())
+handleGetNodeStatus :: State -> GetNodeStatus -> Process (NodeStatus, ())
 handleGetNodeStatus _ _ = do
     info <-
         NodeStatus <$>
@@ -84,8 +89,8 @@ handleGetNodeStatus _ _ = do
 
 
 handleGetClusterMesh ::
-    TagPool -> GetClusterMesh -> Process ((NodeName, M.Map NodeName Bool), ())
-handleGetClusterMesh tagPool _ = do
+    State -> GetClusterMesh -> Process ((NodeName, M.Map NodeName Bool), ())
+handleGetClusterMesh (tagPool, _) _ = do
     res <- GR.getVisibleNodes tagPool
     return (res, ())
 

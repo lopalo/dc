@@ -29,7 +29,7 @@ define(["bootstrap", "mithril", "pages"], function (_, m, pages) {
 
                 var sectionAttrs = {
                     id: section.section,
-                    class: "list-unstyled" + (active ? "" : " collapse")
+                    class: "list-unstyled collapse" + (active ? " in" : "")
                 };
                 return m("li", [button, m("ul", sectionAttrs, pageItems)]);
             });

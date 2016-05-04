@@ -3,7 +3,7 @@
 module Admin.ClusterHandlers (clusterHandlers) where
 
 import Data.Function (on)
-import Data.List (sortBy)
+import Data.List (sort, sortBy)
 import Data.Tuple.Utils (fst3, snd3)
 import qualified Data.Map.Strict as M
 
@@ -13,7 +13,7 @@ import Control.Distributed.Process.Node (LocalNode)
 import Control.Distributed.Process.Extras (newTagPool)
 import Web.Scotty hiding (settings, status)
 
-import Types (NodeNames)
+import Types (NodeNames, SwitchOffService(..))
 import Utils (milliseconds)
 import Admin.Utils (execProcess)
 import qualified Base.GlobalRegistry as GR
@@ -24,6 +24,7 @@ clusterHandlers :: LocalNode -> NodeNames -> ScottyM ()
 clusterHandlers node nodeNames = do
     g "registry" $ getRegistry node nodeNames
     p "kill-process-by-name" $ killProcessByName node
+    p "switch-off-service" $ switchOffService node
     g "node-status" $ getNodeStatus node nodeNames
     g "mesh" $ getClusterMesh node nodeNames
     where
@@ -63,8 +64,12 @@ getNodeStatus node nodeNames = do
 
 
 getClusterMesh :: LocalNode -> NodeNames -> ActionM ()
-getClusterMesh node _ =
-    json =<< execProcess node (NA.getClusterMesh =<< newTagPool)
+getClusterMesh node nodeNames = do
+    mesh <- execProcess node (NA.getClusterMesh =<< newTagPool)
+    json $ object [
+        "nodes" .= sort (M.elems nodeNames),
+        "mesh" .= mesh
+        ]
 
 
 getRegistry :: LocalNode -> NodeNames -> ActionM ()
@@ -85,6 +90,19 @@ killProcessByName :: LocalNode -> ActionM ()
 killProcessByName node = do
     name <- param "name"
     execProcess node $ do
-        Just pid <- GR.globalWhereIs name =<< newTagPool
-        kill pid "admin"
+        maybePid <- GR.globalWhereIs name =<< newTagPool
+        case maybePid of
+            Just pid -> kill pid "admin"
+            Nothing -> return ()
+
+
+switchOffService :: LocalNode -> ActionM ()
+switchOffService node = do
+    name <- param "name"
+    execProcess node $ do
+        maybePid <- GR.globalWhereIs name =<< newTagPool
+        case maybePid of
+            Just pid -> exit pid SwitchOffService
+            Nothing -> return ()
+
 

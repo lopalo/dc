@@ -18,6 +18,7 @@
 .node-status {
     margin: 1%;
     float: left;
+    min-width: 30%;
 }
 
 dt.key {

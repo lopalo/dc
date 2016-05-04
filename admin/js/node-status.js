@@ -46,7 +46,7 @@ define(["mithril", "utils"], function (m, utils) {
                 );
                 return m("div", [statsView, baseView]);
             }
-            var viewList = ctrl.data().map(function (pair) {
+            var viewList = ctrl.response().map(function (pair) {
                 var nodeName = pair[0];
                 var nodeStatus = pair[1];
                 var head = m(".panel-heading", nodeName);

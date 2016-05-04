@@ -16,7 +16,7 @@ define(["mithril", "utils"], function (m, utils) {
                 objects: 0,
                 "tick-duration": 0
             };
-            var rows = ctrl.data().map(function (record) {
+            var rows = ctrl.response().map(function (record) {
                 var name = m("td", record.id);
                 var users = m("td", record.users);
                 var objects = m("td", record.objects);

@@ -42,10 +42,10 @@ define(["mithril"], function (m) {
     }
 
 
-    function Poller(url, queryData, pollingEnabledKey) {
+    function Poller(url, requestParams, pollingEnabledKey) {
         this.url = m.prop(url);
-        this.queryData = m.prop(queryData);
-        this.data = m.prop(null);
+        this.requestParams = m.prop(requestParams);
+        this.response = m.prop(null);
         this.pollingEnabled = storageItem(
             pollingEnabledKey || "polling-enabled",
             JSON.stringify(true)
@@ -55,16 +55,16 @@ define(["mithril"], function (m) {
     Poller.prototype = {
         doRequest: function (force) {
             var enabled = JSON.parse(this.pollingEnabled());
-            if (!enabled && this.data() !== null && !force) return;
+            if (!enabled && this.response() !== null && !force) return;
             m.request({
                 method: "GET",
                 url: this.url(),
-                data: this.queryData(),
+                data: this.requestParams(),
                 serialize: function (data) {
                     return m.route.buildQueryString(data);
                 },
                 config: urlEncoded
-            }).then(this.data);
+            }).then(this.response);
         },
         startPolling: function () {
             var func = this.doRequest.bind(this, false);
@@ -76,14 +76,17 @@ define(["mithril"], function (m) {
     };
 
 
-    function PollerController(url, queryData, pollingEnabledKey) {
-        var poller = new Poller(url, queryData, pollingEnabledKey);
+    function PollerController(url, requestParams, pollingEnabledKey) {
+        var poller = new Poller(url, requestParams, pollingEnabledKey);
         this._poller = poller;
-        this.data = poller.data;
-        this.pollingEnabled = poller.pollingEnabled;
         poller.startPolling();
         poller.doRequest();
         bindAll(this, ["togglePolling"]);
+
+        this.url = poller.url;
+        this.requestParams = poller.requestParams;
+        this.response = poller.response;
+        this.pollingEnabled = poller.pollingEnabled;
     }
     PollerController.prototype = {
         onunload: function () {

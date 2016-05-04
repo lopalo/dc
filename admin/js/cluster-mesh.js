@@ -5,8 +5,9 @@ define(["mithril", "utils"], function (m, utils) {
             return new utils.PollerController("/cluster/mesh");
         },
         view: function (ctrl) {
-            var data = ctrl.data();
-            var nodes = Object.keys(data).sort();
+            var data = ctrl.response();
+            var nodes = data.nodes;
+            var mesh = data.mesh;
             var headers = nodes.map(function (node) {
                 return m("th", node);
             });
@@ -19,7 +20,11 @@ define(["mithril", "utils"], function (m, utils) {
                     if (node === targetNode) {
                         connected = "";
                     } else {
-                        connected = utils.boolIcon(data[node][targetNode]);
+                        if (mesh[node] === undefined) {
+                            connected = utils.boolIcon(false);
+                        } else {
+                            connected = utils.boolIcon(mesh[node][targetNode]);
+                        }
                     }
                     return m("td", connected);
                 });
