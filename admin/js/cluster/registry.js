@@ -14,8 +14,8 @@ define(["mithril", "utils"], function (m, utils) {
             "setNode"
         ]);
         requestParams = {
-            prefix: this.prefix(),
-            node: this.node()
+            prefix: this.prefix,
+            node: this.node
         };
         PollerController.call(
             this, url, requestParams,
@@ -25,35 +25,20 @@ define(["mithril", "utils"], function (m, utils) {
     RegistryController.prototype = Object.create(PollerController.prototype);
     utils.extend(RegistryController.prototype, {
         killProcess: function (name) {
-            m.request({
-                method: "POST",
-                url: "/cluster/kill-process-by-name",
-                data: {name: name},
-                serialize: function (data) {
-                    return m.route.buildQueryString(data);
-                },
-                config: utils.urlEncoded
-            });
+            utils.postUrlEncoded(
+                "/cluster/kill-process-by-name",
+                {name: name}
+            );
         },
         offService: function (name) {
-            m.request({
-                method: "POST",
-                url: "/cluster/switch-off-service",
-                data: {name: name},
-                serialize: function (data) {
-                    return m.route.buildQueryString(data);
-                },
-                config: utils.urlEncoded
-            });
+            utils.postUrlEncoded("/cluster/switch-off-service", {name: name});
         },
         setPrefix: function (prefix) {
             this.prefix(prefix);
-            this.requestParams().prefix = prefix;
             this.doRequest();
         },
         setNode: function (node) {
             this.node(node);
-            this.requestParams().node = node;
             this.doRequest();
         }
     });
@@ -118,13 +103,11 @@ define(["mithril", "utils"], function (m, utils) {
             ]));
 
             var polling = JSON.parse(ctrl.pollingEnabled()) ? " active" : "";
-            var pollingToggle = m(".form-group", m(".input-group", [
-                m("button", {
-                    class: "form-cotnrol btn btn-default" + polling,
-                    type: "button",
-                    onclick: ctrl.togglePolling,
-                }, "Auto Refresh")
-            ]));
+            var pollingToggle = m("button", {
+                class: "btn btn-default" + polling,
+                type: "button",
+                onclick: ctrl.togglePolling,
+            }, "Auto Refresh");
             var control = m("form.form-inline", [
                 prefixFilter,
                 nodeFilter,

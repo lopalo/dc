@@ -18,17 +18,30 @@ define(["mithril"], function (m) {
         });
     }
 
+    function isEmpty(object) {
+        return Object.keys(object).length === 0;
+    }
 
-    function urlEncoded(xhr) {
-        xhr.setRequestHeader(
-            "Content-type",
-            "application/x-www-form-urlencoded"
-        );
+    function postUrlEncoded(url, data) {
+        return m.request({
+            method: "POST",
+            url: url,
+            data: data,
+            serialize: function (data) {
+                return m.route.buildQueryString(data);
+            },
+            config: function (xhr) {
+                xhr.setRequestHeader(
+                    "Content-type",
+                    "application/x-www-form-urlencoded"
+                );
+            }
+        });
     }
 
 
     function storageItem(key, defaultValue) {
-        function setter(value) {
+        function accessor(value) {
             if (value === undefined) {
                 value = localStorage.getItem(key);
                 if (value === null) {
@@ -38,13 +51,14 @@ define(["mithril"], function (m) {
             }
             localStorage.setItem(key, value);
         }
-        return setter;
+        accessor.toJSON = function () { return accessor(); };
+        return accessor;
     }
 
 
     function Poller(url, requestParams, pollingEnabledKey) {
         this.url = m.prop(url);
-        this.requestParams = m.prop(requestParams);
+        this.requestParams = m.prop(requestParams || {});
         this.response = m.prop(null);
         this.pollingEnabled = storageItem(
             pollingEnabledKey || "polling-enabled",
@@ -56,14 +70,16 @@ define(["mithril"], function (m) {
         doRequest: function (force) {
             var enabled = JSON.parse(this.pollingEnabled());
             if (!enabled && this.response() !== null && !force) return;
+
+            var data = {};
+            var params = this.requestParams();
+            Object.keys(params).forEach(function (k) {
+                data[k] = params[k]();
+            });
             m.request({
                 method: "GET",
                 url: this.url(),
-                data: this.requestParams(),
-                serialize: function (data) {
-                    return m.route.buildQueryString(data);
-                },
-                config: urlEncoded
+                data: data,
             }).then(this.response);
         },
         startPolling: function () {
@@ -113,7 +129,8 @@ define(["mithril"], function (m) {
         extend: extend,
         storageItem: storageItem,
         bindAll: bindAll,
-        urlEncoded: urlEncoded,
+        isEmpty: isEmpty,
+        postUrlEncoded: postUrlEncoded,
         boolIcon: boolIcon,
         Poller: Poller,
         PollerController: PollerController

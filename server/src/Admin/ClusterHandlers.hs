@@ -23,6 +23,7 @@ import qualified NodeAgent.NodeAgent as NA
 clusterHandlers :: LocalNode -> NodeNames -> ScottyM ()
 clusterHandlers node nodeNames = do
     g "registry" $ getRegistry node nodeNames
+    p "start-service" $ startService node
     p "kill-process-by-name" $ killProcessByName node
     p "switch-off-service" $ switchOffService node
     g "node-status" $ getNodeStatus node nodeNames
@@ -104,5 +105,12 @@ switchOffService node = do
         case maybePid of
             Just pid -> exit pid SwitchOffService
             Nothing -> return ()
+
+
+startService :: LocalNode -> ActionM ()
+startService node = do
+    (nodeName, serviceSettings) <- jsonData
+    execProcess node $ NA.startService nodeName serviceSettings
+
 
 

@@ -15,6 +15,11 @@
 }
 
 
+.sidebar-nav .nav-page {
+    padding-left: 30px;
+}
+
+
 .node-status {
     margin: 1%;
     float: left;
@@ -27,4 +32,9 @@ dt.key {
 
 .form-group {
     padding-right: 8px;
+}
+
+.alert.disappearing {
+    opacity: 0;
+    transition: opacity 8s;
 }

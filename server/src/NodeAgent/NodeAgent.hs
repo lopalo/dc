@@ -5,7 +5,8 @@ module NodeAgent.NodeAgent (
     nodeAgentProcess,
     getNodeStatus,
     getClusterMesh,
-    distributedWhereIs
+    distributedWhereIs,
+    startService
     ) where
 
 import GHC.Generics (Generic)
@@ -43,6 +44,13 @@ data WhereIs = WhereIs String deriving (Generic, Typeable)
 instance Binary WhereIs
 
 
+data StartService =
+    StartService S.ServiceSettings
+    deriving (Generic, Typeable)
+
+instance Binary StartService
+
+
 data NodeStatus = NodeStatus {
         stats :: NodeStats,
         broadcasterIsRunning :: Bool,
@@ -61,11 +69,13 @@ nodeAgentProcess :: (TagPool -> S.ServiceSettings -> Process ()) -> Process ()
 nodeAgentProcess spawnService = do
     tagPool <- newTagPool
     let state = (tagPool, spawnService tagPool)
+        prepare h = match (h state)
         prepareCall h = callResponse (h state)
         handlers = [
             prepareCall handleWhereIs,
             prepareCall handleGetNodeStatus,
             prepareCall handleGetClusterMesh,
+            prepare handleStartService,
             matchUnknown (return ())
             ]
     forever $ safeReceive handlers ()
@@ -95,6 +105,11 @@ handleGetClusterMesh (tagPool, _) _ = do
     return (res, ())
 
 
+handleStartService :: State -> StartService -> Process ()
+handleStartService (_, spawnService) (StartService serviceSettings) =
+    spawnService serviceSettings
+
+
 distributedRequest ::
     (Serializable a, Serializable b) => a -> TagPool -> Process [b]
 distributedRequest = GR.multicallByPrefix $ prefix NodeAgent
@@ -118,3 +133,7 @@ distributedWhereIs name tagPool = do
     return [pid | Just pid <- res]
 
 
+startService :: NodeName -> S.ServiceSettings -> Process ()
+startService nodeName serviceSettings =
+    GR.globalNSend name $ StartService serviceSettings
+    where name = prefix NodeAgent ++ nodeName

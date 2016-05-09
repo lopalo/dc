@@ -46,9 +46,12 @@ http:
     client-settings: ../../client_settings/dev.json
     ws-addresses:
         - [<http-host>, *ws-port-1]
+    caching: true
+    verbose: 0
 
 admin:
     ui-dir: ../../admin
+    verbose: 0
 
 nodes:
     first:

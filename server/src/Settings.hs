@@ -2,6 +2,7 @@
 
 module Settings where
 
+import Data.Binary (Binary, put, get)
 import Control.Applicative ((<$>), (<*>))
 import Control.Monad (mzero)
 import qualified Data.Map.Strict as M
@@ -102,6 +103,14 @@ data ServiceSettings = ServiceSettings {
     ident :: ServiceId,
     options :: Object
     }
+    deriving (Show, Read)
+
+
+instance Binary ServiceSettings where
+
+    put t = put $ show t
+
+    get = read <$> get
 
 
 instance FromJSON ServiceSettings where

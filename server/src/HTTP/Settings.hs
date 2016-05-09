@@ -11,7 +11,9 @@ import Data.Aeson (FromJSON(parseJSON), Value(Object), (.:))
 data Settings = Settings {
     clientDir :: String,
     clientSettings :: String,
-    wsAddresses :: [(String, Int)]
+    wsAddresses :: [(String, Int)],
+    caching :: Bool,
+    verbose :: Int
     }
 
 
@@ -21,6 +23,8 @@ instance FromJSON Settings where
         Settings <$>
         v .: "client-dir" <*>
         v .: "client-settings" <*>
-        v .: "ws-addresses"
+        v .: "ws-addresses" <*>
+        v .: "caching" <*>
+        v .: "verbose"
     parseJSON _ = mzero
 

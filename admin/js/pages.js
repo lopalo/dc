@@ -1,10 +1,11 @@
 
 define(function (require) {
-    var Registry = require("registry");
-    var NodeStatus = require("node-status");
-    var ClusterMesh = require("cluster-mesh");
+    var Registry = require("cluster/registry");
+    var StartServiceForm = require("cluster/start-service");
+    var NodeStatus = require("cluster/node-status");
+    var ClusterMesh = require("cluster/cluster-mesh");
 
-    var AreaStatus = require("area-status");
+    var AreaStatus = require("area/status");
 
     var pages = [
         {
@@ -15,6 +16,11 @@ define(function (require) {
                     id: "registry",
                     title: "Registry",
                     component: Registry
+                },
+                {
+                    id: "start-service",
+                    title: "Start Service",
+                    component: StartServiceForm
                 },
                 {
                     id: "node-status",

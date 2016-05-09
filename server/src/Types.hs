@@ -150,7 +150,7 @@ data ServiceType
     | NodeAgent
     | LogAggregator
     | Unknown
-    deriving (Eq, Ord)
+    deriving (Eq, Ord, Show, Read)
 
 
 servicePrefixes :: M.Map ServiceType String

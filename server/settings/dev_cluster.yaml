@@ -48,9 +48,12 @@ http:
     ws-addresses:
         - [<http-host>, *ws-port-1]
         - [<http-host>, *ws-port-2]
+    caching: false
+    verbose: 0
 
 admin:
     ui-dir: ../../admin
+    verbose: 0
 
 nodes:
     first:

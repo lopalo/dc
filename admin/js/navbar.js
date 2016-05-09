@@ -24,7 +24,10 @@ define(["bootstrap", "mithril", "pages"], function (_, m, pages) {
                     var active = m.route.param("page") === page.id;
                     var liClass = active ? ".active" : "";
                     var attrs = {config: m.route, href: route};
-                    return m("li" + liClass, m("a", attrs, page.title));
+                    return m(
+                        "li" + liClass,
+                        m("a.nav-page", attrs, page.title)
+                    );
                 });
 
                 var sectionAttrs = {

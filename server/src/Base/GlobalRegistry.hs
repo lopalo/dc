@@ -57,13 +57,6 @@ data Merge = Merge (T.Trie Record) deriving (Generic, Typeable)
 instance Binary Merge
 
 
-data RemoteRegister =
-    RemoteRegister B.ByteString Record
-    deriving (Generic, Typeable)
-
-instance Binary RemoteRegister
-
-
 data Register = Register String ProcessId deriving (Generic, Typeable)
 
 instance Binary Register
@@ -180,12 +173,11 @@ loop state = safeReceive handlers state >>= loop
         handlers = [
             prepareCall handleWhereIs,
             prepareCall handleRegister,
-            prepare handleRemoteRegister,
+            prepare handleMerge,
             prepare handleMonitorNotification,
             prepareCall handleGetNameList,
             prepareCall handleWhereIsByPrefix,
             prepare handlePing,
-            prepare handleMerge,
             prepare handleNodeMonitorNotification,
             prepareCall handleGetVisibleNodes,
             matchUnknown (return state)
@@ -229,19 +221,14 @@ handleRegister state (Register name pid) = do
             registry=T.insert n record reg,
             pidIndex=M.insert pid n $ pidIndex state
             }
-        payload = RemoteRegister n record
+        merge = Merge $ T.singleton n record
         s (nodeId, True) =
-            nsendRemote nodeId globalRegistryServiceName payload
+            nsendRemote nodeId globalRegistryServiceName merge
         s _ = return ()
     when ok $ do
         monitor pid
         mapM_ s $ M.toList $ visibleNodes state'
     return $ if ok then (True, state') else (False, state)
-
-
-handleRemoteRegister :: State -> RemoteRegister -> Process State
-handleRemoteRegister state (RemoteRegister name record) =
-    mergeRecord state name record
 
 
 handleWhereIs :: State -> WhereIs -> Process ([Maybe ProcessId], State)
