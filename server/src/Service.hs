@@ -16,7 +16,7 @@ import Control.Distributed.Process.Internal.Types (
     messageFingerprint
     )
 import Control.Distributed.Process.Serializable (fingerprint)
-import Control.Distributed.Process.Extras (TagPool)
+import Control.Distributed.Process.Extras (TagPool, getTag)
 import Control.Distributed.Process.Extras.Time (milliSeconds)
 import Control.Distributed.Process.Extras.Timer (sleep)
 import qualified Control.Distributed.Process.Node as Node
@@ -24,7 +24,10 @@ import qualified Data.Aeson as Aeson
 import Data.Aeson ((.:))
 import Data.Aeson.Types (parse)
 
-import Types (LogLevel(..), ServiceType(..), SwitchOffService(..), prefix)
+import Types (
+    NodeName, LogLevel(..), ServiceType(..),
+    SwitchOffService(..), prefix
+    )
 import Base.Logger (log)
 import Base.GlobalRegistry (globalRegister, globalWhereIs)
 import Area.Area (areaProcess)
@@ -39,14 +42,17 @@ import qualified Settings as S
 
 
 spawnService ::
-    Node.LocalNode -> S.Settings -> TagPool -> S.ServiceSettings -> Process ()
-spawnService node settings tagPool serviceSettings = do
+    NodeName -> Node.LocalNode -> S.Settings ->
+    TagPool -> S.ServiceSettings -> Process ()
+spawnService nodeName node settings tagPool serviceSettings = do
+    tag <- getTag tagPool
     let delayR = S.respawnDelayMilliseconds $ S.cluster settings
         randomDelay = liftIO $ randomRIO delayR
         serviceType = S.serviceType serviceSettings
         ident = S.ident serviceSettings
         options = S.options serviceSettings
         name = prefix serviceType ++ ident
+        uniqueName = concat ["service:", nodeName, ":", name, ":", show tag]
 
         initService AreaDB _ =
             return $ areaDBProcess (S.db settings) ident
@@ -68,14 +74,17 @@ spawnService node settings tagPool serviceSettings = do
             minReplicas <- opts .: "min-db-replicas"
             return $ areaProcess (S.area settings) ident minReplicas
         initService NodeAgent _ =
-            return $ nodeAgentProcess $ spawnService node settings
+            let spawner = spawnService nodeName node settings tagPool
+            in return $ nodeAgentProcess spawner
         initService LogAggregator _ =
             return logAggregatorProcess
         initService _ _ = mzero
 
-        wait delayFactor =
+        wait delayFactor = do
             (delayFactor *) <$> randomDelay >>= sleep . milliSeconds
         serviceLoop service delayFactor = do
+            pid <- getSelfPid
+            globalRegister uniqueName pid tagPool
             wait delayFactor
             forever $ do
                 --log Debug $ "Try to start service: " ++ name
@@ -84,7 +93,6 @@ spawnService node settings tagPool serviceSettings = do
                     servicePids <- distributedWhereIs name tagPool
                     --reduces probability of conflicts during disconnection
                     when (null servicePids) $ do
-                        pid <- getSelfPid
                         ok <- globalRegister name pid tagPool
                         when ok $ do
                             log Info $ "Start service: " ++ name

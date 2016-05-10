@@ -65,10 +65,10 @@ instance Binary NodeStatus
 type State = (TagPool, S.ServiceSettings -> Process ())
 
 
-nodeAgentProcess :: (TagPool -> S.ServiceSettings -> Process ()) -> Process ()
+nodeAgentProcess :: (S.ServiceSettings -> Process ()) -> Process ()
 nodeAgentProcess spawnService = do
     tagPool <- newTagPool
-    let state = (tagPool, spawnService tagPool)
+    let state = (tagPool, spawnService)
         prepare h = match (h state)
         prepareCall h = callResponse (h state)
         handlers = [

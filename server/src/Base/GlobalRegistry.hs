@@ -16,6 +16,7 @@ import Control.Applicative ((<$>))
 import Control.Monad (void, when, forever, foldM)
 import Data.ByteString.UTF8 (fromString, toString)
 import Data.Maybe (isJust)
+import Data.List (delete)
 import qualified Data.ByteString as B
 import qualified Data.Map.Strict as M
 import qualified Data.Trie as T
@@ -39,9 +40,15 @@ import Base.Logger (log)
 type Record = (Ts, ProcessId)
 
 
+type PidIndex =  M.Map ProcessId [B.ByteString]
+
+
+type NameList = [(String, ProcessId, Ts)]
+
+
 data State = State {
     registry :: T.Trie Record,
-    pidIndex :: M.Map ProcessId B.ByteString,
+    pidIndex :: PidIndex,
     visibleNodes :: M.Map NodeId Bool,
     nodeNames :: NodeNames
     }
@@ -87,9 +94,6 @@ data RegistrationFailure =
     deriving (Generic, Typeable, Show)
 
 instance Binary RegistrationFailure
-
-
-type NameList = [(String, ProcessId, Ts)]
 
 
 globalRegistryServiceName :: String
@@ -140,7 +144,7 @@ mergeRecord state name record = do
             monitor pid
             return $ state{
                 registry=T.insert name record reg,
-                pidIndex=M.insert pid name $ pidIndex state
+                pidIndex=insertName pid name $ pidIndex state
                 }
         Just record'@(ts', pid')
             | pid == pid' ->
@@ -155,7 +159,7 @@ mergeRecord state name record = do
                 exit pid' RegistrationFailure
                 log Info $ "Local name conflict: " ++ toString name
                 monitor pid
-                let modPids = M.insert pid name . M.delete pid'
+                let modPids = insertName pid name . deleteName pid' name
                 return $ state{
                     registry=T.insert name record reg,
                     pidIndex=modPids $ pidIndex state
@@ -219,7 +223,7 @@ handleRegister state (Register name pid) = do
         ok = thereIsQuorum state && not (n `T.member` reg)
         state' = state{
             registry=T.insert n record reg,
-            pidIndex=M.insert pid n $ pidIndex state
+            pidIndex=insertName pid n $ pidIndex state
             }
         merge = Merge $ T.singleton n record
         s (nodeId, True) =
@@ -243,10 +247,10 @@ handleMonitorNotification ::
     State -> ProcessMonitorNotification -> Process State
 handleMonitorNotification state (ProcessMonitorNotification _ pid _)
     | pid `M.member` pidIndex state = do
-        let name = pidIndex state M.! pid
-        log Debug $ "Unregister name: " ++ toString name
+        let names = pidIndex state M.! pid
+        log Debug $ "Unregister names: " ++ unwords (map toString names)
         return $ state{
-            registry=T.delete name $ registry state,
+            registry=foldr T.delete (registry state) names,
             pidIndex=M.delete pid $ pidIndex state
             }
     | otherwise = return state
@@ -301,6 +305,24 @@ runPing ms nodeIds = do
         s nodeId = nsendRemote nodeId globalRegistryServiceName payload
         ping = forever $ sleepFor ms Millis >> mapM_ s nodeIds
     spawnLocal $ link selfPid >> ping
+
+
+insertName :: ProcessId -> B.ByteString -> PidIndex -> PidIndex
+insertName pid name index = index'
+    where
+        names = M.findWithDefault [] pid index
+        index' = M.insert pid (name : names) index
+
+
+deleteName :: ProcessId -> B.ByteString -> PidIndex -> PidIndex
+deleteName pid name index = index'
+    where
+        names = M.findWithDefault [] pid index
+        names' = delete name names
+        index' =
+            case names' of
+                [] -> M.delete pid index
+                _ -> M.insert pid names' index
 
 
 request :: (Serializable a, Serializable b) => a -> TagPool -> Process b
