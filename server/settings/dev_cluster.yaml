@@ -1,7 +1,3 @@
-ws-addresses: &ws-addresses
-    - [dc-dev-host-example.net, &ws-port-1 10611]
-    - [dc-dev-host-example.net, &ws-port-2 10612]
-
 log:
     log-level: Debug
     stdout: true
@@ -45,9 +41,6 @@ area:
 http:
     client-dir: ../../client
     client-settings: ../../client_settings/dev.json
-    ws-addresses:
-        - [<http-host>, *ws-port-1]
-        - [<http-host>, *ws-port-2]
     caching: false
     verbose: 0
 
@@ -62,8 +55,8 @@ nodes:
         services:
             - type: ws
               ident: one
-              host: 0.0.0.0
-              port: *ws-port-1
+              host: <http-host>
+              port: 10611
 
             - type: http
               ident: one
@@ -92,8 +85,8 @@ nodes:
 
             - type: ws
               ident: two
-              host: 0.0.0.0
-              port: *ws-port-2
+              host: <http-host>
+              port: 10612
 
             - type: area
               ident: beta

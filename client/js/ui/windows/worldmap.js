@@ -29,7 +29,7 @@ define(function (require) {
             var isActive = this.model.get("activeWindow") === "worldmap";
             var el = this.$el;
             var worldmap = this.worldmap;
-            var worldOwner = null
+            var worldOwner = null;
             var owners = this.worldmap.values();
             var half = Math.floor(owners.length / 2);
             el.toggle(isActive);
@@ -47,7 +47,7 @@ define(function (require) {
             el.append(this.headerTemplate({owner: worldOwner}));
             _.chain(worldmap.keys()).sortBy().each(function (aid) {
                 el.append(this.areaTemplate({
-                    area: aid.replace("area:", ""),
+                    area: aid.replace("area:", ""), //FIXME
                     owner: worldmap.get(aid)
                 }));
             }, this);

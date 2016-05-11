@@ -3,8 +3,7 @@
 module User.External(
     UserArea(..), SyncState(..), SwitchArea(..),
     monitorUser, syncState, switchArea,
-    broadcastAreaOwnerName, clientCmd,
-    userBroadcastHandlers
+    clientCmd, userBroadcastHandlers
     ) where
 
 import GHC.Generics (Generic)
@@ -14,10 +13,8 @@ import Control.Applicative ((<$>))
 
 import Data.Aeson (FromJSON, Value, Result(Success), fromJSON)
 import Control.Distributed.Process
-import Control.Distributed.Process.Extras (newTagPool)
 
-import Base.GlobalRegistry (globalWhereIsByPrefix)
-import Base.Broadcaster (broadcast, prepareHandler)
+import Base.Broadcaster (prepareHandler)
 import WS.Connection (Connection)
 import Utils (evaluate)
 import Types
@@ -56,14 +53,6 @@ switchArea :: UserPid -> AreaId -> Process ()
 switchArea (UserPid pid) aid = send pid $ SwitchArea aid
 
 
-broadcastAreaOwnerName :: AreaId -> Maybe UserName -> Process ()
-broadcastAreaOwnerName aid maybeUserName = do
-    spawnLocal $ do
-        userPids <- globalWhereIsByPrefix (prefix User) =<< newTagPool
-        broadcast userPids $ AreaOwnerName aid maybeUserName
-    return ()
-
-
 parseClientCmd :: String -> Value -> Result ClientCommand
 parseClientCmd "send-message" =
     load $ \(uids, msg) -> SendUserMessage uids msg
@@ -88,15 +77,9 @@ handleBroadcastUserMessage ::
 handleBroadcastUserMessage = ($)
 
 
-handleBroadcastAreaOwnerName ::
-    (AreaOwnerName -> Process ()) -> AreaOwnerName -> Process ()
-handleBroadcastAreaOwnerName = ($)
-
-
 userBroadcastHandlers :: [Match ()]
 userBroadcastHandlers = [
-    prepareHandler handleBroadcastUserMessage,
-    prepareHandler handleBroadcastAreaOwnerName
+    prepareHandler handleBroadcastUserMessage
     ]
 
 

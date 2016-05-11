@@ -23,7 +23,7 @@ import Types (ServiceId, AreaId(..), AreaPid(..), UserName, AreaStatus(..))
 import qualified User.External as UE
 import qualified Area.Objects.User as U
 import Area.Utils (sendCmd)
-import Area.Misc (spawnUser, broadcastOwnerName)
+import Area.Misc (spawnUser, updateOwnerName)
 import Area.Types
 import Area.State
 import Area.ClientCommands (handleClientCommand, handleClientReq)
@@ -100,12 +100,6 @@ handleMonitorNotification state (ProcessMonitorNotification ref _ _) =
             Nothing -> state
 
 
-handleGetOwner ::
-    State -> GetOwner -> Process ((AreaId, Maybe UserName), State)
-handleGetOwner state _ =
-    return ((areaId state, ownerName state), state)
-
-
 handleGetAreaStatus ::
     State -> GetAreaStatus -> Process (AreaStatus, State)
 handleGetAreaStatus state _ =
@@ -154,7 +148,7 @@ areaProcess aSettings ident minReplicas = do
         fromList :: Object o => [o] -> M.Map ObjId o
         fromList = M.fromList . map (\o -> (objId o, o))
     scheduleTick $ AS.tickMilliseconds aSettings
-    broadcastOwnerName state
+    updateOwnerName state
     loop state
     where aid = AreaId ident
 
@@ -170,7 +164,6 @@ loop state = safeReceive handlers state >>= loop
             prepare handleClientReq,
             prepare handleEnter,
             prepare handleReconnection,
-            prepareCall handleGetOwner,
             prepareCall handleGetAreaStatus,
             prepare handleMonitorNotification,
             matchUnknown (return state)

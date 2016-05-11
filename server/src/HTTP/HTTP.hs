@@ -8,6 +8,8 @@ import Data.Text.Lazy (unpack)
 import Data.String (fromString)
 
 import Control.Distributed.Process (Process, liftIO)
+import Control.Distributed.Process.Node (LocalNode)
+import Control.Distributed.Process.Extras (newTagPool)
 import qualified Network.Wai.Handler.Warp as W
 import Network.Wai.Middleware.Static (
     CachingStrategy(PublicStaticCaching, NoCaching),
@@ -16,11 +18,13 @@ import Network.Wai.Middleware.Static (
     )
 import Web.Scotty hiding (settings)
 
+import qualified Base.GlobalCache as GC
 import qualified HTTP.Settings as HS
+import Utils (execProcess)
 
 
-httpProcess :: HS.Settings -> String -> Int -> Process ()
-httpProcess settings host port  =
+httpProcess :: HS.Settings -> LocalNode -> String -> Int -> Process ()
+httpProcess settings node host port  =
     liftIO $ do
         cacheContainer <-
             initCaching $
@@ -38,18 +42,19 @@ httpProcess settings host port  =
             clientPolicy = clientPrefix >-> addBase clientDir
             settingsPolicy =
                 only [("client/js/settings.json", HS.clientSettings settings)]
-            wsAddresses = HS.wsAddresses settings
             staticMiddleware =
                 staticPolicy' cacheContainer $ settingsPolicy <|> clientPolicy
         scottyOpts scottyOptions $ do
             middleware staticMiddleware
             get "/ws-addresses" $ do
+                wsAddresses <-
+                    execProcess node $ GC.get GC.WSAddressTag =<< newTagPool
                 Just hostHeader <- header "Host"
                 let hostName = head $ split ":" $ unpack hostHeader
-                    f (h, p) =
+                    f (name, GC.WSAddress h p) =
                         if h == "<http-host>"
-                            then (hostName, p)
-                            else (h, p)
+                            then (name, hostName, p)
+                            else (name, h, p)
                 json $ map f wsAddresses
             get "/" $ redirect "/client/index.html"
 

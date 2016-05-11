@@ -8,7 +8,7 @@ import Control.Distributed.Process.Extras (newTagPool)
 import Web.Scotty hiding (settings, status)
 
 import Types (AreaStatus(..), AreaId(AreaId))
-import Admin.Utils (execProcess)
+import Utils (execProcess)
 import Area.External (getAreaStatus)
 
 

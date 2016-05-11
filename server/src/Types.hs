@@ -44,9 +44,6 @@ type UserName = String
 type UserMonitorRef = MonitorRef
 
 
-type AreaOwners = M.Map AreaId (Maybe UserName)
-
-
 newtype UserId = UserId String deriving (Eq, Ord, Generic, Typeable)
 
 instance Binary UserId

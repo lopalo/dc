@@ -28,7 +28,7 @@ import Area.Vector (
     angle, distanceToSegment
     )
 import Area.Collision (Collision(Collision), rayCollision)
-import Area.Misc (broadcastOwnerName)
+import Area.Misc (updateOwnerName)
 
 
 type Response = Process (Value, State)
@@ -181,7 +181,7 @@ handleClientCommand state (Shoot targetPos, conn) =
     where shooterId = uidByConn conn state
 
 handleClientCommand state (Capture cpid, conn) = do
-    broadcastOwnerName state'
+    updateOwnerName state'
     return state'
     where
         ownerId = uidByConn conn state

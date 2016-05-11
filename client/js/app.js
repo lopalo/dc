@@ -14,10 +14,10 @@ define(function (require) {
 
     function fillAddressField(addresses) {
         var el = $("#connect-address");
-        var tmpl = _.template("<option value='<%= v %>'><%= v %></option>");
+        var tmpl = _.template("<option value='<%= v %>'><%= n %></option>");
         var query = $.getQuery();
-        _.each(addresses, function (pair) {
-            el.append(tmpl({v: pair[0] + ":" + pair[1]}));
+        _.each(addresses, function (item) {
+            el.append(tmpl({n: item[0], v: item[1] + ":" + item[2]}));
         });
         el.selectpicker();
         if (query.name) {

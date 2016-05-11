@@ -14,8 +14,7 @@ import Control.Distributed.Process.Extras (newTagPool)
 import Web.Scotty hiding (settings, status)
 
 import Types (NodeNames, SwitchOffService(..))
-import Utils (milliseconds)
-import Admin.Utils (execProcess)
+import Utils (milliseconds, execProcess)
 import qualified Base.GlobalRegistry as GR
 import qualified NodeAgent.NodeAgent as NA
 
@@ -52,6 +51,7 @@ getNodeStatus node nodeNames = do
                 "stats" .= statsView (NA.stats status),
                 "broadcaster" .= NA.broadcasterIsRunning status,
                 "global-registry" .= NA.globalRegistryIsRunning status,
+                "global-cache" .= NA.globalCacheIsRunning status,
                 "logger" .= NA.loggerIsRunning status
                 ]
         statsView stats =

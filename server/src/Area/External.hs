@@ -2,11 +2,10 @@
 
 module Area.External (
     enter, clientCmd, reconnect,
-    getOwners, getAreaStatus
+    getAreaStatus
     ) where
 
 import Control.Applicative ((<$>))
-import qualified Data.Map.Strict as M
 
 import Data.Aeson (FromJSON, Value(Null), Result(Success), fromJSON)
 import Control.Distributed.Process hiding (reconnect)
@@ -20,7 +19,7 @@ import qualified User.External as UE
 import Types (
     UserId, UserPid(..), AreaId,
     AreaPid(..), ServiceType(Area),
-    RequestNumber, AreaOwners, AreaStatus,
+    RequestNumber, AreaStatus,
     prefix
     )
 import Area.Types
@@ -65,10 +64,6 @@ reconnect areaId userId conn =
 distributedRequest ::
     (Serializable a, Serializable b) => a -> TagPool -> Process [b]
 distributedRequest = multicallByPrefix $ prefix Area
-
-
-getOwners :: TagPool -> Process AreaOwners
-getOwners tagPool = M.fromList <$> distributedRequest GetOwner tagPool
 
 
 getAreaStatus :: TagPool -> Process [AreaStatus]

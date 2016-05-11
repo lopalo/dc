@@ -36,6 +36,9 @@ define(["mithril", "utils"], function (m, utils) {
                     m("dt.key", "Global Registry"),
                     m("dd", utils.boolIcon(data["global-registry"])),
 
+                    m("dt.key", "Global Cache"),
+                    m("dd", utils.boolIcon(data["global-cache"])),
+
                     m("dt.key", "Logger"),
                     m("dd", utils.boolIcon(data.logger)),
                 ];

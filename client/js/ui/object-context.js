@@ -36,7 +36,7 @@ define(function (require) {
             _.chain(this.worldmap.keys()).sortBy().each(function (aid) {
                 el.append(this.template({
                     v: aid,
-                    n: aid.replace("area:", "")
+                    n: aid.replace("area:", "") //FIXME
                 }));
             }, this);
             el.val(this.area.get("areaId"));

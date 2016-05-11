@@ -25,6 +25,7 @@ import Types (NodeName, ServiceType(NodeAgent), prefix)
 import Utils (safeReceive)
 import qualified Base.Broadcaster as B
 import qualified Base.GlobalRegistry as GR
+import qualified Base.GlobalCache as GC
 import qualified Base.Logger as L
 import qualified Settings as S
 
@@ -55,6 +56,7 @@ data NodeStatus = NodeStatus {
         stats :: NodeStats,
         broadcasterIsRunning :: Bool,
         globalRegistryIsRunning :: Bool,
+        globalCacheIsRunning :: Bool,
         loggerIsRunning :: Bool
     }
     deriving (Generic, Typeable)
@@ -94,6 +96,7 @@ handleGetNodeStatus _ _ = do
         getLocalNodeStats <*>
         B.isRunning <*>
         GR.isRunning <*>
+        GC.isRunning <*>
         L.isRunning
     return (info, ())
 

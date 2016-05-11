@@ -33,11 +33,6 @@ data Enter = Enter !UE.UserArea UserPid Bool deriving (Generic, Typeable)
 instance Binary Enter
 
 
-data GetOwner = GetOwner deriving (Generic, Typeable)
-
-instance Binary GetOwner
-
-
 data GetAreaStatus = GetAreaStatus deriving (Generic, Typeable)
 
 instance Binary GetAreaStatus

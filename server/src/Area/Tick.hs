@@ -50,7 +50,7 @@ import Area.Signal (
     )
 import Area.Utils (distance)
 import Area.Grid (groupCells, groupByCells)
-import Area.Misc (spawnUser, broadcastOwnerName)
+import Area.Misc (spawnUser, updateOwnerName)
 import Area.Types (Object(..), Destroyable(..), ObjId(..), Pos)
 import qualified Area.Objects.User as U
 import qualified Area.Objects.ControlPoint as CP
@@ -91,9 +91,10 @@ handleTick state TimeTick = do
     when (tnum `rem` logEveryTick == 0) $
         log Info $ printf "Tick %d of the '%s'" tnum $ show aid
     when (tnum `rem` syncEveryTick == 0) $ do
-        syncUsers state
-        saveObjects state
-    when (ownerName state /= ownerName state') (broadcastOwnerName state')
+        syncUsers state'
+        saveObjects state'
+        updateOwnerName state'
+    when (ownerName state /= ownerName state') (updateOwnerName state')
     return state'
 
 

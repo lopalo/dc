@@ -23,6 +23,7 @@ import Types (
     UserName, AreaId, LogLevel(..)
     )
 import Base.GlobalRegistry (globalRegister, globalWhereIs)
+import qualified Base.GlobalCache as GC
 import Base.Logger (log)
 import qualified WS.Connection as C
 import qualified User.Settings as US
@@ -119,13 +120,14 @@ handleUserMessage state userMsg = do
     return state{userMessages=userMessages state Seq.|> userMsg}
 
 
-handleAreaOwnerName :: State -> AreaOwnerName -> Process State
-handleAreaOwnerName state (AreaOwnerName aid maybeUserName) = do
+handleNewCacheValue :: State -> GC.NewCacheValue -> Process State
+handleNewCacheValue state newCacheValue = do
+    let GC.NewCacheValue (key, GC.AreaOwner maybeUserName) = newCacheValue
     case connection state of
         Just conn ->
-            sendCmd conn "update-worldmap" $ M.singleton (show aid) maybeUserName
+            sendCmd conn "update-worldmap" $ M.singleton key maybeUserName
         Nothing -> return ()
-    return state{areaOwners=M.insert aid maybeUserName $ areaOwners state}
+    return state
 
 
 userProcess :: UserName -> C.Connection -> US.Settings -> Process ()
@@ -144,7 +146,6 @@ userProcess userName conn userSettings = do
     ok <- globalRegister (show uid) pid tagPool
     unless ok terminate
     res <- getUser uid minReplicas tagPool `onException` onDBError
-    aOwners <- AE.getOwners tagPool
     let startArea = US.startArea userSettings
         usr = fromMaybe newUser res
         areaId = area usr
@@ -167,8 +168,7 @@ userProcess userName conn userSettings = do
             connection=mConn,
             disconnectTs=Nothing,
             reqTagPool=tagPool,
-            userMessages=Seq.empty,
-            areaOwners=aOwners
+            userMessages=Seq.empty
             }
     tryToLinkToArea areaId mConn tagPool
     putUser usr minReplicas tagPool
@@ -193,7 +193,7 @@ loop state = safeReceive handlers state >>= loop
             prepare handleSwitchArea,
             prepare handleMonitorNotification,
             prepare handleReconnection,
-            prepare handleAreaOwnerName,
+            prepare handleNewCacheValue,
             matchUnknown (return state)
             ]
 
@@ -234,9 +234,11 @@ initConnection :: C.Connection -> State -> Process ()
 initConnection conn state = do
     C.monitorConnection conn
     makeSelfPid >>= C.setUser conn
+    res <- GC.getSubscribe GC.AreaOwnerTag $ reqTagPool state
+    let areaOwners = M.fromList [(k, v) | (k, GC.AreaOwner v) <- res]
     sendCmd conn "init" $ initClientInfo state
     sendCmd conn "add-messages" $ toList $ userMessages state
-    sendCmd conn "update-worldmap" $ M.mapKeys show $ areaOwners state
+    sendCmd conn "update-worldmap" areaOwners
 
 
 initClientInfo :: State -> Value

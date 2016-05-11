@@ -21,6 +21,7 @@ import Service (spawnService)
 import Base.Broadcaster (broadcasterProcess)
 import Base.Logger (loggerProcess, log)
 import Base.GlobalRegistry (globalRegistryProcess)
+import Base.GlobalCache (globalCacheProcess)
 import WS.Connection (connectionBroadcastHandlers)
 import User.External (userBroadcastHandlers)
 import LogAggregator.LogAggregator (createSender)
@@ -45,6 +46,7 @@ startNode node settings nodeName = do
     tagPool <- newTagPool
     spawnLocal $ broadcasterProcess $ concat broadcastHandlers
     spawnLocal $ globalRegistryProcess settings
+    spawnLocal $ globalCacheProcess settings
     mapM_ (spawnService nodeName node settings tagPool) services'
 
 

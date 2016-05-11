@@ -8,7 +8,7 @@ import Control.Distributed.Process
 
 import Types (UserId, width)
 import Utils (mkRandomGen, choice)
-import qualified User.External as UE
+import Base.GlobalCache (Value(AreaOwner), set, durationFactor)
 import qualified Area.Settings as AS
 import Area.State
 import Area.Objects.Gate (pos, size)
@@ -34,6 +34,10 @@ spawnUser uid state =
             else (userPL uid ^%= modUser) state
 
 
-broadcastOwnerName :: State -> Process ()
-broadcastOwnerName state =
-    UE.broadcastAreaOwnerName (areaId state) (ownerName state)
+updateOwnerName :: State -> Process ()
+updateOwnerName state = set key value duration
+    where
+        key = show $ areaId state
+        value = AreaOwner $ ownerName state
+        s = settings state
+        duration = AS.tickMilliseconds s * AS.syncEveryTick s * durationFactor

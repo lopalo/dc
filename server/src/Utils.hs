@@ -4,11 +4,13 @@ import Data.Time.Clock.POSIX (getPOSIXTime)
 import qualified Control.Exception as Ex
 import Control.Monad (liftM)
 import System.Random (RandomGen, StdGen, mkStdGen, randomR)
-import Control.Concurrent (threadDelay)
+import Control.Concurrent (threadDelay, newEmptyMVar, putMVar, takeMVar)
 
 import Data.Hashable (hash)
 import Control.Distributed.Process
 import Control.Distributed.Process.Extras.Time (Timeout)
+import Control.Distributed.Process.Node (LocalNode, runProcess)
+import Web.Scotty hiding (settings)
 
 import Types(Ts)
 import Base.Logger (logException)
@@ -44,4 +46,14 @@ safeReceive handlers state = evalState `catches` logException state
 
 sleepSeconds :: Int -> IO ()
 sleepSeconds seconds = threadDelay $ seconds * 1000 * 1000
+
+
+execProcess :: LocalNode -> Process a -> ActionM a
+execProcess node proc =
+    liftIO $ do
+        var <- newEmptyMVar
+        runProcess node $ do
+            res <- proc
+            liftIO $ putMVar var res
+        takeMVar var
 

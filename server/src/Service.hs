@@ -61,11 +61,11 @@ spawnService nodeName node settings tagPool serviceSettings = do
         initService WS opts = do
             host <- opts .: "host"
             port <- opts .: "port"
-            return $ wsProcess settings node host port
+            return $ wsProcess settings node ident host port
         initService HTTP opts = do
             host <- opts .: "host"
             port <- opts .: "port"
-            return $ httpProcess (S.http settings) host port
+            return $ httpProcess (S.http settings) node host port
         initService Admin opts = do
             host <- opts .: "host"
             port <- opts .: "port"
