@@ -1,0 +1,9 @@
+#!/bin/bash
+DIR=`dirname $(readlink -f "$0")`/..
+docker run \
+    --name dc_dev \
+    --rm \
+    -v $DIR:/dc \
+    -w="/dc/server/src" \
+    -t -i dc:dev \
+    ghc -o ../bin/server Main.hs -O2 -threaded -rtsopts -with-rtsopts=-N

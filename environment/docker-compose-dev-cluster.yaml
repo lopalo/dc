@@ -9,26 +9,27 @@ services:
             - "10622:10622"
         volumes:
             - "..:/dc"
-        working_dir: /dc/server/src
-        command: runghc Main.hs ../settings/dev_cluster.yaml first
+        working_dir: /dc/server/bin
+        tty: true
+        command: ./server ../settings/dev_cluster.yaml first
     second-node:
         <<: *first-node
         container_name: second-node
         ports:
             - "10612:10612"
-        command: runghc Main.hs ../settings/dev_cluster.yaml second
+        command: ./server ../settings/dev_cluster.yaml second
     third-node:
         <<: *first-node
         container_name: third-node
         ports: []
-        command: runghc Main.hs ../settings/dev_cluster.yaml third
+        command: ./server ../settings/dev_cluster.yaml third
     fourth-node:
         <<: *first-node
         container_name: fourth-node
         ports: []
-        command: runghc Main.hs ../settings/dev_cluster.yaml fourth
+        command: ./server ../settings/dev_cluster.yaml fourth
     fifth-node:
         <<: *first-node
         container_name: fifth-node
         ports: []
-        command: runghc Main.hs ../settings/dev_cluster.yaml fifth
+        command: ./server ../settings/dev_cluster.yaml fifth

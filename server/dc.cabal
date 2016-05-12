@@ -11,7 +11,7 @@ Tested-With: GHC == 7.8.4
 Executable dc
     Main-Is: Main.hs
     GHC-Options:
-        -02
+        -O2
         -threaded
         -rtsopts
         -with-rtsopts=-N

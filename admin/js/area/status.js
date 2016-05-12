@@ -32,7 +32,7 @@ define(["mithril", "utils"], function (m, utils) {
                 return m("tr", [name, users, objects, duration]);
             });
             var summaryRow = [
-                m("td", "Summary"),
+                m("td", m("b", "Summary")),
                 m("td", summary.users),
                 m("td", summary.objects),
                 m("td", summary["tick-duration"])
