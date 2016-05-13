@@ -9,5 +9,19 @@
         "check-period-msec": 5,
         "freeze-factor": 100000,
         "input-delay-msec": 0
+    },
+    "areas": {
+        "area:alpha": {
+            "title": "Alpha",
+            "background": "alpha.jpg"
+        },
+        "area:beta": {
+            "title": "Beta",
+            "background": "beta.jpg"
+        },
+        "area:gamma": {
+            "title": "Gamma",
+            "background": "gamma.jpg"
+        }
     }
 }

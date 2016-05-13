@@ -29,22 +29,23 @@ import qualified WS.Connection as C
 import qualified User.Settings as US
 import qualified Area.External as AE
 import qualified User.External as UE
+import qualified User.UserArea as UA
 import DB.UserDB (putUser, getUser)
 import User.Types
 import User.State
 import User.ClientCommands (handleClientCommand)
 
 
-userArea :: User -> UE.UserArea
-userArea usr = UE.UserArea{
-    UE.userId=userId usr,
-    UE.name=name usr,
-    UE.speed=speed usr,
-    UE.maxDurability=maxDurability usr,
-    UE.durability=durability usr,
-    UE.size=size usr,
-    UE.kills=kills usr,
-    UE.deaths=deaths usr
+userArea :: User -> UA.UserArea
+userArea usr = UA.UserArea{
+    UA.userId=userId usr,
+    UA.name=name usr,
+    UA.speed=speed usr,
+    UA.maxDurability=maxDurability usr,
+    UA.durability=durability usr,
+    UA.size=size usr,
+    UA.kills=kills usr,
+    UA.deaths=deaths usr
     }
 
 
@@ -86,9 +87,9 @@ handleSyncState :: State -> UE.SyncState -> Process State
 handleSyncState state (UE.SyncState ua) = do
     let usr = user state
         usr' = usr{
-            durability=UE.durability ua,
-            kills=UE.kills ua,
-            deaths=UE.deaths ua
+            durability=UA.durability ua,
+            kills=UA.kills ua,
+            deaths=UA.deaths ua
             }
         minReplicas = US.minDBReplicas $ settings state
     putUser usr' minReplicas $ reqTagPool state
@@ -125,7 +126,7 @@ handleNewCacheValue state newCacheValue = do
     let GC.NewCacheValue (key, GC.AreaOwner maybeUserName) = newCacheValue
     case connection state of
         Just conn ->
-            sendCmd conn "update-worldmap" $ M.singleton key maybeUserName
+            sendCmd conn "update-area-owners" $ M.singleton key maybeUserName
         Nothing -> return ()
     return state
 
@@ -238,7 +239,7 @@ initConnection conn state = do
     let areaOwners = M.fromList [(k, v) | (k, GC.AreaOwner v) <- res]
     sendCmd conn "init" $ initClientInfo state
     sendCmd conn "add-messages" $ toList $ userMessages state
-    sendCmd conn "update-worldmap" areaOwners
+    sendCmd conn "update-area-owners" areaOwners
 
 
 initClientInfo :: State -> Value

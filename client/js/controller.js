@@ -110,8 +110,12 @@ define(function (require) {
         _initArea: function (data) {
             this._models.models.area.set({
                 areaId: data.areaId,
-                background: data.areaId.replace("area:", "") + ".jpg" //FIXME
             });
+            var positions = data["global-positions"];
+            var worldmapItems = _.keys(positions).map(function (area) {
+                return {id: area, pos: positions[area]};
+            });
+            this._models.models.worldmap.add(worldmapItems, {merge: true});
         },
         _userDispatch: function (data) {
             var handler = $.camelCase("_handle-" + data.cmd);
@@ -123,8 +127,11 @@ define(function (require) {
         _handleAddMessages: function (messages) {
             this._models.models.messages.add(messages);
         },
-        _handleUpdateWorldmap: function (data) {
-            this._models.models.worldmap.set(data);
+        _handleUpdateAreaOwners: function (owners) {
+            var items = _.keys(owners).map(function (area) {
+                return {id: area, owner: owners[area]};
+            });
+            this._models.models.worldmap.add(items, {merge: true});
         },
         _listenToUI: function (uiViews) {
             var common = uiViews.common;

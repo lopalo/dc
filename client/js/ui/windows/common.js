@@ -52,7 +52,7 @@ define(function (require) {
         render: function () {
             var el = this.$el;
             var activeWindow = this.model.get("activeWindow");
-            el.parent().toggle(activeWindow !== null);
+            el.parent().parent().toggle(activeWindow !== null);
             el.text(this.text[activeWindow]);
         },
     });

@@ -179,7 +179,6 @@ define(function (require) {
         },
         _tick: function (data) {
             var objectModels = this._objectModels.models;
-            //FIXME: use sets to improve time complexity
             var idents = [];
             var unknownIdents = [];
             _.each(data.signals, function (signal) {

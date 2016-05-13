@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveGeneric, DeriveDataTypeable #-}
 
-module User.External(
-    UserArea(..), SyncState(..), SwitchArea(..),
+module User.External (
+    SyncState(..), SwitchArea(..),
     monitorUser, syncState, switchArea,
     clientCmd, userBroadcastHandlers
     ) where
@@ -19,21 +19,7 @@ import WS.Connection (Connection)
 import Utils (evaluate)
 import Types
 import User.Types hiding (User)
-
-
-data UserArea = UserArea {
-    userId :: UserId,
-    name :: UserName,
-    speed :: Int, --units per second
-    maxDurability :: Int,
-    durability :: Int,
-    size :: !Size,
-    kills :: !Int,
-    deaths :: !Int
-    }
-    deriving (Generic, Typeable)
-
-instance Binary UserArea
+import User.UserArea (UserArea)
 
 
 newtype SyncState = SyncState UserArea deriving (Generic, Typeable)

@@ -39,5 +39,34 @@
     height: 20em;
 }
 
+.ui-worldmap {
+    overflow: scroll;
+    width: 40vw;
+    height: 30vh;
+    background-color: #14141f;
+}
 
+.worldmap-field {
+    position: relative;
+    margin: 100px;
+}
 
+.worldmap-item {
+    position: absolute;
+}
+
+.worldmap-item.current {
+    color: #0486f7;
+}
+
+.worldmap-circle {
+    background-color: white;
+    border-radius: 5px;
+    width: 10px;
+    height: 10px;
+    margin-top: 10px;
+}
+
+.current .worldmap-circle {
+    background-color: #0486f7;
+}

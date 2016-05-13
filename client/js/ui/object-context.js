@@ -4,6 +4,7 @@ define(function (require) {
     var Backbone = require("backbone");
     require("bootstrap");
     require("bootstrap-select");
+    var settings = require("json!settings.json");
 
     var common = require("ui/common");
 
@@ -23,7 +24,7 @@ define(function (require) {
             this.area = options.area;
             this.worldmap = options.worldmap;
             this.listenTo(this.area, "change:areaId", this.render);
-            this.listenTo(this.worldmap, "change", this.render);
+            this.listenTo(this.worldmap, "update", this.render);
             this.listenTo(this.model, "change:selectedObjectType", this.render);
             this.render();
         },
@@ -33,10 +34,10 @@ define(function (require) {
             el.parent().toggle(gateSelected);
             if (!gateSelected) return;
             el.empty();
-            _.chain(this.worldmap.keys()).sortBy().each(function (aid) {
+            this.worldmap.getActive().each(function (i) {
                 el.append(this.template({
-                    v: aid,
-                    n: aid.replace("area:", "") //FIXME
+                    v: i.id,
+                    n: settings.areas[i.id].title
                 }));
             }, this);
             el.val(this.area.get("areaId"));
@@ -82,6 +83,7 @@ define(function (require) {
         initialize: function () {
             ObjectInfo.__super__.initialize.call(this);
             this.listenTo(this.model, "change:selectedObjectInfo", this.render);
+            this.render();
         },
         render: function () {
             var el = this.$el;

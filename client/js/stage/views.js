@@ -5,7 +5,7 @@ define(function (require) {
     var Victor = require("victor");
     var TweenLite = require("tween-lite");
     var pixi = require("pixi");
-
+    var settings = require("json!settings.json");
 
     var Layer;
     var ObjectLayer;
@@ -75,8 +75,7 @@ define(function (require) {
             this._area = options.area;
             this._camera = options.camera;
 
-            this.listenTo(this._area, "change:background",
-                                    this._changeBackground);
+            this.listenTo(this._area, "change:areaId", this._changeBackground);
             this.listenTo(this._camera, "change:width change:height",
                                             this.resize);
         },
@@ -91,13 +90,13 @@ define(function (require) {
             container.scale.x = container.scale.y = scale;
         },
         _createContainer: function () {
-            var bg = "img/" + this._area.get("background");
-            this._container = pixi.Sprite.fromImage(bg);
+            this._container = new pixi.Sprite();
             this._container.interactive = true;
             this.resize();
         },
         _changeBackground: function () {
-            var bg = "img/" + this._area.get("background");
+            var areaId = this._area.get("areaId");
+            var bg = "img/" + settings.areas[areaId].background;
             this._container.texture = pixi.Texture.fromImage(bg);
             this.resize();
         },

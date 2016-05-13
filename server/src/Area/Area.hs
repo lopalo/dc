@@ -21,6 +21,7 @@ import Utils (milliseconds, safeReceive, evaluate)
 import qualified Area.Settings as AS
 import Types (ServiceId, AreaId(..), AreaPid(..), UserName, AreaStatus(..))
 import qualified User.External as UE
+import qualified User.UserArea as UA
 import qualified Area.Objects.User as U
 import Area.Utils (sendCmd)
 import Area.Misc (spawnUser, updateOwnerName)
@@ -48,16 +49,16 @@ handleEnter state (Enter ua userPid login, conn)
                 U.connection=conn,
                 U.pid=userPid,
                 U.monitorRef=userMonitorRef,
-                U.name=UE.name ua,
+                U.name=UA.name ua,
                 U.pos=Pos 0 0,
                 U.angle=0,
-                U.speed=UE.speed ua,
-                U.maxDurability=UE.maxDurability ua,
-                U.durability=UE.durability ua,
+                U.speed=UA.speed ua,
+                U.maxDurability=UA.maxDurability ua,
+                U.durability=UA.durability ua,
                 U.actions=[],
-                U.size=UE.size ua,
-                U.kills=UE.kills ua,
-                U.deaths=UE.deaths ua,
+                U.size=UA.size ua,
+                U.kills=UA.kills ua,
+                U.deaths=UA.deaths ua,
                 U.lastAttacker=Nothing,
                 U.nextShootTs=0
                 }
@@ -67,7 +68,7 @@ handleEnter state (Enter ua userPid login, conn)
         initConnection conn state'
         UE.syncState userPid $ U.userArea user
         return state'
-    where uid = UE.userId ua
+    where uid = UA.userId ua
 
 
 handleReconnection :: State -> (Reconnection, Connection) -> Process State
@@ -178,7 +179,13 @@ initConnection :: Connection -> State -> Process ()
 initConnection conn state = do
     setArea conn =<< makeSelfPid
     now <- liftIO milliseconds
-    sendCmd conn "init" $ object
-        ["areaId" .= areaId state, "timestamp" .= now]
+    sendCmd conn "init" $ object [
+        "areaId" .= areaId state,
+        "timestamp" .= now,
+        "global-positions" .= positions'
+        ]
+    where
+        positions = AS.globalPositions $ settings state
+        positions' = M.mapKeys (show . AreaId) positions
 
 

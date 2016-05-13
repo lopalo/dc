@@ -21,6 +21,10 @@ user:
     min-db-replicas: 1
 
 area:
+    global-positions:
+        alpha: [0, 0]
+        beta: [250, -70]
+        gamma: [30, 400]
     gate-field-radius: 700
     shot:
         damage: 10
@@ -33,7 +37,7 @@ area:
     collision-cell-size: 300 # units
 
     tick-milliseconds: 50
-    broadcast-every-tick: 1 # 4
+    broadcast-every-tick: 4
     log-every-tick: 1000
     sync-every-tick: 100
     tick-duration-history-size: 100

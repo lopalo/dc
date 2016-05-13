@@ -15,7 +15,7 @@ import Control.Distributed.Process.Extras (TagPool)
 import Utils (evaluate)
 import WS.Connection (Connection)
 import Base.GlobalRegistry (globalNSend, multicallByPrefix)
-import qualified User.External as UE
+import User.UserArea (UserArea)
 import Types (
     UserId, UserPid(..), AreaId,
     AreaPid(..), ServiceType(Area),
@@ -41,7 +41,7 @@ load :: FromJSON a => (a -> b) -> Value -> Result b
 load constructor body = constructor <$> fromJSON body
 
 
-enter :: AreaId -> UE.UserArea -> UserPid -> Bool -> Connection -> Process ()
+enter :: AreaId -> UserArea -> UserPid -> Bool -> Connection -> Process ()
 enter aid userArea userPid login conn =
     globalNSend (show aid) (Enter userArea userPid login, conn)
 

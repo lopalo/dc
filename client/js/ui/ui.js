@@ -110,6 +110,7 @@ define(function (require) {
         var worldmapWindow = new WorldmapWindow({
             el: windowsEl.find("#ui-worldmap-window"),
             model: models.ui,
+            area: models.area,
             worldmap: models.worldmap
         });
         return {

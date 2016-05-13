@@ -5,6 +5,7 @@ define(["underscore", "backbone"], function (_, Backbone) {
     var Area;
     var Message;
     var Messages;
+    var WorldmapItem;
     var Worldmap;
 
     function ReadOnlyProxy(model) {
@@ -101,7 +102,6 @@ define(["underscore", "backbone"], function (_, Backbone) {
     Area = Backbone.Model.extend({
         defaults: {
             areaId: null,
-            background: null
         }
     });
 
@@ -126,7 +126,27 @@ define(["underscore", "backbone"], function (_, Backbone) {
     });
 
 
-    Worldmap = Backbone.Model.extend({
+    WorldmapItem = Backbone.Model.extend({
+        defaults: function () {
+            return {
+                owner: undefined,
+                pos: [0, 0]
+            };
+        }
+    });
+
+
+    Worldmap = Backbone.Collection.extend({
+        model: WorldmapItem,
+        comparator: "id",
+        proxyAttributes: [
+            "getActive",
+        ],
+        getActive: function () {
+            return _.chain(this.filter(function (i) {
+                return i.get("owner") !== undefined;
+            }));
+        }
     });
 
     return {

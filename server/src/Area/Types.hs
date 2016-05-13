@@ -15,7 +15,7 @@ import Types (
     UserId(..), UserPid(..), ServiceType(User),
     AreaId, delIdPrefix, prefix
     )
-import qualified User.External as UE
+import User.UserArea (UserArea)
 
 
 type Angle = Float --degrees
@@ -28,7 +28,7 @@ data Reconnection = Reconnection UserId deriving (Generic, Typeable)
 instance Binary Reconnection
 
 
-data Enter = Enter !UE.UserArea UserPid Bool deriving (Generic, Typeable)
+data Enter = Enter !UserArea UserPid Bool deriving (Generic, Typeable)
 
 instance Binary Enter
 

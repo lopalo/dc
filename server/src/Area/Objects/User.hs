@@ -7,7 +7,7 @@ import Data.Lens.Strict (Lens, lens)
 
 import Types (UserId, UserName, UserMonitorRef, UserPid, Size(Size), Ts)
 import WS.Connection (Connection)
-import qualified User.External as UE
+import qualified User.UserArea as UA
 import Area.Types (
     Positioned(..), Object(..), Destroyable(..),
     Pos, Angle, ObjId(UId),
@@ -127,16 +127,16 @@ lastAttackerL :: Lens User (Maybe UserId)
 lastAttackerL = lens lastAttacker (\v s -> s{lastAttacker=v})
 
 
-userArea :: User -> UE.UserArea
-userArea user = UE.UserArea{
-    UE.userId=userId user,
-    UE.name=name user,
-    UE.speed=speed user,
-    UE.maxDurability=maxDurability user,
-    UE.durability=durability user,
-    UE.size=size user,
-    UE.kills=kills user,
-    UE.deaths=deaths user
+userArea :: User -> UA.UserArea
+userArea user = UA.UserArea{
+    UA.userId=userId user,
+    UA.name=name user,
+    UA.speed=speed user,
+    UA.maxDurability=maxDurability user,
+    UA.durability=durability user,
+    UA.size=size user,
+    UA.kills=kills user,
+    UA.deaths=deaths user
     }
 
 

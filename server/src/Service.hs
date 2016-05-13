@@ -88,6 +88,7 @@ spawnService nodeName node settings tagPool serviceSettings = do
             wait delayFactor
             forever $ do
                 --log Debug $ "Try to start service: " ++ name
+                globalRegister uniqueName pid tagPool
                 maybePid <- globalWhereIs name tagPool --optimization
                 when (isNothing maybePid) $ do
                     servicePids <- distributedWhereIs name tagPool
