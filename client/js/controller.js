@@ -65,15 +65,15 @@ define(function (require) {
         },
         listenToStageBackground: function (bg) {
             this.listenTo(bg, "click", this._backgroundClick);
-            this.listenTo(bg, "mouseDown", this._backgroundMouseDown);
-            this.listenTo(bg, "mouseUp", this._backgroundMouseUp);
-            this.listenTo(bg, "mouseMove", this._backgroundMouseMove);
+            this.listenTo(bg, "pointerDown", this._backgroundPointerDown);
+            this.listenTo(bg, "pointerUp", this._backgroundPointerUp);
+            this.listenTo(bg, "pointerMove", this._backgroundPointerMove);
         },
         listenToStageObjectView: function (view) {
             this.listenTo(view, "click", this._stageObjectViewClick);
-            this.listenTo(view, "mouseUp", this._stageObjectViewMouseUp);
-            this.listenTo(view, "mouseOver", this._stageObjectViewMouseOver);
-            this.listenTo(view, "mouseOut", this._stageObjectViewMouseOut);
+            this.listenTo(view, "pointerUp", this._stageObjectViewPointerUp);
+            this.listenTo(view, "pointerOver", this._stageObjectViewPointerOver);
+            this.listenTo(view, "pointerOut", this._stageObjectViewPointerOut);
         },
         request: function () {
             this._connection.request.apply(this._connection, arguments);
@@ -172,14 +172,14 @@ define(function (require) {
                     break;
             }
         },
-        _stageObjectViewMouseUp: function (ident) {
+        _stageObjectViewPointerUp: function (ident) {
             if (this._windowIsActive()) return;
         },
-        _stageObjectViewMouseOver: function (ident) {
+        _stageObjectViewPointerOver: function (ident) {
             if (this._windowIsActive()) return;
             this._cursorPos = null;
         },
-        _stageObjectViewMouseOut: function () {
+        _stageObjectViewPointerOut: function () {
             if (this._windowIsActive()) return;
         },
         _backgroundClick: function (pos) {
@@ -197,12 +197,12 @@ define(function (require) {
             }
 
         },
-        _backgroundMouseDown: function () {
+        _backgroundPointerDown: function () {
             if (this._windowIsActive()) return;
             this._cursorPos = null;
             this._cursorPath = [];
         },
-        _backgroundMouseMove: function (pos) {
+        _backgroundPointerMove: function (pos) {
             if (this._windowIsActive()) return;
             pos = new Victor(pos.x, pos.y);
             switch (this.getControlMode()) {
@@ -220,7 +220,7 @@ define(function (require) {
             }
 
         },
-        _backgroundMouseUp: function () {
+        _backgroundPointerUp: function () {
             if (this._windowIsActive()) return;
             if (this.getControlMode() !== "move") return;
             var cameraPos = this._stageController.getCameraPos();

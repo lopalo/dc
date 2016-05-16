@@ -81,9 +81,9 @@ define(function (require) {
             this._updateAllowed = true;
 
         },
-        _update: function () {
+        update: function () {
             if (!this._updateAllowed) return;
-            UserView.__super__._update.call(this);
+            UserView.__super__.update.call(this);
         },
         _getTextColor: function () {
             return this._isSelf ? "#8B8FBD" : "white";
@@ -96,7 +96,7 @@ define(function (require) {
             var sprite = this._sprite;
             var onComplete = function () {
                 self._updateAllowed = true;
-                self._update();
+                self.update();
             };
             var rotation = this._getRotation();
             var toProps;

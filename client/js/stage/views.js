@@ -66,9 +66,14 @@ define(function (require) {
     Background = StageView.extend({
         events: {
             click: "_click",
-            mousedown: "_mouseDown",
-            mouseup: "_mouseUp",
-            mousemove: "_mouseMove"
+            mousedown: "_pointerDown",
+            mouseup: "_pointerUp",
+            mousemove: "_pointerMove",
+
+            tap: "_click",
+            touchstart: "_pointerDown",
+            touchend: "_pointerUp",
+            touchmove: "_pointerMove"
         },
         initialize: function (options) {
             Background.__super__.initialize.call(this, options);
@@ -103,15 +108,16 @@ define(function (require) {
         _click: function (ev) {
             this.trigger("click", Victor.fromObject(ev.data.global));
         },
-        _mouseDown: function () {
-            this.trigger("mouseDown");
+        _pointerDown: function () {
+            this.trigger("pointerDown");
         },
-        _mouseUp: function () {
-            this.trigger("mouseUp");
+        _pointerUp: function () {
+            this.trigger("pointerUp");
         },
-        _mouseMove: function (ev) {
-            if (ev.data.originalEvent.which !== 1) return;
-            this.trigger("mouseMove", Victor.fromObject(ev.data.global));
+        _pointerMove: function (ev) {
+            if (ev.type === "touchmove" || ev.data.originalEvent.which === 1) {
+                this.trigger("pointerMove", Victor.fromObject(ev.data.global));
+            }
         }
     });
 
@@ -166,6 +172,10 @@ define(function (require) {
             };
             container.addChildAt(effectContainer, 0); //FIXME: it's not effecient
             tween.eventCallback("onComplete", onComplete);
+            if (document.hidden) {
+                tween.progress(1);
+            }
+
         },
         _createContainer: function () {
             this._container = new pixi.Container();
@@ -181,16 +191,18 @@ define(function (require) {
     StageObject = StageView.extend({
         events: {
             click: "_click",
-            mouseup: "_mouseUp",
-            mouseover: "_mouseOver",
-            mouseout: "_mouseOut"
+            mouseup: "_pointerUp",
+            mouseover: "_pointerOver",
+            mouseout: "_pointerOut",
+
+            tap: "_click",
+            touchstart: "_pointerOver"
         },
         texturePath: "",
         showName: true,
         initialize: function (options) {
             this._model = options.model;
             this._sprite = null;
-            this.listenTo(this._model, "change", this._update);
         },
         destroy: function (reason) {
             var pos = Victor.fromArray(this._model.get("pos"));
@@ -208,6 +220,9 @@ define(function (require) {
             sprite.y = -pos.y;
             tween = this._disappearanceEffect(reason, sprite);
             tween.eventCallback("onComplete", onComplete);
+            if (document.hidden) {
+                tween.progress(1);
+            }
         },
         _getTexturePath: function () {
             return this.texturePath;
@@ -220,6 +235,7 @@ define(function (require) {
             var container;
             var sprite;
             var text;
+            var tween;
 
             this._container = container = new pixi.Container();
             this._sprite = sprite = pixi.Sprite.fromImage(texturePath);
@@ -236,10 +252,14 @@ define(function (require) {
                 text.y = -(_.max(size) / 2 + 15);
                 container.addChild(text);
             }
-            this._update();
-            this._appearanceEffect();
+            this.update();
+            tween = this._appearanceEffect();
+            if (document.hidden) {
+                tween.progress(1);
+            }
+
         },
-        _update: function () {
+        update: function () {
             var model = this._model;
             var container = this._container;
             var pos = Victor.fromArray(model.get("pos"));
@@ -263,14 +283,14 @@ define(function (require) {
         _click: function () {
             this.trigger("click", this._model.get("id"));
         },
-        _mouseUp: function () {
-            this.trigger("mouseUp", this._model.get("id"));
+        _pointerUp: function () {
+            this.trigger("pointerUp", this._model.get("id"));
         },
-        _mouseOver: function () {
-            this.trigger("mouseOver", this._model.get("id"));
+        _pointerOver: function () {
+            this.trigger("pointerOver", this._model.get("id"));
         },
-        _mouseOut: function () {
-            this.trigger("mouseOut", this._model.get("id"));
+        _pointerOut: function () {
+            this.trigger("pointerOut", this._model.get("id"));
         }
     });
 

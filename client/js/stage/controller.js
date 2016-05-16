@@ -312,6 +312,9 @@ define(function (require) {
         _animationCallback: function () {
             this._requestAnimation();
             this._backgroundLayer.resize();
+            _.each(_.values(this._objectViews), function (view) {
+                view.update();
+            });
             this._renderer.render(this._stage);
         },
 
