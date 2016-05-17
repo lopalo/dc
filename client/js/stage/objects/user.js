@@ -23,6 +23,7 @@ define(function (require) {
                 deaths: 0,
                 "max-durability": 0,
                 durability: 0,
+                "area-exiting": false
             };
             return _.extend(User.__super__.defaults.call(this), defaults);
         },
@@ -38,6 +39,8 @@ define(function (require) {
             switch (action.tag) {
                 case "MoveRoute":
                     this._applyMoveRoute(timestamp, action);
+                    break;
+                case "Rotation":
                     break;
                 default:
                     User.__super__._applyAction.call(this, timestamp, action);
@@ -124,6 +127,10 @@ define(function (require) {
             this._updateAllowed = false;
             tween.eventCallback("onComplete", onComplete);
             return tween;
+        },
+        _getDisappearanceReason: function () {
+            if (this._model.get("area-exiting")) return "Exit";
+            return UserView.__super__._getDisappearanceReason.call(this);
         },
         _disappearanceEffect: function (reason, sprite) {
             var size = this._model.get("size");

@@ -27,7 +27,6 @@ define(function (require) {
         this._serverTimeDiff = 0;
         this._tickQueue = [];
         this._appearanceReasons = {};
-        this._disappearanceReasons = {};
         this._firstEnter = true;
 
         this._animationLoopId = null;
@@ -102,10 +101,8 @@ define(function (require) {
         moveCamera: function (delta) {
             this._camera.move(delta);
         },
-        enterArea: function () {
-            this._appearanceReasons = {};
-            this._firstEnter = false;
-            this._removeObject(this._controller.getUserId(), "Exit");
+        exitArea: function () {
+            this._getSelf().set("area-exiting", true);
         },
         getObjectModel: function (id) {
             return this._objectModels.roModels[id];
@@ -150,6 +147,7 @@ define(function (require) {
             this._objectLayer.createContainer(stage);
         },
         _handleInit: function (data) {
+            this._appearanceReasons = {};
             this._setServerTime(data.timestamp);
             _.each(_.keys(this._objectModels.models),
                    this._removeObject, this);
@@ -185,12 +183,18 @@ define(function (require) {
                 if (signal.tag === "Appearance") {
                     this._appearanceReasons[signal.userId] = signal.aReason;
                 }
-                if (signal.tag === "Disappearance") {
-                    this._disappearanceReasons[signal.objId] = signal.dReason;
+                var obj = objectModels[signal.objId];
+                if (signal.tag === "Disappearance" && obj !== undefined) {
+                    obj.set("disappearance-reason", signal.dReason);
                 }
             }, this);
             _.each(data.objects, function (value) {
-                if (_.has(this._disappearanceReasons, value.id)) return;
+                var obj = objectModels[value.id];
+                var dReason = null;
+                if (obj !== undefined) {
+                    dReason = obj.get("disappearance-reason");
+                    if (dReason !== null) return;
+                }
                 idents.push(value.id);
                 if (!_.has(objectModels, value.id)) {
                     unknownIdents.push(value.id);
@@ -211,7 +215,6 @@ define(function (require) {
             _.chain(objectModels)
                 .keys().difference(idents)
                 .each(this._removeObject, this);
-            this._disappearanceReasons = {};
         },
         _getTime: function () {
             return window.performance.now();
@@ -257,8 +260,11 @@ define(function (require) {
             switch (data.tag) {
                 case "User":
                     isSelf = this._controller.isSelf(data.id);
-                    if (!reason && isSelf) {
-                        reason = this._firstEnter ? "LogIn" : "Entry";
+                    if (isSelf) {
+                        if (!reason) {
+                            reason = this._firstEnter ? "LogIn" : "Entry";
+                        }
+                        this._firstEnter = false;
                     }
                     view = new user.UserView({
                         model: roModel,
@@ -286,14 +292,13 @@ define(function (require) {
                 this._controller.setSelfStageObject(data.id);
             }
         },
-        _removeObject: function (ident, reason) {
+        _removeObject: function (ident) {
             var view = this._objectViews[ident];
-            reason = reason || this._disappearanceReasons[ident];
             this._signalHandler.deleteStageObject(ident);
             this._controller.deleteStageObject(ident);
             this.stopListening(view);
             this._controller.stopListening(view);
-            view.destroy(reason);
+            view.destroy();
             this._objectModels.cleanup(ident);
             delete this._objectViews[ident];
         },

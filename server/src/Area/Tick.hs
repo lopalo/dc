@@ -18,7 +18,7 @@ import qualified Data.Set as Set
 import qualified Data.Sequence as Seq
 import Text.Printf (printf)
 
-import Data.Lens.Strict (access, (^$), (~=), (+=), (%=))
+import Data.Lens.Strict (access, modL, (^$), (~=), (+=), (%=))
 import Data.Lens.Partial.Common (getPL, (^%=), (^-=), (^+=))
 import Control.Distributed.Process
 import Control.Distributed.Process.Extras.Time (TimeUnit(..))
@@ -45,7 +45,7 @@ import Area.Collision (
     collider, findAllCollisions, collisionPair
     )
 import Area.Signal (
-    Signal(Appearance, Disappearance, MoveAsteroid),
+    Signal(Appearance, Disappearance, MoveAsteroid, JumpToArea),
     AReason(..), DReason(..)
     )
 import Area.Utils (distance)
@@ -54,6 +54,7 @@ import Area.Misc (spawnUser, updateOwnerName)
 import Area.Types (Object(..), Destroyable(..), ObjId(..), Pos)
 import qualified Area.Objects.User as U
 import qualified Area.Objects.ControlPoint as CP
+import Area.External (enter)
 import qualified User.External as UE
 
 
@@ -83,6 +84,7 @@ handleTick state TimeTick = do
     let tnum = tickNumber state
         (broadcastData, state') = runState (calculateTick now) state
         aid = areaId state'
+    state'' <- handleSideEffects state'
     case broadcastData of
         Just bd -> broadcastState bd
         Nothing -> return ()
@@ -91,11 +93,11 @@ handleTick state TimeTick = do
     when (tnum `rem` logEveryTick == 0) $
         log Info $ printf "Tick %d of the '%s'" tnum $ show aid
     when (tnum `rem` syncEveryTick == 0) $ do
-        syncUsers state'
-        saveObjects state'
-        updateOwnerName state'
-    when (ownerName state /= ownerName state') (updateOwnerName state')
-    return state'
+        syncUsers state''
+        saveObjects state''
+        updateOwnerName state''
+    when (ownerName state /= ownerName state'') (updateOwnerName state'')
+    return state''
 
 
 calculateTick :: Ts -> StateS (Maybe BroadcastData)
@@ -215,7 +217,7 @@ handleSignals = do
 
 handleSignal :: Signal -> StateS (Maybe Signal)
 handleSignal signal@(Disappearance (UId uid) Destruction) = do
-    mAttacker <- gets $  getPL $ userFieldPL uid U.lastAttackerL
+    mAttacker <- gets $ getPL $ userFieldPL uid U.lastAttackerL
     let
         resetUser u = u{
             U.durability=1,
@@ -224,7 +226,7 @@ handleSignal signal@(Disappearance (UId uid) Destruction) = do
             U.lastAttacker=Nothing
             }
     modify $ userPL uid ^%= resetUser
-    modify $ spawnUser uid
+    modify $ spawnUser uid Nothing
     addSignalS $ Appearance uid Recovery
     case mAttacker of
         Just (Just attackerId) ->
@@ -264,6 +266,19 @@ handleSignal (MoveAsteroid aid targetPos) = do
             unless (any moveTrajectory as) $
                 modify $ asLens ^%= (action :)
         Nothing -> return ()
+    return Nothing
+handleSignal (JumpToArea aid uid) = do
+    fromArea <- gets areaId
+    maybeUser <- gets $ getPL $ userPL uid
+    case maybeUser of
+        Just user@U.User{U.pid=pid, U.monitorRef=ref, U.connection=conn} ->
+            addSideEffectS $ do
+                unmonitor ref
+                UE.switchArea pid aid
+                enter aid (U.userArea user) pid (Just fromArea) conn
+        Nothing -> return ()
+    modify $ usersL `modL` deleteUser uid
+    addSignalS $ Disappearance (UId uid) Exit
     return Nothing
 handleSignal signal = return $ Just signal
 
@@ -343,5 +358,11 @@ saveObjects state = DB.putAreaObjects (areaId state) minReplicas objs
         g getter = M.elems $ getter state
         objs = DB.AreaObjects (g gates) (g asteroids) (g controlPoints)
         minReplicas = minDBReplicas state
+
+
+handleSideEffects :: State -> Process State
+handleSideEffects state = do
+    sequence_ $ sideEffects state
+    return state{sideEffects=[]}
 
 

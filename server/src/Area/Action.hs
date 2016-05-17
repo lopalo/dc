@@ -5,13 +5,12 @@ module Area.Action (
     moveAction, publicAction,
     moveDistance, eternalRotation,
     moveRoute, recovery, moveCircularTrajectory,
-    pullingAsteroid
+    pullingAsteroid, rotation
     ) where
 
 import GHC.Generics (Generic)
 import Data.Binary (Binary)
 import Data.Typeable (Typeable)
-
 import Data.Maybe (fromMaybe)
 import Data.Fixed (mod', divMod')
 import Data.Sequence (Seq, singleton)
@@ -69,8 +68,9 @@ data Action
     | Rotation {
         startTs :: Ts,
         endTs :: Ts,
-        from :: Angle,
-        to :: Angle
+        startAngle :: Angle,
+        endAngle :: Angle,
+        completeSignal :: Signal
         }
     | EternalRotation {rotSpeed :: Angle} --degrees per second
     | MoveCircularTrajectory {
@@ -150,6 +150,20 @@ moveDistance obj action Time{timestamp=ts} = do
                 then (endPos action, Nothing)
                 else (toPos point, Just action)
     return (setPos pos obj, maybeAction)
+
+
+rotation :: ObjectHandler
+rotation obj action Time{timestamp=ts} = do
+    let t = getT action ts
+        start = startAngle action
+        end = endAngle action
+    (ang, maybeAction) <-
+        if ts >= endTs action
+            then do
+                putSignal $ completeSignal action
+                return (end `mod'` 360, Nothing)
+            else return ((end - start) * t + start, Just action)
+    return (setAngle ang obj, maybeAction)
 
 
 eternalRotation :: ObjectHandler

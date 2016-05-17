@@ -28,7 +28,9 @@ data Reconnection = Reconnection UserId deriving (Generic, Typeable)
 instance Binary Reconnection
 
 
-data Enter = Enter !UserArea UserPid Bool deriving (Generic, Typeable)
+data Enter =
+    Enter !UserArea UserPid (Maybe AreaId)
+    deriving (Generic, Typeable)
 
 instance Binary Enter
 

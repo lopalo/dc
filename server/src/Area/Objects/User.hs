@@ -13,8 +13,9 @@ import Area.Types (
     Pos, Angle, ObjId(UId),
     )
 import Area.Action (
-    Active(..), Action(MoveRoute, Recovery, PullingAsteroid),
-    moveRoute, recovery, publicAction, pullingAsteroid
+    Active(..),
+    Action(Rotation, MoveRoute, Recovery, PullingAsteroid),
+    rotation, moveRoute, recovery, publicAction, pullingAsteroid
     )
 import Area.Collision (Collidable(collider), Collider(Circular))
 
@@ -83,6 +84,7 @@ instance Object User where
 
 instance Active User where
 
+    apply user action@Rotation{} = rotation user action
     apply user action@MoveRoute{} = moveRoute user action
     apply user action@Recovery{} = recovery user action
     apply user action@PullingAsteroid{} = pullingAsteroid user action

@@ -204,7 +204,8 @@ define(function (require) {
             this._model = options.model;
             this._sprite = null;
         },
-        destroy: function (reason) {
+        destroy: function () {
+            var reason = this._getDisappearanceReason();
             var pos = Victor.fromArray(this._model.get("pos"));
             var parent = this._container.parent;
             var sprite = this._sprite;
@@ -223,6 +224,9 @@ define(function (require) {
             if (document.hidden) {
                 tween.progress(1);
             }
+        },
+        _getDisappearanceReason: function () {
+            return this._model.get("disappearance-reason");
         },
         _getTexturePath: function () {
             return this.texturePath;

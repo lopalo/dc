@@ -14,6 +14,7 @@ import Area.Types (Pos)
 
 data Settings = Settings {
     globalPositions :: M.Map String Pos,
+    jumpRotationMilliseconds :: Ts,
     gateFieldRadius :: Float,
     shot :: ShotSettings,
     asteroidPullSpeed :: Float,
@@ -32,6 +33,7 @@ instance FromJSON Settings where
     parseJSON (Object v) =
         Settings <$>
         v .: "global-positions" <*>
+        v .: "jump-rotation-milliseconds" <*>
         v .: "gate-field-radius" <*>
         v .: "shot" <*>
         v .: "asteroid-pull-speed" <*>

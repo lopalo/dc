@@ -41,9 +41,10 @@ load :: FromJSON a => (a -> b) -> Value -> Result b
 load constructor body = constructor <$> fromJSON body
 
 
-enter :: AreaId -> UserArea -> UserPid -> Bool -> Connection -> Process ()
-enter aid userArea userPid login conn =
-    globalNSend (show aid) (Enter userArea userPid login, conn)
+enter ::
+    AreaId -> UserArea -> UserPid -> Maybe AreaId -> Connection -> Process ()
+enter aid userArea userPid maybeFromArea conn =
+    globalNSend (show aid) (Enter userArea userPid maybeFromArea, conn)
 
 
 clientCmd ::

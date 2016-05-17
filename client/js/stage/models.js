@@ -39,7 +39,8 @@ define(function (require) {
                 pos: [0, 0],
                 angle: 0,
                 size: [50, 50],
-                actions: []
+                actions: [],
+                "disappearance-reason": null
             };
         },
         getInfoForUI: function () {

@@ -4,25 +4,23 @@ module Area.ClientCommands (handleClientCommand, handleClientReq) where
 import qualified Data.Map.Strict as M
 import Data.List (elemIndex, maximumBy)
 import System.Random (randomR)
+import Data.Fixed (mod')
 
 import Data.Aeson (ToJSON, Value, toJSON)
-import Data.Lens.Strict (modL)
 import Data.Lens.Partial.Common ((^.), (^%=), (^-=))
 import Control.Distributed.Process
 
-import Utils (milliseconds, mkRandomGen)
+import Utils (evaluate, milliseconds, mkRandomGen)
 import WS.Connection (Connection, sendResponse)
-import Types (UserId, RequestNumber, width)
+import Types (AreaId(AreaId), UserId, RequestNumber, width)
 import qualified Area.Settings as AS
-import qualified User.External as UE
 import qualified Area.Objects.User as U
 import qualified Area.Objects.ControlPoint as CP
 import Area.Action (Action(..), actionsL, moveAction)
 import Area.Utils (distance, getIntervals)
 import Area.Types
 import Area.State
-import Area.Signal (Signal(Disappearance, Shot), DReason(Exit))
-import Area.External (enter)
+import Area.Signal (Signal(Shot, JumpToArea))
 import Area.Vector (
     fromPolar, toPos, fromPos, add, sub,
     angle, distanceToSegment
@@ -74,14 +72,34 @@ handleClientRequest state (GetObjectsInfo ids, _) = do
 
 handleClientCommand :: State -> (ClientCommand, Connection) -> Process State
 handleClientCommand state (EnterArea aid, conn) = do
-    let delUser = usersL `modL` deleteUser uid
-        addSig = addSignal $ Disappearance (UId uid) Exit
-        user@U.User{U.userId=uid, U.pid=pid, U.monitorRef=ref} =
-            conn `userByConn` state
-    unmonitor ref
-    UE.switchArea pid aid
-    enter aid (U.userArea user) pid False conn
-    return $ addSig $ delUser state
+    now <- liftIO milliseconds
+    let sett = settings state
+        uid = uidByConn conn state
+        user = userByConn conn state
+        dt = AS.jumpRotationMilliseconds sett
+        globalPositions = AS.globalPositions sett
+        AreaId fromArea = areaId state
+        AreaId toArea = aid
+        start = globalPositions M.! fromArea
+        end = globalPositions M.! toArea
+        ang = U.angle user `mod'` 360
+        ang' = angle $ fromPos end `sub` fromPos start
+        da = ang' - ang
+        ang'' =
+            if abs da > 180
+                then if da > 0 then ang' - 360 else ang' + 360
+                else ang'
+        action = Rotation{
+            startTs=now,
+            endTs=now + dt,
+            startAngle=ang,
+            endAngle=ang'',
+            completeSignal=JumpToArea aid uid
+            }
+        updActions = replaceUserAction uid moveAction action
+    evaluate endPos
+    return $ updActions state
+
 
 handleClientCommand state (MoveAlongRoute route, conn) = do
     now <- liftIO milliseconds

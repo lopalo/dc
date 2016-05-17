@@ -175,7 +175,7 @@ userProcess userName conn userSettings = do
     putUser usr minReplicas tagPool
     initConnection conn state
     userPid <- makeSelfPid
-    AE.enter areaId (userArea usr) userPid True conn
+    AE.enter areaId (userArea usr) userPid Nothing conn
     log Info $ "Login: " ++ userName
     runPeriodic $ US.periodMilliseconds userSettings
     loop state

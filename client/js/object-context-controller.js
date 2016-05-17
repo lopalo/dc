@@ -30,7 +30,7 @@ define(function (require) {
                                   this.getSelectedObjectId());
         },
         _enterArea: function (areaId) {
-            this._stageController.enterArea();
+            this._stageController.exitArea();
             this._connection.send("area.enter-area", areaId);
         },
     });

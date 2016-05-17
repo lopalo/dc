@@ -10,6 +10,7 @@ import Data.Sequence ((|>))
 
 import Data.Lens.Strict (Lens, lens, mapLens, (^%=), (%=))
 import Data.Lens.Partial.Common (PartialLens, totalLens, justLens)
+import Control.Distributed.Process (Process)
 
 import WS.Connection (Connection)
 import Types (UserId, UserName, UserMonitorRef, AreaId, Ts)
@@ -61,7 +62,8 @@ data State = State {
     controlPoints :: !ControlPoints,
     colliders :: !Colliders,
     signalBuffer :: !Signals,
-    signalsForBroadcast :: !Signals
+    signalsForBroadcast :: !Signals,
+    sideEffects :: [Process ()]
     }
 
 
@@ -177,12 +179,20 @@ signalsForBroadcastL =
     lens signalsForBroadcast (\v s -> s{signalsForBroadcast=v})
 
 
+sideEffectsL :: Lens State [Process ()]
+sideEffectsL = lens sideEffects (\v s -> s{sideEffects=v})
+
+
 addSignal :: Signal -> State -> State
 addSignal signal = signalsL ^%= (|> signal)
 
 
 addSignalS :: Signal -> StateS ()
 addSignalS signal = void $ signalsL %= (|> signal)
+
+
+addSideEffectS :: Process () -> StateS ()
+addSideEffectS eff = void $ sideEffectsL %= (eff :)
 
 
 ownerName :: State -> Maybe UserName

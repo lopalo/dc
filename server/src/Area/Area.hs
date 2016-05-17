@@ -4,6 +4,7 @@ module Area.Area (areaProcess) where
 
 import Prelude hiding ((.))
 import Control.Monad (liftM)
+import Data.Maybe (isNothing)
 import Control.Category ((.), (>>>))
 import qualified Data.Map.Strict as M
 import qualified Data.Sequence as Seq
@@ -19,7 +20,7 @@ import WS.Connection (Connection, setArea)
 import qualified DB.AreaDB as DB
 import Utils (milliseconds, safeReceive, evaluate)
 import qualified Area.Settings as AS
-import Types (ServiceId, AreaId(..), AreaPid(..), UserName, AreaStatus(..))
+import Types (ServiceId, AreaId(..), AreaPid(..), AreaStatus(..))
 import qualified User.External as UE
 import qualified User.UserArea as UA
 import qualified Area.Objects.User as U
@@ -38,12 +39,12 @@ import Area.Collision (emptyColliders)
 
 
 handleEnter :: State -> (Enter, Connection) -> Process State
-handleEnter state (Enter ua userPid login, conn)
+handleEnter state (Enter ua userPid maybeFromArea, conn)
     | uid `M.member` usersData (users state) =
         return state
     | otherwise = do
         userMonitorRef <- UE.monitorUser userPid
-        let state' = addSig $ spawnUser uid $ insUsr state
+        let state' = addSig $ spawnUser uid maybeFromArea $ insUsr state
             user = U.User{
                 U.userId=uid,
                 U.connection=conn,
@@ -63,7 +64,7 @@ handleEnter state (Enter ua userPid login, conn)
                 U.nextShootTs=0
                 }
             insUsr = usersL ^%= insertUser user
-            reason = if login then LogIn else Entry
+            reason = if isNothing maybeFromArea then LogIn else Entry
             addSig = addSignal $ Appearance uid reason
         initConnection conn state'
         UE.syncState userPid $ U.userArea user
@@ -139,7 +140,8 @@ areaProcess aSettings ident minReplicas = do
             controlPoints=fromList $ DB.controlPoints objects,
             colliders=emptyColliders,
             signalBuffer=Seq.empty,
-            signalsForBroadcast=Seq.empty
+            signalsForBroadcast=Seq.empty,
+            sideEffects=[]
             }
         us = Users{
             usersData=M.empty,
