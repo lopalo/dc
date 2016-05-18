@@ -13,7 +13,10 @@ import Data.Aeson (Value(Object), object, (.=), (.:), (.:?), (.!=))
 import Types (Size)
 import DB.Types (Persistent(toDB, fromDB))
 import Area.Types (Positioned(..), Object(..), Pos, Angle, ObjId)
-import Area.Action (Active(..), Action(EternalRotation), eternalRotation)
+import Area.Action (
+    Active(..), Action(EternalRotation),
+    eternalRotation, publicAction
+    )
 
 
 data Gate = Gate {
@@ -74,7 +77,8 @@ instance Object Gate where
             "name" .= name gate,
             "angle" .= angle gate,
             "pos" .= pos gate,
-            "size" .= size gate
+            "size" .= size gate,
+            "actions" .= filter publicAction (actions gate)
             ]
 
     tickClientInfo gate =

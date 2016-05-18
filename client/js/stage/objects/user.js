@@ -35,23 +35,24 @@ define(function (require) {
             return info;
 
         },
-        _applyAction: function (timestamp, action) {
+        _applyAction: function (action, timestamp) {
             switch (action.tag) {
                 case "MoveRoute":
-                    this._applyMoveRoute(timestamp, action);
+                    this._applyMoveRoute(action, timestamp);
                     break;
                 case "Rotation":
+                    this._applyRotation(action, timestamp);
                     break;
                 default:
-                    User.__super__._applyAction.call(this, timestamp, action);
+                    User.__super__._applyAction.call(this, action, timestamp);
             }
         },
-        _applyMoveRoute: function (timestamp, a) {
+        _applyMoveRoute: function (a, timestamp) {
             if (timestamp >= a.endTs) {
                 this.set("pos", _.last(a.positions));
                 return;
             }
-            var t = this._getT(timestamp, a);
+            var t = this._getT(a, timestamp);
             var tv = new Victor(t, t);
             function reduce(points) {
                 if (points.length === 2) {
@@ -72,11 +73,19 @@ define(function (require) {
             var res = reduce(_.map(a.positions, Victor.fromArray));
             this.set(res);
         },
+        _applyRotation: function (a, timestamp) {
+            if (timestamp >= a.endTs) {
+                this.set("angle", a.endAngle);
+                return;
+            }
+            var t = this._getT(a, timestamp);
+            var angle = (a.endAngle - a.startAngle) * t + a.startAngle;
+            this.set("angle", angle);
+        }
     });
 
 
     UserView = views.StageObject.extend({
-        texturePath: "img/ship.png",
         initialize: function (options) {
             UserView.__super__.initialize.call(this, options);
             this._isSelf = options.isSelf;
@@ -88,12 +97,16 @@ define(function (require) {
             if (!this._updateAllowed) return;
             UserView.__super__.update.call(this);
         },
+        _getTexturePath: function () {
+            return "img/" + this._model.get("asset") + ".png";
+        },
         _getTextColor: function () {
             return this._isSelf ? "#8B8FBD" : "white";
         },
         _appearanceEffect: function () {
             var self = this;
-            var size = this._model.get("size");
+            var model = this._model;
+            var size = model.get("size");
             var width = size[0];
             var height = size[1];
             var sprite = this._sprite;
@@ -112,10 +125,23 @@ define(function (require) {
                     tween = TweenLite.to(sprite, 1, toProps);
                     break;
                 case "Entry":
-                    sprite.width = 50 * width;
+                    var dist = 20 * width;
+                    var fromPos = new Victor(1, 0)
+                                    .rotateDeg(model.get("angle"))
+                                    .multiply(new Victor(dist, dist))
+                                    .invert()
+                                    .unfloat();
+                    sprite.x = fromPos.x;
+                    sprite.y = -fromPos.y;
+                    sprite.width = 40 * width;
                     sprite.height = 0.01 * height;
-                    tween = TweenLite.to(sprite, 0.5,
-                                        {width: width, height: height});
+                    toProps = {
+                        x: 0,
+                        y: 0,
+                        width: width,
+                        height: height
+                    };
+                    tween = TweenLite.to(sprite, 0.2, toProps);
                     break;
                 case "Recovery":
                     tween = UserView.__super__._appearanceEffect.call(this);
@@ -133,7 +159,9 @@ define(function (require) {
             return UserView.__super__._getDisappearanceReason.call(this);
         },
         _disappearanceEffect: function (reason, sprite) {
-            var size = this._model.get("size");
+            var model = this._model;
+            var size = model.get("size");
+            var pos = Victor.fromArray(model.get("pos"));
             var width = size[0];
             var height = size[1];
             var rotation = this._getRotation();
@@ -145,8 +173,19 @@ define(function (require) {
                     tween = TweenLite.to(sprite, 0.5, toProps);
                     break;
                 case "Exit":
-                    toProps = {width: 50 * width, height: 0.01 * height};
-                    tween = TweenLite.to(sprite, 0.5, toProps);
+                    var dist = 20 * width;
+                    var targetPos = new Victor(1, 0)
+                                    .rotateDeg(model.get("angle"))
+                                    .multiply(new Victor(dist, dist))
+                                    .add(pos)
+                                    .unfloat();
+                    toProps = {
+                        x: targetPos.x,
+                        y: -targetPos.y,
+                        width: 40 * width,
+                        height: 0.01 * height
+                    };
+                    tween = TweenLite.to(sprite, 0.2, toProps);
                     break;
                 case "LogOut":
                     toProps = {

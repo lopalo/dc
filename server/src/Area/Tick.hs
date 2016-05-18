@@ -32,7 +32,7 @@ import qualified DB.AreaDB as DB
 import qualified WS.Connection as C
 import qualified Area.Settings as AS
 import Area.Action (
-    Active(applyActions), Time(..),
+    Active(applyActions),
     Action(
         MoveDistance, MoveCircularTrajectory,
         startTs, endTs, startPos, endPos
@@ -104,7 +104,7 @@ calculateTick :: Ts -> StateS (Maybe BroadcastData)
 calculateTick ts = do
     previousTs <- gets currentTs
     modify $ \s -> s{currentTs=ts}
-    handleActions previousTs
+    handleActions
     handleCollisions
     checkDurability
     handleSignals
@@ -119,10 +119,10 @@ calculateTick ts = do
         else return Nothing
 
 
-handleActions :: Ts -> StateS ()
-handleActions previousTs= do
+handleActions :: StateS ()
+handleActions = do
     ts <- gets currentTs
-    let time = Time{timestamp=ts, timeDelta=ts - previousTs}
+    let
         handleActive lens = do
             actives <- access lens
             signals <- access signalsL
@@ -133,7 +133,7 @@ handleActions previousTs= do
             signalsL ~= signals'
             return ()
         handle (res, signals) ident active =
-            let (active', newSignals) = runWriter $ applyActions time active
+            let (active', newSignals) = runWriter $ applyActions ts active
                 res' = M.insert ident active' res
             in (res', signals Seq.>< newSignals)
     handleActive $ usersL >>> usersDataL
@@ -245,9 +245,13 @@ handleSignal (MoveAsteroid aid targetPos) = do
     mPos <- gets $ getPL $ asteroidFieldPL aid posL
     let asLens = asteroidFieldPL aid actionsL
 
-        moveTrajectory MoveCircularTrajectory{} = True
-        moveTrajectory _ = False
 
+        movement MoveDistance{} = True
+        movement MoveCircularTrajectory{} = True
+        movement _ = False
+
+        moveDistance MoveDistance{endPos=end}
+            | end == targetPos = False
         moveDistance MoveDistance{} = True
         moveDistance _ = False
 
@@ -263,7 +267,7 @@ handleSignal (MoveAsteroid aid targetPos) = do
     mActions <- gets $ getPL asLens
     case mActions of
         Just as ->
-            unless (any moveTrajectory as) $
+            unless (any movement as) $
                 modify $ asLens ^%= (action :)
         Nothing -> return ()
     return Nothing

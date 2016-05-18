@@ -47,29 +47,34 @@ define(function (require) {
             return {};
         },
         applyActions: function (timestamp) {
-            _.each(this.get("actions"),
-                   this._applyAction.bind(this, timestamp));
+            _.each(this.get("actions"), function (action) {
+                   this._applyAction(action, timestamp);
+            }, this);
         },
-        _applyAction: function (timestamp, action) {
+        _applyAction: function (action, timestamp) {
             switch (action.tag) {
                 case "MoveDistance":
-                    this._applyMoveDistance(timestamp, action);
+                    this._applyMoveDistance(action, timestamp);
                     break;
                 case "EternalRotation":
+                    this._applyEternalRotation(action, timestamp);
                     break;
                 default:
                     console.log("Unknown action " + action.tag);
             }
         },
-        _getT: function (timestamp, a) {
+        _getT: function (a, timestamp) {
             return (timestamp - a.startTs) / (a.endTs - a.startTs);
         },
-        _applyMoveDistance: function (timestamp, a) {
+        _getSecondsDelta: function (a, timestamp) {
+            return (timestamp - a.startTs) / 1000;
+        },
+        _applyMoveDistance: function (a, timestamp) {
             if (timestamp >= a.endTs) {
                 this.set("pos", a.endPos);
                 return;
             }
-            var t = this._getT(timestamp, a);
+            var t = this._getT(a, timestamp);
             var startPos = Victor.fromArray(a.startPos);
             var endPos = Victor.fromArray(a.endPos);
             var pos = endPos
@@ -79,6 +84,11 @@ define(function (require) {
                       .unfloat();
             this.set("pos", pos.toArray());
         },
+        _applyEternalRotation: function (a, timestamp) {
+            var secondsDelta = this._getSecondsDelta(a, timestamp);
+            var newAngle = (a.startAngle + a.rotSpeed * secondsDelta) % 360;
+            this.set("angle", newAngle);
+        }
     });
 
     return {

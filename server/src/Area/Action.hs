@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveGeneric, DeriveDataTypeable, RankNTypes #-}
 
 module Area.Action (
-    Active(..), Action(..), Time(..),
+    Active(..), Action(..),
     moveAction, publicAction,
     moveDistance, eternalRotation,
     moveRoute, recovery, moveCircularTrajectory,
@@ -32,7 +32,7 @@ type SignalW = Writer (Seq Signal)
 
 class Active a where
 
-    apply :: a -> Action -> Time -> SignalW (a, Maybe Action)
+    apply :: a -> Action -> Ts -> SignalW (a, Maybe Action)
 
     getActions :: a -> [Action]
 
@@ -41,21 +41,18 @@ class Active a where
     actionsL :: Lens a [Action]
     actionsL = lens getActions setActions
 
-    applyActions :: Time -> a -> SignalW a
-    applyActions time active = do
+    applyActions :: Ts -> a -> SignalW a
+    applyActions ts active = do
         let actions = getActions active
         (active', actions') <- foldM handleActions (active, []) actions
         return $ setActions actions' active'
         where
             handleActions (act, actions) action = do
-                (act', maybeAction) <- apply act action time
+                (act', maybeAction) <- apply act action ts
                 return $
                     case maybeAction of
                         Nothing -> (act', actions)
                         Just action'-> (act', action' : actions)
-
-
-data Time = Time {timestamp :: Ts, timeDelta :: Ts}
 
 
 data Action
@@ -72,12 +69,17 @@ data Action
         endAngle :: Angle,
         completeSignal :: Signal
         }
-    | EternalRotation {rotSpeed :: Angle} --degrees per second
+    | EternalRotation {
+        startTs :: Ts,
+        startAngle :: Angle,
+        rotSpeed :: Angle --degrees per second
+        }
     | MoveCircularTrajectory {
+        startTs :: Ts,
+        startAngle :: Angle,
         center :: Pos,
         radius :: Int,
-        rotSpeed :: Angle,
-        curAngle :: Angle
+        rotSpeed :: Angle
         }
     | MoveRoute {
         startTs :: Ts,
@@ -86,7 +88,8 @@ data Action
         }
     | Recovery {
         recoverySpeed :: Float, --units per second
-        durabilityAccum :: Float
+        durabilityAccum :: Float,
+        prevTs :: Ts
         }
     | PullingAsteroid {asteroidId :: ObjId}
     deriving (Generic, Typeable, Eq, Ord)
@@ -102,7 +105,7 @@ type T = Float -- in the interval [0, 1]
 
 
 type ObjectHandler =
-    forall o. Object o => o -> Action -> Time -> SignalW (o, Maybe Action)
+    forall o. Object o => o -> Action -> Ts -> SignalW (o, Maybe Action)
 
 
 publicAction :: Action -> Bool
@@ -123,12 +126,13 @@ moveAction MoveRoute{} = True
 moveAction _ = False
 
 
-recovery :: Destroyable d => d -> Action -> Time -> SignalW (d, Maybe Action)
-recovery obj action time = do
+recovery :: Destroyable d => d -> Action -> Ts -> SignalW (d, Maybe Action)
+recovery obj action ts = do
     let Recovery{recoverySpeed=speed, durabilityAccum=accum} = action
-        accum' = secondsDelta time * speed + accum
+        dSeconds = (fromIntegral $ ts - prevTs action) / 1000
+        accum' = dSeconds * speed + accum
         (durabilityDelta, accum'') = accum' `divMod'` 1
-        action' = action{durabilityAccum=accum''}
+        action' = action{durabilityAccum=accum'', prevTs=ts}
         maxDur = getMaxDurability obj
         update = min maxDur . (durabilityDelta +)
         obj' = (durabilityL ^%= update) obj
@@ -140,7 +144,7 @@ recovery obj action time = do
 
 
 moveDistance :: ObjectHandler
-moveDistance obj action Time{timestamp=ts} = do
+moveDistance obj action ts = do
     let t = getT action ts
         startPoint = fromPos $ startPos action
         endPoint = fromPos $ endPos action
@@ -153,7 +157,7 @@ moveDistance obj action Time{timestamp=ts} = do
 
 
 rotation :: ObjectHandler
-rotation obj action Time{timestamp=ts} = do
+rotation obj action ts = do
     let t = getT action ts
         start = startAngle action
         end = endAngle action
@@ -167,25 +171,23 @@ rotation obj action Time{timestamp=ts} = do
 
 
 eternalRotation :: ObjectHandler
-eternalRotation obj action@EternalRotation{rotSpeed=speed} time = do
-    let ang = getAngle obj
-        angleDelta = speed * secondsDelta time
-        ang' = (ang + angleDelta) `mod'` 360
-    return (setAngle ang' obj, Just action)
+eternalRotation obj action ts = do
+    let angleDelta = rotSpeed action * secondsDelta action ts
+        ang = (startAngle action + angleDelta) `mod'` 360
+    return (setAngle ang obj, Just action)
 
 
 moveCircularTrajectory :: ObjectHandler
-moveCircularTrajectory obj action time = do
-    let angleDelta = rotSpeed action * secondsDelta time
-        newAngle = (curAngle action + angleDelta) `mod'` 360
-        action' = action{curAngle=newAngle}
+moveCircularTrajectory obj action ts = do
+    let angleDelta = rotSpeed action * secondsDelta action ts
+        newAngle = (startAngle action + angleDelta) `mod'` 360
         rotVect = fromPolar (fromIntegral (radius action)) newAngle
         pos = toPos $ fromPos (center action) `add` rotVect
-    return (setPos pos obj, Just action')
+    return (setPos pos obj, Just action)
 
 
 moveRoute :: ObjectHandler
-moveRoute obj action Time{timestamp=ts} = do
+moveRoute obj action ts = do
     let (pos, ang) = reduce $ map fromPos $ positions action
         (pos', maybeAngle, maybeAction) =
             if ts >= endTs action
@@ -213,8 +215,8 @@ pullingAsteroid obj action _ = do
     return (obj, Just action)
 
 
-secondsDelta :: Time -> Float
-secondsDelta = (/ 1000) . fromIntegral . timeDelta
+secondsDelta :: Action -> Ts -> Float
+secondsDelta action ts = (fromIntegral $ ts - startTs action) / 1000
 
 
 getT :: Action -> Ts -> T

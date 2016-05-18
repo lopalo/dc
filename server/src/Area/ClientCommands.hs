@@ -123,12 +123,17 @@ handleClientCommand state (MoveAlongRoute route, conn) = do
         updActions = replaceUserAction uid moveAction action
     return $ updActions state
 
-handleClientCommand state (Recover recSpeed, conn) =
+handleClientCommand state (Recover recSpeed, conn) = do
+    now <- liftIO milliseconds
     let uid = uidByConn conn state
-        action = Recovery{durabilityAccum=0, recoverySpeed=recSpeed}
+        action = Recovery{
+            durabilityAccum=0,
+            recoverySpeed=recSpeed,
+            prevTs=now
+            }
         replace Recovery{} = True
         replace _ = False
-    in return $ replaceUserAction uid replace action state
+    return $ replaceUserAction uid replace action state
 
 handleClientCommand state (Shoot targetPos, conn) =
     return $

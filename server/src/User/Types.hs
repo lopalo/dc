@@ -71,6 +71,7 @@ data User = User {
     maxDurability :: !Int,
     durability :: !Int,
     size :: !Size,
+    asset :: !String,
     kills :: !Int,
     deaths :: !Int
     }
@@ -90,6 +91,7 @@ instance Persistent User where
             "max-durability" .= maxDurability u,
             "durability" .= durability u,
             "size" .= size u,
+            "asset" .= asset u,
             "kills" .= kills u,
             "deaths" .= deaths u
             ]
@@ -103,6 +105,7 @@ instance Persistent User where
         v .: "max-durability" <*>
         v .: "durability" <*>
         v .: "size" <*>
+        v .: "asset" <*>
         v .:? "kills" .!= 0 <*>
         v .:? "deaths" .!= 0
     fromDB _ = mzero

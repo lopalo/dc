@@ -15,6 +15,7 @@ data Settings = Settings {
     size :: Size,
     speed :: Int,
     initDurability :: Int,
+    initAssets :: [String],
     logoutSeconds :: Int,
     periodMilliseconds :: Ts,
     minDBReplicas :: Int
@@ -28,6 +29,7 @@ instance FromJSON Settings where
         v .: "size" <*>
         v .: "speed" <*>
         v .: "init-durability" <*>
+        v .: "init-assets" <*>
         v .: "logout-seconds" <*>
         v .: "period-milliseconds" <*>
         v .: "min-db-replicas"

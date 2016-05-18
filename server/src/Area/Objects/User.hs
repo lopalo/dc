@@ -33,6 +33,7 @@ data User = User {
     durability :: !Int,
     actions :: ![Action],
     size :: !Size,
+    asset :: !String,
     kills :: !Int,
     deaths :: !Int,
     lastAttacker :: Maybe UserId,
@@ -66,6 +67,7 @@ instance Object User where
             "angle" .= angle user,
             "pos" .= pos user,
             "size" .= size user,
+            "asset" .= asset user,
             "kills" .= kills user,
             "deaths" .= deaths user
             ]
@@ -137,6 +139,7 @@ userArea user = UA.UserArea{
     UA.maxDurability=maxDurability user,
     UA.durability=durability user,
     UA.size=size user,
+    UA.asset=asset user,
     UA.kills=kills user,
     UA.deaths=deaths user
     }

@@ -58,6 +58,7 @@ handleEnter state (Enter ua userPid maybeFromArea, conn)
                 U.durability=UA.durability ua,
                 U.actions=[],
                 U.size=UA.size ua,
+                U.asset=UA.asset ua,
                 U.kills=UA.kills ua,
                 U.deaths=UA.deaths ua,
                 U.lastAttacker=Nothing,

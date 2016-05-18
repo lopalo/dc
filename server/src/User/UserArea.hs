@@ -16,6 +16,7 @@ data UserArea = UserArea {
     maxDurability :: Int,
     durability :: Int,
     size :: !Size,
+    asset :: !String,
     kills :: !Int,
     deaths :: !Int
     }

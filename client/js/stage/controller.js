@@ -322,7 +322,6 @@ define(function (require) {
             });
             this._renderer.render(this._stage);
         },
-
         _startInterpolation: function () {
             this._interpolationLoopId = window.setInterval(
                 this._interpolationStep,

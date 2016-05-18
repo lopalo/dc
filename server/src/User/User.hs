@@ -3,6 +3,7 @@
 module User.User (userProcess) where
 
 import Prelude hiding (log)
+import Control.Applicative ((<$>))
 import Control.Monad (forever, when, unless)
 import Control.Monad.Catch (onException)
 import Data.Maybe (fromMaybe)
@@ -10,6 +11,7 @@ import Text.Printf (printf)
 import qualified Data.Map.Strict as M
 import qualified Data.Sequence as Seq
 import Data.Foldable (toList)
+import System.Random (getStdGen)
 
 import Data.Aeson (ToJSON, Value, object, (.=))
 import Control.Distributed.Process hiding (reconnect, onException)
@@ -17,7 +19,7 @@ import Control.Distributed.Process.Extras (TagPool, newTagPool)
 import Control.Distributed.Process.Extras.Time (TimeUnit(..))
 import Control.Distributed.Process.Extras.Timer (sleepFor)
 
-import Utils (safeReceive, milliseconds)
+import Utils (safeReceive, milliseconds, choice)
 import Types (
     Ts, UserPid(UserPid), UserId(UserId),
     UserName, AreaId, LogLevel(..)
@@ -44,6 +46,7 @@ userArea usr = UA.UserArea{
     UA.maxDurability=maxDurability usr,
     UA.durability=durability usr,
     UA.size=size usr,
+    UA.asset=asset usr,
     UA.kills=kills usr,
     UA.deaths=deaths usr
     }
@@ -147,6 +150,8 @@ userProcess userName conn userSettings = do
     ok <- globalRegister (show uid) pid tagPool
     unless ok terminate
     res <- getUser uid minReplicas tagPool `onException` onDBError
+    (userAsset, _) <-
+        liftIO $ choice (US.initAssets userSettings) <$> getStdGen
     let startArea = US.startArea userSettings
         usr = fromMaybe newUser res
         areaId = area usr
@@ -160,6 +165,7 @@ userProcess userName conn userSettings = do
             maxDurability=maxDur,
             durability=maxDur,
             size=US.size userSettings,
+            asset=userAsset,
             kills=0,
             deaths=0
             }

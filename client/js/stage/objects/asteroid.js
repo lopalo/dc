@@ -33,21 +33,33 @@ define(function (require) {
                 pullAllowed: pullAllowed
             };
         },
-        _applyAction: function (timestamp, action) {
+        _applyAction: function (action, timestamp) {
             switch (action.tag) {
                 case "MoveCircularTrajectory":
+                    this._applyMoveCircularTrajectory(action, timestamp);
                     break;
                 default:
-                    Asteroid.__super__._applyAction.call(this,
-                                                         timestamp, action);
+                    Asteroid.__super__._applyAction.call(this, action,
+                                                         timestamp);
             }
         },
+        _applyMoveCircularTrajectory: function (a, timestamp) {
+            var secondsDelta = this._getSecondsDelta(a, timestamp);
+            var angle = (a.startAngle + a.rotSpeed * secondsDelta) % 360;
+            var pos = new Victor(1, 0)
+                        .rotateDeg(angle)
+                        .multiply(new Victor(a.radius, a.radius))
+                        .add(Victor.fromArray(a.center));
+            this.set("pos", pos.toArray());
+        }
     });
 
 
     AsteroidView = views.StageObject.extend({
-        texturePath: "img/asteroid.png",
-        showName: false
+        showName: false,
+        _getTexturePath: function () {
+            return "img/" + this._model.get("asset") + ".png";
+        },
     });
 
     return {

@@ -33,7 +33,8 @@ data Asteroid = Asteroid {
     maxDurability :: !Int,
     durability :: !Int,
     actions :: ![Action],
-    size :: !Size
+    size :: !Size,
+    asset :: !String
     }
     deriving (Generic, Typeable)
 
@@ -51,7 +52,8 @@ instance Persistent Asteroid where
             "max-durability" .= maxDurability ast,
             "durability" .= durability ast,
             "actions" .= actions ast,
-            "size" .= size ast
+            "size" .= size ast,
+            "asset" .= asset ast
             ]
 
     fromDB (Object v) =
@@ -63,7 +65,8 @@ instance Persistent Asteroid where
         v .: "max-durability" <*>
         v .: "durability" <*>
         v .:? "actions" .!= [] <*>
-        v .: "size"
+        v .: "size" <*>
+        v .: "asset"
     fromDB _ = mzero
 
 
@@ -92,7 +95,8 @@ instance Object Asteroid where
             "angle" .= angle ast,
             "pos" .= pos ast,
             "actions" .= filter publicAction (actions ast),
-            "size" .= size ast
+            "size" .= size ast,
+            "asset" .= asset ast
             ]
 
     tickClientInfo ast =
