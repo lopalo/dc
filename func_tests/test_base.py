@@ -1,5 +1,5 @@
 import unittest
-from tools import FuncTestCase, ANY
+from test_tools import FuncTestCase, ANY
 from websocket import WebSocketTimeoutException
 
 

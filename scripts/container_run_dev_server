@@ -1,0 +1,11 @@
+#!/bin/bash
+DIR=`dirname $(readlink -f "$0")`/..
+docker run \
+    --name dc_dev \
+    --rm \
+    -p 10501:10501 \
+    -p 10502:10502 \
+    -p 10503:10503 \
+    -v $DIR:/dc \
+    -t -i dc:dev \
+    run_dev_server

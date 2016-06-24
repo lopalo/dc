@@ -30,6 +30,8 @@ RUN cabal update
 RUN cabal install --only-dependencies
 
 WORKDIR /dc
+ENV PATH ${PATH}:/dc/scripts
+ENV PYTHONPATH /dc/python_modules
 
 
 

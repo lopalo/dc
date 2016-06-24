@@ -1,5 +1,5 @@
 import unittest
-from tools import FuncTestCase, subdict as sd
+from test_tools import FuncTestCase, subdict as sd
 
 
 class TestEnterArea(FuncTestCase):

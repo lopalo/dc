@@ -28,6 +28,8 @@ su $USER <<USER_COMMANDS
 cat <<TEXT >> $PROFILE
 cd /dc
 PATH=$PATH:/opt/ghc/$GHC_VERSION/bin:/opt/cabal/$CABAL_VERSION/bin
+PATH=$PATH:/dc/scripts
+PYTHONPATH=/dc/python_modules
 TEXT
 source $PROFILE
 
