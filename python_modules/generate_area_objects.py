@@ -57,6 +57,10 @@ def create_gate(db, counter, s):
 
 
 def create_asteroids(db, counter, s):
+    assets = ["asteroid_1",
+              "asteroid_2",
+              "asteroid_3",
+              "asteroid_4"]
     c_pos = s.asteroid_field_position
     for _ in xrange(s.asteroid_count):
         ident = "asteroid:" + str(counter())
@@ -89,7 +93,7 @@ def create_asteroids(db, counter, s):
                 "durability": durability,
                 "actions": actions,
                 "size": [size, size],
-                "asset": random.choice(["asteroid_1", "asteroid_2"])}
+                "asset": random.choice(assets)}
         db.put(ident, json.dumps(data))
 
 

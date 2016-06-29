@@ -22,6 +22,9 @@ define(function (require) {
         el.selectpicker();
         if (query.name) {
             $("#connect-name").val(query.name);
+            if (query.address) {
+                el.selectpicker("val", query.address);
+            }
             $("#connect").trigger("click");
         }
     }
@@ -36,8 +39,10 @@ define(function (require) {
 
     function onOpen(connection) {
         var userName = $("#connect-name").val();
+        var address = $("#connect-address").val();
+        var queryString = "?name=" + userName + "&address=" + address;
         connection.send("login", userName);
-        window.history.pushState({}, '', "?name=" + userName);
+        window.history.pushState({}, '', queryString);
         connection.once("init", function () {
             $("#connect-form").hide();
             initGame(connection);
