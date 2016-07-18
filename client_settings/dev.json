@@ -1,4 +1,5 @@
 {
+    "enable-performance-meter": true,
     "stage": {
         "interpolation-msec": 30,
         "enable-interpolation": true,

@@ -23,7 +23,7 @@ define(function (require) {
 
 
     GateView = views.StageObject.extend({
-        texturePath: "img/gate.png",
+        texturePath: "/client/img/gate.png",
     });
 
     return {

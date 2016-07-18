@@ -9,6 +9,7 @@ define(function (require) {
     var StageController = require("stage/controller");
     var WindowsController = require("windows-controller");
     var ObjectContextController = require("object-context-controller");
+    var PerformanceMeter = require("performance-meter");
 
 
     function Controller(gameEl, connection) {
@@ -29,6 +30,10 @@ define(function (require) {
         };
         this._windowsController = new WindowsController(options);
         this._objectContextController = new ObjectContextController(options);
+        this._performanceMeter = new PerformanceMeter(
+            gameEl.find("#meter"),
+            connection
+        );
 
         _.bindAll(this, "destroy");
 
@@ -51,9 +56,11 @@ define(function (require) {
             stage.init();
             stage.listenTo(conn, "area", stage.dispatch);
             this._gameEl.show();
+            this._performanceMeter.init();
         },
         start: function () {
             this._stageController.start();
+            this._performanceMeter.start();
         },
         destroy: function () {
             this._gameEl.hide();
@@ -62,6 +69,7 @@ define(function (require) {
             this._stageController.destroy();
             this._windowsController.destroy();
             this._objectContextController.destroy();
+            this._performanceMeter.destroy();
         },
         listenToStageBackground: function (bg) {
             this.listenTo(bg, "click", this._backgroundClick);
@@ -95,7 +103,6 @@ define(function (require) {
             var ui = this._models.models.ui;
             this._deleteSelfStageObject();
             ui.set("selfObjectInfo", model.getInfoForUI());
-            this.listenTo(model, "change", this._selfStageObjectChanged);
         },
         deleteStageObject: function (ident) {
             if (this.isSelf(ident)) {
@@ -106,6 +113,23 @@ define(function (require) {
             }
             this._windowsController.deleteStageObject(ident);
             this._objectContextController.deleteStageObject(ident);
+        },
+        stageUpdated: function () {
+            var ui = this._models.models.ui;
+            var ident;
+            var model;
+
+            ident = ui.get("selectedObjectId");
+            model = this._stageController.getObjectModel(ident);
+            if (model !== undefined) {
+                ui.set("selectedObjectInfo", model.getInfoForUI());
+            }
+            ident = this.getUserId();
+            model = this._stageController.getObjectModel(ident);
+            if (model !== undefined) {
+                ui.set("selfObjectInfo", model.getInfoForUI());
+            }
+            this._performanceMeter.renderTick();
         },
         _initArea: function (data) {
             this._models.models.area.set({
@@ -239,33 +263,15 @@ define(function (require) {
             ui.set("selectedObjectId", ident);
             ui.set("selectedObjectType", model.objectType);
             ui.set("selectedObjectInfo", model.getInfoForUI());
-            this.listenTo(model, "change", this._selectedStageObjectChanged);
-        },
-        _selectedStageObjectChanged: function (model) {
-            var ui = this._models.models.ui;
-            ui.set("selectedObjectInfo", model.getInfoForUI());
         },
         _unselectStageObject: function () {
             var ui = this._models.models.ui;
-            var ident = ui.get("selectedObjectId");
-            var model = this._stageController.getObjectModel(ident);
-            if (model === undefined) return;
             ui.set("selectedObjectId", null);
             ui.set("selectedObjectType", "nothing");
             ui.set("selectedObjectInfo", {});
-            this.stopListening(model, "change");
-        },
-        _selfStageObjectChanged: function (model) {
-            var ui = this._models.models.ui;
-            ui.set("selfObjectInfo", model.getInfoForUI());
         },
         _deleteSelfStageObject: function () {
-            var ident = this.getUserId();
-            var model = this._stageController.getObjectModel(ident);
-            var ui = this._models.models.ui;
-            if (model === undefined) return;
-            ui.set("selfObjectInfo", {});
-            this.stopListening(model, "change");
+            this._models.models.ui.set("selfObjectInfo", {});
         },
         _windowIsActive: function () {
             return this._models.models.ui.get("activeWindow") !== null;

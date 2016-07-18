@@ -39,8 +39,8 @@ define(function (require) {
 
 
     ControlPointView = views.StageObject.extend({
-        texturePath: "img/space_station_1.png",
-        capturedTexturePath: "img/space_station_2.png",
+        texturePath: "/client/img/space_station_1.png",
+        capturedTexturePath: "/client/img/space_station_2.png",
         initialize: function (options) {
             ControlPointView.__super__.initialize.call(this, options);
             this.listenTo(this._model, "change:owner", this._changeTexture);

@@ -39,11 +39,14 @@ httpProcess settings node host port  =
             scottyOptions = Options (HS.verbose settings) waiSettings
             clientPrefix = policy (stripPrefix "client/")
             clientDir = HS.clientDir settings
+            customPolicy =
+                only [
+                    ("", clientDir ++ "/index.html"),
+                    ("client/js/settings.json", HS.clientSettings settings)
+                    ]
             clientPolicy = clientPrefix >-> addBase clientDir
-            settingsPolicy =
-                only [("client/js/settings.json", HS.clientSettings settings)]
             staticMiddleware =
-                staticPolicy' cacheContainer $ settingsPolicy <|> clientPolicy
+                staticPolicy' cacheContainer $ customPolicy <|> clientPolicy
         scottyOpts scottyOptions $ do
             middleware staticMiddleware
             get "/ws-addresses" $ do
@@ -56,7 +59,6 @@ httpProcess settings node host port  =
                             then (name, hostName, p)
                             else (name, h, p)
                 json $ map f wsAddresses
-            get "/" $ redirect "/client/index.html"
 
 
 

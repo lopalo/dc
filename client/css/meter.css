@@ -1,0 +1,20 @@
+
+#meter {
+    position: absolute;
+    left: 40%;
+    top: 0%;
+}
+
+#ping-meter {
+    position: absolute;
+    left: 130px;
+    top: 0px;
+}
+
+#fps-meter {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+}
+
+

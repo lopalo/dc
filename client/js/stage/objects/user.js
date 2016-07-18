@@ -98,7 +98,7 @@ define(function (require) {
             UserView.__super__.update.call(this);
         },
         _getTexturePath: function () {
-            return "img/" + this._model.get("asset") + ".png";
+            return "/client/img/" + this._model.get("asset") + ".png";
         },
         _getTextColor: function () {
             return this._isSelf ? "#8B8FBD" : "white";

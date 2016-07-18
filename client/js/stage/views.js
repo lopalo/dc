@@ -101,7 +101,7 @@ define(function (require) {
         },
         _changeBackground: function () {
             var areaId = this._area.get("areaId");
-            var bg = "img/" + settings.areas[areaId].background;
+            var bg = "/client/img/" + settings.areas[areaId].background;
             this._container.texture = pixi.Texture.fromImage(bg);
             this.resize();
         },
@@ -141,7 +141,7 @@ define(function (require) {
 
 
     Midground = Layer.extend({
-        texturePath: "img/midground.png",
+        texturePath: "/client/img/midground.png",
         initialize: function (options) {
             Midground.__super__.initialize.call(this, options);
             this._camera = options.camera;

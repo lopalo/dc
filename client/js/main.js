@@ -1,6 +1,6 @@
 
 require.config({
-    baseUrl: "js",
+    baseUrl: "/client/js",
     paths: {
         "text": "vendors/require-text.min",
         "json": "vendors/require-json.min",
@@ -13,6 +13,7 @@ require.config({
         "bootstrap-select": "vendors/bootstrap-select.min",
         "tween-lite": "vendors/TweenLite.min",
         pixi: "vendors/pixi.min",
+        fpsmeter: "vendors/fpsmeter.min",
     },
     shim: {
         jquery: {
@@ -33,6 +34,9 @@ require.config({
         "bootstrap-select": ["bootstrap"],
         "tween-lite": {
             exports: "TweenLite"
+        },
+        fpsmeter: {
+            exports: "FPSMeter"
         },
     }
 });

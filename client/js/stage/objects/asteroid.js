@@ -58,7 +58,7 @@ define(function (require) {
     AsteroidView = views.StageObject.extend({
         showName: false,
         _getTexturePath: function () {
-            return "img/" + this._model.get("asset") + ".png";
+            return "/client/img/" + this._model.get("asset") + ".png";
         },
     });
 

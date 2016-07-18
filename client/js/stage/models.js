@@ -32,6 +32,18 @@ define(function (require) {
             "objectType",
             "getInfoForUI"
         ],
+        silent: true,
+        set: function (key, val) {
+            var attrs;
+            if (typeof key === 'object') {
+                attrs = key;
+            } else {
+                attrs = {};
+                attrs[key] = val;
+            }
+            _.extend(this.attributes, attrs);
+            return this;
+        },
         defaults: function () {
             return {
                 id: "",

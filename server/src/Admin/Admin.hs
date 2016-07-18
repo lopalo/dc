@@ -8,7 +8,9 @@ import Data.String (fromString)
 import Control.Distributed.Process
 import Control.Distributed.Process.Node (LocalNode)
 import qualified Network.Wai.Handler.Warp as W
-import Network.Wai.Middleware.Static (staticPolicy, addBase, policy, (>->))
+import Network.Wai.Middleware.Static (
+    staticPolicy, addBase, only, policy, (>->), (<|>)
+    )
 import Web.Scotty hiding (settings)
 
 import qualified Settings as S
@@ -27,12 +29,13 @@ adminProcess settings node host port = liftIO $ do
         scottyOptions = Options (AS.verbose aSettings) waiSettings
         uiPrefix = policy (stripPrefix "ui/")
         uiDir = AS.uiDir aSettings
+        customPolicy = only [("", uiDir ++ "/index.html")]
+        uiPolicy = uiPrefix >-> addBase uiDir
         nodeNames = S.nodeNames $ S.nodes settings
     scottyOpts scottyOptions $ do
-        middleware $ staticPolicy (uiPrefix >-> addBase uiDir)
+        middleware $ staticPolicy $ customPolicy <|> uiPolicy
         clusterHandlers node nodeNames
         areaHandlers node
-        get "/" $ redirect "/ui/index.html"
 
 
 

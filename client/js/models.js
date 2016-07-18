@@ -10,34 +10,24 @@ define(["underscore", "backbone"], function (_, Backbone) {
 
     function ReadOnlyProxy(model) {
         this._model = model;
-        this.listenTo(model, "all", this._proxyEvent);
-        if (model.proxyAttributes) {
-            _.each(model.proxyAttributes, function (method) {
-                var attr = model[method];
-                if (_.isFunction(attr)) attr = attr.bind(model);
-                this[method] = attr;
-            }, this);
+        if (!model.silent) {
+            this.listenTo(model, "all", this._proxyEvent);
         }
+        var names = this._proxyAttributes.concat(model.proxyAttributes);
+        _.each(names, function (name) {
+            var attr = model[name];
+            if (_.isFunction(attr)) attr = attr.bind(model);
+            this[name] = attr;
+        }, this);
     }
     _.extend(ReadOnlyProxy.prototype, Backbone.Events, {
         isInstanceOf: function (constructor) {
             return this._model instanceof constructor;
         },
-        keys: function () {
-            return this._model.keys();
-        },
-        values: function () {
-            return this._model.values();
-        },
-        get: function (attr) {
-            return this._model.get(attr);
-        },
-        previous: function (attr) {
-            return this._model.previous(attr);
-        },
         set: function () {
             throw "The model is read-only";
         },
+        _proxyAttributes: ["keys", "values", "get", "previous"],
         _proxyEvent: function () {
             var args = arguments;
             if (args[0] === "cleanup") this.stopListening();

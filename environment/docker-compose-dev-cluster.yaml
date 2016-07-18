@@ -2,7 +2,7 @@ version: '2'
 services:
     first-node: &first-node
         container_name: first-node
-        image: dc:dev
+        image: lopalo/dc
         ports:
             - "10611:10611"
             - "10621:10621"
