@@ -15,7 +15,7 @@ define(function (require) {
 
 
     function StageView(options) {
-        this.cid = _.uniqueId('view');
+        this.cid = _.uniqueId("view");
         this._container = null;
         this._containerForListening = null;
         this.initialize(options);

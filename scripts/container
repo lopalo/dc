@@ -1,9 +1,4 @@
 #!/bin/bash
 DIR=`dirname $(readlink -f "$0")`/..
-docker run \
-    --name dc_exec \
-    --rm \
-    -v $DIR:/dc \
-    -t -i lopalo/dc \
-    "$@"
+docker run --rm -v $DIR:/dc -t -i lopalo/dc-scripts "$@"
 

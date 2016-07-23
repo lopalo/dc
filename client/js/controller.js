@@ -1,5 +1,6 @@
 
 define(function (require) {
+    var $ = require("jquery");
     var _ = require("underscore");
     var Backbone = require("backbone");
     var Victor = require("victor");
@@ -196,10 +197,10 @@ define(function (require) {
                     break;
             }
         },
-        _stageObjectViewPointerUp: function (ident) {
+        _stageObjectViewPointerUp: function () {
             if (this._windowIsActive()) return;
         },
-        _stageObjectViewPointerOver: function (ident) {
+        _stageObjectViewPointerOver: function () {
             if (this._windowIsActive()) return;
             this._cursorPos = null;
         },

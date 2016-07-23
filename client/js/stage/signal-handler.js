@@ -11,7 +11,7 @@ define(function (require) {
     }
     SignalHandler.prototype = {
         constructor: SignalHandler,
-        deleteStageObject: function (ident) {
+        deleteStageObject: function () {
         },
         process: function (signals) {
             _.each(signals, function (signal) {

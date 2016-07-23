@@ -10,17 +10,11 @@ COPY ${PROJECT_ROOT_DIR} /dc
 
 RUN apt-get update
 RUN apt-get install software-properties-common -y
-RUN sudo add-apt-repository ppa:hvr/ghc -y
+RUN add-apt-repository ppa:hvr/ghc -y
 RUN apt-get update
 
 RUN apt-get install zlib1g-dev -y
 RUN apt-get install libleveldb1 libleveldb-dev libsnappy1 libsnappy-dev -y
-
-RUN apt-get install python -y
-RUN apt-get install python-dev -y
-RUN apt-get install python-pip -y
-WORKDIR /dc/environment
-RUN pip install -r py_requirements.txt
 
 RUN apt-get install ghc-${GHC_VERSION} -y
 RUN apt-get install cabal-install-${CABAL_VERSION} -y
@@ -31,7 +25,6 @@ RUN cabal install --only-dependencies
 
 WORKDIR /dc
 ENV PATH ${PATH}:/dc/scripts
-ENV PYTHONPATH /dc/python_modules
 
 
 

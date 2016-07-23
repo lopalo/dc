@@ -9,7 +9,7 @@ CABAL_VERSION=1.20
 
 apt-get update
 apt-get install software-properties-common -y
-sudo add-apt-repository ppa:hvr/ghc -y
+add-apt-repository ppa:hvr/ghc -y
 apt-get update
 
 apt-get install zlib1g-dev -y

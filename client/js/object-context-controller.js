@@ -17,7 +17,7 @@ define(function (require) {
         destroy: function () {
             this.stopListening();
         },
-        deleteStageObject: function (ident) {
+        deleteStageObject: function () {
         },
         getSelectedObjectId: function () {
             return this._models.models.ui.get("selectedObjectId");

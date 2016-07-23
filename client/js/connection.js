@@ -1,5 +1,9 @@
 
-define(["backbone", "json!settings.json"], function (Backbone, settings) {
+define(function (require) {
+    var _ = require("underscore");
+    var Backbone = require("backbone");
+
+    var settings = require("json!settings.json");
     var checkPeriod = settings.connection["check-period-msec"];
     var freezeFactor = settings.connection["freeze-factor"];
     var inputDelay = settings.connection["input-delay-msec"];
@@ -71,7 +75,7 @@ define(["backbone", "json!settings.json"], function (Backbone, settings) {
         _checkInput: function () {
             var inputQueue = this._inputQueue;
             var period = checkPeriod;
-            var multipartCommands = this._multipartCommands
+            var multipartCommands = this._multipartCommands;
             var data;
             var cmd;
             var body;
@@ -103,8 +107,8 @@ define(["backbone", "json!settings.json"], function (Backbone, settings) {
                 if (cmd === "error") {
                     this.lastError = body;
                 }
-                if (_.contains(cmd, '.')) {
-                    parts = cmd.split('.');
+                if (_.contains(cmd, ".")) {
+                    parts = cmd.split(".");
                     this.trigger(parts[0], {cmd: parts[1], body: body});
                 }
                 this.trigger(cmd, body);

@@ -35,7 +35,7 @@ define(function (require) {
         silent: true,
         set: function (key, val) {
             var attrs;
-            if (typeof key === 'object') {
+            if (typeof key === "object") {
                 attrs = key;
             } else {
                 attrs = {};
@@ -60,7 +60,7 @@ define(function (require) {
         },
         applyActions: function (timestamp) {
             _.each(this.get("actions"), function (action) {
-                   this._applyAction(action, timestamp);
+                this._applyAction(action, timestamp);
             }, this);
         },
         _applyAction: function (action, timestamp) {

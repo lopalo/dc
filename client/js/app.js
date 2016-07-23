@@ -42,7 +42,7 @@ define(function (require) {
         var address = $("#connect-address").val();
         var queryString = "?name=" + userName + "&address=" + address;
         connection.send("login", userName);
-        window.history.pushState({}, '', queryString);
+        window.history.pushState({}, "", queryString);
         connection.once("init", function () {
             $("#connect-form").hide();
             initGame(connection);

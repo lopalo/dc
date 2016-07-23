@@ -1,9 +1,6 @@
 
 define(function (require) {
     var _ = require("underscore");
-    var Backbone = require("backbone");
-    var Victor = require("victor");
-    var TweenLite = require("tween-lite");
     var pixi = require("pixi");
 
     var models = require("stage/models");

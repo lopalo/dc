@@ -21,7 +21,7 @@ define(function (require) {
         destroy: function () {
             this.stopListening();
         },
-        deleteStageObject: function (ident) {
+        deleteStageObject: function () {
         },
         _activateWindow: function (windowName) {
             this._models.models.ui.set("activeWindow", windowName);

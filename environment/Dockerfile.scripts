@@ -1,0 +1,25 @@
+FROM ubuntu:14.04
+MAINTAINER Vlad Lopalo
+
+ENV LANG C.UTF-8
+ENV PROJECT_ROOT_DIR .
+
+COPY ${PROJECT_ROOT_DIR} /dc
+
+RUN apt-get update
+
+RUN apt-get install zlib1g-dev -y
+RUN apt-get install libleveldb1 libleveldb-dev libsnappy1 libsnappy-dev -y
+
+RUN apt-get install python -y
+RUN apt-get install python-dev -y
+RUN apt-get install python-pip -y
+WORKDIR /dc/environment
+RUN pip install -r py_requirements.txt
+
+WORKDIR /dc
+ENV PATH ${PATH}:/dc/scripts
+ENV PYTHONPATH /dc/python_modules
+
+
+

@@ -1,7 +1,6 @@
 define(function (require) {
     var $ = require("jquery");
     var _ = require("underscore");
-    var Backbone = require("backbone");
     require("bootstrap");
     require("bootstrap-select");
 

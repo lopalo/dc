@@ -1,3 +1,3 @@
 #!/bin/bash
 cd "$(dirname "$0")/.."
-docker build -t lopalo/dc -f environment/Dockerfile .
+docker build -t lopalo/dc-scripts -f environment/Dockerfile.scripts .

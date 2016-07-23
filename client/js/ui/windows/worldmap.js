@@ -1,7 +1,6 @@
 define(function (require) {
     var $ = require("jquery");
     var _ = require("underscore");
-    var Backbone = require("backbone");
     require("bootstrap");
     require("bootstrap-select");
     var settings = require("json!settings.json");
@@ -10,9 +9,9 @@ define(function (require) {
 
     var WorldmapWindow = common.UIView.extend({
         headerTemplate: _.template(
-            '<div class="panel-heading">' +
-                'World Owner: <%= owner === null ? "-" : owner %>' +
-            '</div>'
+            "<div class='panel-heading'>" +
+                "World Owner: <%= owner === null ? '-' : owner %>" +
+            "</div>"
         ),
         initialize: function (options) {
             WorldmapWindow.__super__.initialize.call(this);
