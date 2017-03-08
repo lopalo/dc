@@ -48,6 +48,7 @@ http:
     client-dir: ../../client
     client-settings: ../../client_settings/dev.json
     caching: true
+    fd-cache-duration-seconds: 0 #10
     verbose: 0
 
 admin:

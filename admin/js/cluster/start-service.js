@@ -198,6 +198,7 @@ define(["mithril", "utils", "validation"], function (m, utils, v) {
                     v.validationFormGroup(optErrors.port, [
                         m("label.control-label", "Port"),
                         m("input.form-control", {
+                            type: "number",
                             oninput: m.withAttr("value", opts.port),
                             value: opts.port()
                         }),
@@ -219,6 +220,7 @@ define(["mithril", "utils", "validation"], function (m, utils, v) {
                         v.validationFormGroup(optErrors["min-db-replicas"], [
                             m("label.control-label", "Minimum DB Replicas"),
                             m("input.form-control", {
+                                type: "number",
                                 oninput: m.withAttr(
                                     "value",
                                     opts["min-db-replicas"]

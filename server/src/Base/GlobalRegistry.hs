@@ -153,11 +153,11 @@ mergeRecord state name record = do
                     }
             | record > record' -> do
                 exit pid RegistrationFailure
-                log Info $ "Remote name conflict: " ++ toString name
+                logConflict
                 return state
             | otherwise -> do
                 exit pid' RegistrationFailure
-                log Info $ "Local name conflict: " ++ toString name
+                logConflict
                 monitor pid
                 let modPids = insertName pid name . deleteName pid' name
                 return $ state{
@@ -167,6 +167,7 @@ mergeRecord state name record = do
     where
         reg = registry state
         (ts, pid) = record
+        logConflict = log Info $ "Name conflict: " ++ toString name
 
 
 loop :: State -> Process State

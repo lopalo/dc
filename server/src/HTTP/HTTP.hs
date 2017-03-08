@@ -34,7 +34,9 @@ httpProcess settings node host port  =
         let
             waiSettings = foldr ($) W.defaultSettings [
                 W.setPort port,
-                W.setHost (fromString host)
+                W.setHost (fromString host),
+                W.setFdCacheDuration (HS.fdCacheDurationSeconds settings),
+                W.setFileInfoCacheDuration (HS.fdCacheDurationSeconds settings)
                 ]
             scottyOptions = Options (HS.verbose settings) waiSettings
             clientPrefix = policy (stripPrefix "client/")
