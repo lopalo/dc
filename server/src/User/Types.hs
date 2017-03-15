@@ -5,7 +5,6 @@ module User.Types where
 import GHC.Generics (Generic)
 import Data.Binary (Binary)
 import Data.Typeable (Typeable)
-import Control.Applicative ((<$>), (<*>))
 import Control.Monad (mzero)
 
 import Data.Aeson (

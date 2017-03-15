@@ -5,7 +5,6 @@ module Types where
 import GHC.Generics (Generic)
 import Data.Binary (Binary)
 import Data.Typeable (Typeable)
-import Control.Applicative ((<$>))
 import Data.String.Utils (split, join)
 import qualified Data.Map.Strict as M
 

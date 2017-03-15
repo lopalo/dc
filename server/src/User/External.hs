@@ -9,7 +9,6 @@ module User.External (
 import GHC.Generics (Generic)
 import Data.Binary (Binary)
 import Data.Typeable (Typeable)
-import Control.Applicative ((<$>))
 
 import Data.Aeson (FromJSON, Value, Result(Success), fromJSON)
 import Control.Distributed.Process

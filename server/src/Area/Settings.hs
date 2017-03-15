@@ -2,7 +2,6 @@
 
 module Area.Settings where
 
-import Control.Applicative ((<$>), (<*>))
 import Control.Monad (mzero)
 import qualified Data.Map.Strict as M
 

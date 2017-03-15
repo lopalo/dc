@@ -2,6 +2,7 @@
 
 module Admin.Admin (adminProcess) where
 
+import Data.Function ((&))
 import Data.List (stripPrefix)
 import Data.String (fromString)
 
@@ -22,9 +23,9 @@ import Admin.AreaHandlers (areaHandlers)
 adminProcess :: S.Settings -> LocalNode -> String -> Int -> Process ()
 adminProcess settings node host port = liftIO $ do
     let aSettings = S.admin settings
-        waiSettings = foldr ($) W.defaultSettings [
-            W.setPort port,
-            W.setHost (fromString host)
+        waiSettings = foldl (&) W.defaultSettings [
+            W.setHost (fromString host),
+            W.setPort port
             ]
         scottyOptions = Options (AS.verbose aSettings) waiSettings
         uiPrefix = policy (stripPrefix "ui/")

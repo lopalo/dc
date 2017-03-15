@@ -10,7 +10,6 @@ import GHC.Generics (Generic)
 import Data.Binary (Binary)
 import Data.Typeable (Typeable)
 import Prelude hiding (log)
-import Control.Applicative ((<$>))
 import Control.Monad (forever, when)
 import Data.Maybe (fromMaybe)
 import Data.ByteString (ByteString, isPrefixOf)
@@ -34,7 +33,6 @@ import Database.LevelDB.Streaming (
 import qualified Data.Stream.Monadic as Stream
 
 import Base.GlobalRegistry (globalWhereIsByPrefix)
-import Base.Logger (log)
 import Types (
     Ts, ServiceId, AreaId(..), LogLevel(..),
     ServiceType(AreaDB), prefix
@@ -45,7 +43,7 @@ import Area.Objects.Gate (Gate)
 import Area.Objects.Asteroid (Asteroid)
 import Area.Objects.ControlPoint (ControlPoint)
 import DB.Types (Persistent(fromByteString, toByteString))
-import DB.Utils (dbProcess, key)
+import DB.Utils (dbProcess, key, log)
 import qualified DB.Settings as DS
 
 data AreaObjects = AreaObjects {
@@ -159,7 +157,7 @@ getDBForArea (AreaId aid) tagPool =
 
 replicaAmountError :: AreaId -> Process ()
 replicaAmountError (AreaId aid) =
-    log Error $ "Not enough db replicas for area " ++ aid
+    log Error $ "Not enough replicas for area: " ++ aid
 
 
 --external interface

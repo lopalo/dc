@@ -3,7 +3,6 @@
 module Settings where
 
 import Data.Binary (Binary, put, get)
-import Control.Applicative ((<$>), (<*>))
 import Control.Monad (mzero)
 import qualified Data.Map.Strict as M
 import qualified Data.ByteString.Char8 as B

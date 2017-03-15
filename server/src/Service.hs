@@ -3,7 +3,6 @@
 module Service (spawnService) where
 
 import Prelude hiding (log)
-import Control.Applicative ((<$>))
 import Control.Monad (forever, when, void, mzero)
 import Control.Monad.Catch (throwM)
 import Data.Maybe (isNothing)
@@ -28,7 +27,7 @@ import Types (
     NodeName, LogLevel(..), ServiceType(..),
     SwitchOffService(..), prefix
     )
-import Base.Logger (log)
+import qualified Base.Logger as L
 import Base.GlobalRegistry (globalRegister, globalWhereIs)
 import Area.Area (areaProcess)
 import DB.AreaDB (areaDBProcess)
@@ -87,7 +86,7 @@ spawnService nodeName node settings tagPool serviceSettings = do
             globalRegister uniqueName pid tagPool
             wait delayFactor
             forever $ do
-                --log Debug $ "Try to start service: " ++ name
+                --log Debug $ "Try to start: " ++ name
                 globalRegister uniqueName pid tagPool
                 maybePid <- globalWhereIs name tagPool --optimization
                 when (isNothing maybePid) $ do
@@ -96,7 +95,7 @@ spawnService nodeName node settings tagPool serviceSettings = do
                     when (null servicePids) $ do
                         ok <- globalRegister name pid tagPool
                         when ok $ do
-                            log Info $ "Start service: " ++ name
+                            log Info $ "Start: " ++ name
                             service
                 wait 1
         spawnLoop service delayFactor =
@@ -106,7 +105,7 @@ spawnService nodeName node settings tagPool serviceSettings = do
                 sequel = spawnLoop service $ delayFactor + 1
     case parse (initService serviceType) options of
         Aeson.Success service -> void $ spawnLoop service 0
-        Aeson.Error err -> log Error $ "Service init error: " ++ err
+        Aeson.Error err -> log Error $ "Init error: " ++ err
 
 
 respawnService :: Process () -> Process () -> Process ()
@@ -121,3 +120,9 @@ spawning `respawnService` sequel = do
 
         handleAny :: SomeException -> Process a
         handleAny ex = sequel >> throwM ex
+
+
+
+log :: LogLevel -> String -> Process ()
+log level txt = L.log level $ "Service - " ++ txt
+

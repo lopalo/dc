@@ -8,7 +8,6 @@ module Base.Broadcaster (
 import GHC.Generics (Generic)
 import Data.Binary (Binary)
 import Data.Typeable (Typeable)
-import Control.Applicative ((<$>))
 import Control.Monad (forever)
 import Data.Maybe (isJust)
 import qualified Data.Map.Strict as M

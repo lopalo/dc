@@ -8,13 +8,13 @@ import Control.Distributed.Process
 import Data.Aeson (Value(Null), Result(Success), fromJSON, decodeStrict)
 import Data.String.Utils (startswith)
 
-import WS.Connection (Connection, sendCmd, sendResponse, InputHandler)
+import WS.Connection (Connection, InputHandler, sendCmd, sendResponse, log)
 import qualified Area.External as AE
 import qualified User.External as UE
 import User.User (userProcess)
 import Types (UserPid, AreaPid, RequestNumber, LogLevel(..), delPrefix)
 import Utils (evaluate)
-import Base.Logger (log, logException)
+import Base.Logger (logException)
 import qualified Settings as S
 
 

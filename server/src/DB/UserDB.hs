@@ -6,7 +6,6 @@ import GHC.Generics (Generic)
 import Data.Binary (Binary)
 import Data.Typeable (Typeable)
 import Prelude hiding (log)
-import Control.Applicative ((<$>))
 import Control.Monad (forever, when)
 import Data.Maybe (fromMaybe)
 import Data.ByteString.Char8 (pack, unpack)
@@ -24,14 +23,13 @@ import Database.LevelDB.Base (
 import Data.Digest.CRC32 (crc32)
 
 import Base.GlobalRegistry (getNameList)
-import Base.Logger (log)
 import Types (
     UserId(..), ServiceId, ServiceType(UserDB),
     LogLevel(Error), Ts, prefix, delIdPrefix
     )
 import Utils (safeReceive, timeoutForCall, milliseconds)
 import User.Types (User, userId)
-import DB.Utils (dbProcess, key)
+import DB.Utils (dbProcess, key, log)
 import DB.Types (Persistent(fromByteString, toByteString))
 import qualified DB.Settings as DS
 
@@ -112,7 +110,7 @@ getDBForUser (UserId uid) tagPool = do
     res <- fmap (map namePair) (getNameList (prefix UserDB) tagPool)
     case res of
         [] -> do
-            log Error $ "There is no user db" ++ uid
+            log Error $ "There are no user databases"
             terminate
         nameList ->
             let name = fst $ head nameList
@@ -140,7 +138,7 @@ shardName (number, amount) =
 
 replicaAmountError :: UserId -> Process ()
 replicaAmountError (UserId uid) =
-    log Error $ "Not enough db replicas for user " ++ uid
+    log Error $ "Not enough replicas for user: " ++ uid
 
 
 --external interface

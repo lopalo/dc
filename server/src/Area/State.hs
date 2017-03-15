@@ -4,6 +4,7 @@ module Area.State where
 import Prelude hiding ((.))
 import Control.Category ((.))
 import Control.Monad (void)
+import Data.Function ((&))
 import qualified Control.Monad.State.Strict as S
 import qualified Data.Map.Strict as M
 import Data.Sequence ((|>))
@@ -99,26 +100,26 @@ insertUser :: U.User -> Users -> Users
 insertUser user us =
     if uid `M.member` usersData us
         then us
-        else foldr ($) us fs
+        else foldl (&) us fs
     where
         fs = [
-            usersDataL ^%= M.insert uid user,
+            userMonitorRefIndexL ^%= M.insert (U.monitorRef user) uid,
             connectionIndexL ^%= M.insert (U.connection user) uid,
-            userMonitorRefIndexL ^%= M.insert (U.monitorRef user) uid
+            usersDataL ^%= M.insert uid user
             ]
         uid = U.userId user
 
 
 deleteUser :: UserId -> Users -> Users
-deleteUser uid us = foldr ($) us fs
+deleteUser uid us = foldl (&) us fs
     where
         usr = usersData  us M.! uid
         conn = U.connection usr
         ref = U.monitorRef usr
         fs = [
-            usersDataL ^%= M.delete uid,
+            userMonitorRefIndexL ^%= M.delete ref,
             connectionIndexL ^%= M.delete conn,
-            userMonitorRefIndexL ^%= M.delete ref
+            usersDataL ^%= M.delete uid
             ]
 
 

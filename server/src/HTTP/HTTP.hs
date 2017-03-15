@@ -2,6 +2,7 @@
 
 module HTTP.HTTP (httpProcess) where
 
+import Data.Function ((&))
 import Data.List (stripPrefix)
 import Data.String.Utils (split)
 import Data.Text.Lazy (unpack)
@@ -31,12 +32,12 @@ httpProcess settings node host port  =
                 if HS.caching settings
                     then PublicStaticCaching
                     else NoCaching
-        let
-            waiSettings = foldr ($) W.defaultSettings [
-                W.setPort port,
+        let cacheDuration = HS.fdCacheDurationSeconds settings
+            waiSettings = foldl (&) W.defaultSettings [
                 W.setHost (fromString host),
-                W.setFdCacheDuration (HS.fdCacheDurationSeconds settings),
-                W.setFileInfoCacheDuration (HS.fdCacheDurationSeconds settings)
+                W.setPort port,
+                W.setFdCacheDuration cacheDuration,
+                W.setFileInfoCacheDuration cacheDuration
                 ]
             scottyOptions = Options (HS.verbose settings) waiSettings
             clientPrefix = policy (stripPrefix "client/")

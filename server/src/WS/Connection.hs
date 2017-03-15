@@ -6,7 +6,7 @@ module WS.Connection (
     broadcastBeginMultipart, broadcastEndMultipart,
     setUser, setArea, close, monitorConnection,
     checkMonitorNotification, sendErrorAndClose,
-    connectionBroadcastHandlers
+    connectionBroadcastHandlers, log
     ) where
 
 import GHC.Generics (Generic)
@@ -28,7 +28,7 @@ import qualified Network.WebSockets as WS
 import Base.Broadcaster (broadcast, prepareHandler)
 import Types (RequestNumber, UserPid(..), AreaPid, LogLevel(..))
 import Utils (evaluate)
-import Base.Logger (log)
+import qualified Base.Logger as L
 
 
 data Connection =
@@ -52,13 +52,13 @@ acceptConnection node inputHandler pending = do
                     forever $ receiveWait [
                         match handleOutput
                         ]
-            outputLoop `finally` log Debug "Connection: output closed"
+            outputLoop `finally` log Debug "Output closed"
     Node.runProcess node $ do
         inputPid <- getSelfPid
         let conn = Connection outputPid inputPid
             final = do
                 exit outputPid "closed"
-                log Debug "Connection: input closed"
+                log Debug "Input closed"
             setUserPid (_, areaPid) userPid@(UserPid pid) = do
                 link pid
                 return (Just userPid, areaPid)
@@ -78,6 +78,10 @@ acceptConnection node inputHandler pending = do
                 uncurry (inputHandler inputData conn) state'
                 inputLoop state'
         link outputPid >> inputLoop (Nothing, Nothing) `finally` final
+
+
+log :: LogLevel -> String -> Process ()
+log level txt = L.log level $ "WS - " ++ txt
 
 
 handleBroadcastOutput ::

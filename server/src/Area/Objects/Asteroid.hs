@@ -6,7 +6,6 @@ import GHC.Generics (Generic)
 import Data.Binary (Binary)
 import Data.Typeable (Typeable)
 import Control.Monad (mzero)
-import Control.Applicative ((<$>), (<*>))
 
 import Data.Aeson (Value(Object), object, (.=), (.:), (.:?), (.!=))
 

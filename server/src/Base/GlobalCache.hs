@@ -10,7 +10,6 @@ import GHC.Generics (Generic)
 import Data.Binary (Binary)
 import Data.Typeable (Typeable)
 import Prelude hiding (log)
-import Control.Applicative ((<$>))
 import Control.Monad (void, foldM)
 import Data.Maybe (isJust)
 import Data.List (delete)
@@ -22,9 +21,11 @@ import Control.Distributed.Process.Serializable (Serializable)
 import Control.Distributed.Process.Extras (TagPool, getTag)
 import Control.Distributed.Process.Extras.Call (callResponse, callTimeout)
 
-import Types (Ts, UserName)
+import Types (Ts, UserName, LogLevel(..))
 import qualified Settings as S
 import Utils (safeReceive, timeoutForCall, milliseconds)
+import Base.GlobalRegistry (Event(NewNode))
+import qualified Base.Logger as L
 
 
 type Record = (Value, Ts)
@@ -55,13 +56,9 @@ instance Binary Value
 data State = State {
     cache :: M.Map KeyTag (M.Map String Record),
     subscriptions :: M.Map KeyTag (S.Set ProcessId),
-    nodes :: [NodeId]
+    nodes :: [NodeId],
+    grEventPort :: ReceivePort Event
     }
-
-
-data MergeRequest = MergeRequest NodeId deriving (Generic, Typeable)
-
-instance Binary MergeRequest
 
 
 data Merge = Merge [KeyRecord] deriving (Generic, Typeable)
@@ -90,18 +87,17 @@ globalCacheServiceName :: String
 globalCacheServiceName = "globalCache"
 
 
-globalCacheProcess :: S.Settings -> Process ()
-globalCacheProcess settings = do
+globalCacheProcess :: S.Settings -> ReceivePort Event -> Process ()
+globalCacheProcess settings evPort = do
     register globalCacheServiceName =<< getSelfPid
     selfNodeId <- getSelfNode
     let ns = delete selfNodeId $ M.keys $ S.nodeNames $ S.nodes settings
         state = State{
             cache=M.empty,
             subscriptions=M.empty,
-            nodes=ns
+            nodes=ns,
+            grEventPort=evPort
             }
-        req = MergeRequest selfNodeId
-    mapM_ (\n -> nsendRemote n globalCacheServiceName req) ns
     void $ loop state
 
 
@@ -128,7 +124,9 @@ mergeRecord state (key, record@(value, _)) = do
         tagSubs =
             S.toList $ M.findWithDefault S.empty keyTag $ subscriptions state
         payload = NewCacheValue (key, value)
-        broadcast = mapM_ (\pid -> send pid payload) tagSubs
+        broadcast = do
+            mapM_ (`send` payload) tagSubs
+            log Debug $ "Key updated: " ++ show key
 
 
 loop :: State -> Process State
@@ -136,12 +134,14 @@ loop state = safeReceive handlers state >>= loop
     where
         prepare h = match (h state)
         prepareCall h = callResponse (h state)
+        grEventHandler =
+            matchChan (grEventPort state) (handleGlobalRegistryEvent state)
         handlers = [
             prepareCall handleGetSubscribe,
             prepare handleSetValue,
             prepare handleMerge,
-            prepare handleMergeRequest,
             prepare handleMonitorNotification,
+            grEventHandler,
             matchUnknown (return state)
             ]
 
@@ -177,11 +177,12 @@ handleMerge :: State -> Merge -> Process State
 handleMerge state (Merge keyRecords) = foldM mergeRecord state keyRecords
 
 
-handleMergeRequest :: State -> MergeRequest -> Process State
-handleMergeRequest state (MergeRequest nodeId) = do
+handleGlobalRegistryEvent :: State -> Event -> Process State
+handleGlobalRegistryEvent state (NewNode nodeId nodeName) = do
     nsendRemote nodeId globalCacheServiceName merge
+    log Debug $ "Send merge to node: " ++ nodeName
     return state
-    where merge = Merge $ concat $ map M.toList $ M.elems $ cache state
+    where merge = Merge $ concatMap M.toList $ M.elems $ cache state
 
 
 handleMonitorNotification ::
@@ -189,6 +190,10 @@ handleMonitorNotification ::
 handleMonitorNotification state (ProcessMonitorNotification _ pid _) =
     return state{subscriptions=del $ subscriptions state}
     where del = M.map $ S.delete pid
+
+
+log :: LogLevel -> String -> Process ()
+log level txt = L.log level $ "GlobalCache - " ++ txt
 
 
 request :: (Serializable a, Serializable b) => a -> TagPool -> Process b

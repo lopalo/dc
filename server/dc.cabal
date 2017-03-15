@@ -5,7 +5,7 @@ License: BSD3
 Author: Vlad Lopalo
 Synopsis: DC
 Build-Type: Simple
-Tested-With: GHC == 7.8.4
+Tested-With: GHC == 7.10.3
 
 
 Executable dc
@@ -18,21 +18,20 @@ Executable dc
         -Wall --enable warnings
         -fno-warn-unused-do-bind
     Build-Depends:
+        base,
+        mtl,
         SHA == 1.6.4,
         random >= 1.0.0.0,
         hashable >= 1.0.0,
         aeson == 0.11.*,
-        base == 4.7.0.2,
         time >= 1.5,
-        mtl == 2.1.2,
         exceptions,
-        text >= 0.11.0.0,
+        text == 1.*,
         digest == 0.0.1.2,
-        bytestring == 0.10.4.0,
+        bytestring == 0.10.6.0,
         bytestring-trie >= 0.2.4,
-        ghc-prim == 0.3.1.0,
         data-lens == 2.10.5,
-        binary == 0.7.1.0,
+        binary,
         directory <= 1.2.5.1,
         MissingH == 1.2.1.0,
         network == 2.6.*,
@@ -41,13 +40,13 @@ Executable dc
         distributed-static == 0.3.4.0,
         network-transport == 0.4.3.*,
         network-transport-tcp == 0.5.*,
-        utf8-string == 0.3.7,
+        utf8-string == 0.3.*,
         websockets == 0.9.5.0,
-        containers == 0.5.5.1,
-        yaml == 0.8.14,
+        containers == 0.5.*,
+        yaml == 0.8.*,
         leveldb-haskell == 0.6.3,
         scotty == 0.11.*,
-        wai-middleware-static == 0.7.0.1,
+        wai-middleware-static == 0.8.*,
         warp >= 3.1.0
     Hs-Source-Dirs: src
     Other-Modules:
@@ -58,7 +57,6 @@ Executable dc
         Utils,
         Area.Area,
         Area.Action,
-        Area.Event,
         Area.State,
         Area.Tick,
         Area.Types,

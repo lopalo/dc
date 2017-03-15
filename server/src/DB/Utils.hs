@@ -1,5 +1,5 @@
 
-module DB.Utils (dbProcess, key) where
+module DB.Utils (dbProcess, key, log) where
 
 import Prelude hiding (log)
 import Data.List (intercalate)
@@ -10,7 +10,7 @@ import Control.Monad.Catch (catch)
 import Control.Distributed.Process hiding (catch)
 import Database.LevelDB.Base (DB, withDB, defaultOptions)
 
-import Base.Logger (log)
+import qualified Base.Logger as L
 import qualified DB.Settings as DS
 import Types (LogLevel(..))
 import DB.Types (DBName)
@@ -22,9 +22,13 @@ dbProcess handler settings ident =
     where
         path = intercalate "/" [DS.dbDir settings, ident]
         errorHandler e =
-            log Error $ "DB error: " ++ show (e :: IOError)
+            log Error $ "Error: " ++ show (e :: IOError)
 
 
 key :: Show a => a -> ByteString
 key = fromString . show
+
+
+log :: LogLevel -> String -> Process ()
+log level txt = L.log level $ "DB - " ++ txt
 

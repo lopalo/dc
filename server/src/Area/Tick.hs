@@ -6,11 +6,11 @@ import GHC.Generics (Generic)
 import Data.Binary (Binary)
 import Data.Typeable (Typeable)
 import Prelude hiding (log, (.))
-import Control.Applicative ((<$>))
 import Control.Monad (liftM, when, unless)
 import Control.Monad.Writer (runWriter)
 import Control.Category ((>>>), (.))
 import Control.Monad.State.Strict (runState, get, gets, modify)
+import Data.Function ((&))
 import Data.Foldable (foldlM, toList)
 import Data.Maybe (fromJust)
 import qualified Data.Map.Strict as M
@@ -27,7 +27,6 @@ import Data.Aeson (Value, object, (.=))
 
 import Types (Ts, LogLevel(..))
 import Utils (milliseconds)
-import Base.Logger (log)
 import qualified DB.AreaDB as DB
 import qualified WS.Connection as C
 import qualified Area.Settings as AS
@@ -48,7 +47,7 @@ import Area.Signal (
     Signal(Appearance, Disappearance, MoveAsteroid, JumpToArea),
     AReason(..), DReason(..)
     )
-import Area.Utils (distance)
+import Area.Utils (distance, log)
 import Area.Grid (groupCells, groupByCells)
 import Area.Misc (spawnUser, updateOwnerName)
 import Area.Types (Object(..), Destroyable(..), ObjId(..), Pos)
@@ -150,10 +149,10 @@ handleCollisions = do
         group = groupByCells cellSize Set.empty $ flip $ Set.insert . collider
         g getter = M.elems $ getter state
         colliderGroups =
-            groupCells $ foldr ($) M.empty [
-                group $ g $ usersData . users,
+            groupCells $ foldl (&) M.empty [
+                group $ g controlPoints,
                 group $ g asteroids,
-                group $ g controlPoints
+                group $ g $ usersData . users
                 ]
         collisions = findAllCollisions colliderGroups
     collidersL ~= colliderGroups
@@ -318,9 +317,9 @@ getBroadcastData ts = do
 
         gg getter = M.elems $ getter state
         groups =
-            foldr ($) M.empty [
-                group userReducer $ gg $ usersData . users,
-                group reducer $ gg asteroids
+            foldl (&) M.empty [
+                group reducer $ gg asteroids,
+                group userReducer $ gg $ usersData . users
                 ]
         broadcastGroup field@(center:_) =
             let objects = fst center

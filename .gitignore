@@ -14,5 +14,5 @@ dist
 nohup.out
 .vagrant
 server/bin/*
-
+*.vim
 

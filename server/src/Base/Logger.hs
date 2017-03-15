@@ -3,7 +3,6 @@
 module Base.Logger (loggerProcess, isRunning, log, logException) where
 
 import Prelude hiding (log)
-import Control.Applicative ((<$>))
 import Control.Monad (when, forever)
 import Control.Monad.Catch (finally)
 import Data.Maybe (isJust)

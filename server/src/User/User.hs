@@ -3,7 +3,6 @@
 module User.User (userProcess) where
 
 import Prelude hiding (log)
-import Control.Applicative ((<$>))
 import Control.Monad (forever, when, unless)
 import Control.Monad.Catch (onException)
 import Data.Maybe (fromMaybe)
@@ -26,7 +25,7 @@ import Types (
     )
 import Base.GlobalRegistry (globalRegister, globalWhereIs)
 import qualified Base.GlobalCache as GC
-import Base.Logger (log)
+import qualified Base.Logger as L
 import qualified WS.Connection as C
 import qualified User.Settings as US
 import qualified Area.External as AE
@@ -81,7 +80,7 @@ handleReconnection state (Reconnection conn) = do
         Nothing -> return ()
     initConnection conn state
     AE.reconnect (area usr) (userId usr) conn
-    log Debug "User reconnected"
+    log Debug $ "Reconnected: " ++ (show $ userId usr)
     return state{connection=Just conn, disconnectTs=Nothing}
     where usr = user state
 
@@ -96,7 +95,7 @@ handleSyncState state (UE.SyncState ua) = do
             }
         minReplicas = US.minDBReplicas $ settings state
     putUser usr' minReplicas $ reqTagPool state
-    log Debug $ printf "User '%s' synchronized" $ show $ userId usr'
+    log Debug $ "Synchronized: " ++ (show $ userId usr')
     return state{user=usr'}
 
 
@@ -255,6 +254,10 @@ initClientInfo state =
         "name" .= name usr
         ]
     where usr = user state
+
+
+log :: LogLevel -> String -> Process ()
+log level txt = L.log level $ "User - " ++ txt
 
 
 runPeriodic :: Ts -> Process ProcessId

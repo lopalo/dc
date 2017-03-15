@@ -20,7 +20,7 @@ import Types (NodeName, LogLevel(..), ServiceType(..))
 import Service (spawnService)
 import Base.Broadcaster (broadcasterProcess)
 import Base.Logger (loggerProcess, log)
-import Base.GlobalRegistry (globalRegistryProcess)
+import Base.GlobalRegistry (spawnGlobalRegistry)
 import Base.GlobalCache (globalCacheProcess)
 import WS.Connection (connectionBroadcastHandlers)
 import User.External (userBroadcastHandlers)
@@ -42,11 +42,11 @@ startNode node settings nodeName = do
             ]
     logSender <- createSender (S.logAggregatorName logSettings) nodeName
     spawnLocal $ loggerProcess logSettings logSender
-    log Info $ "Start node: " ++ nodeName
+    log Info $ "Node - Start: " ++ nodeName
     tagPool <- newTagPool
     spawnLocal $ broadcasterProcess $ concat broadcastHandlers
-    spawnLocal $ globalRegistryProcess settings
-    spawnLocal $ globalCacheProcess settings
+    grReceivePort <- spawnGlobalRegistry settings
+    spawnLocal $ globalCacheProcess settings grReceivePort
     mapM_ (spawnService nodeName node settings tagPool) services'
 
 

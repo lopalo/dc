@@ -5,8 +5,6 @@ module Area.External (
     getAreaStatus
     ) where
 
-import Control.Applicative ((<$>))
-
 import Data.Aeson (FromJSON, Value(Null), Result(Success), fromJSON)
 import Control.Distributed.Process hiding (reconnect)
 import Control.Distributed.Process.Serializable (Serializable)

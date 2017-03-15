@@ -1,6 +1,7 @@
 
 module Area.ClientCommands (handleClientCommand, handleClientReq) where
 
+import Data.Function ((&))
 import qualified Data.Map.Strict as M
 import Data.List (elemIndex, maximumBy)
 import System.Random (randomR)
@@ -187,17 +188,17 @@ handleClientCommand state (Shoot targetPos, conn) =
                         then
                             case ray $ colliders state of
                                 Just (Collision _ targetId targetPos'') ->
-                                    foldr ($) state [
-                                        shotCooldown,
-                                        dmgTarget targetId,
-                                        updTargetAttacker targetId,
+                                    foldl (&) state [
+                                        addSig targetPos'',
                                         updTargetActions targetId,
-                                        addSig targetPos''
+                                        updTargetAttacker targetId,
+                                        dmgTarget targetId,
+                                        shotCooldown
                                         ]
                                 Nothing ->
-                                    foldr ($) state [
-                                        shotCooldown,
-                                        addSig targetPos'
+                                    foldl (&) state [
+                                        addSig targetPos',
+                                        shotCooldown
                                         ]
                         else state
             Nothing -> state

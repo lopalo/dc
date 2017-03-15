@@ -12,7 +12,6 @@ module NodeAgent.NodeAgent (
 import GHC.Generics (Generic)
 import Data.Binary (Binary)
 import Data.Typeable (Typeable)
-import Control.Applicative ((<$>), (<*>))
 import Control.Monad (forever)
 import qualified Data.Map.Strict as M
 

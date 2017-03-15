@@ -2,7 +2,8 @@
 
 module Base.GlobalRegistry (
     RegistrationFailure(RegistrationFailure),
-    globalRegistryProcess, isRunning,
+    Event(..),
+    spawnGlobalRegistry, isRunning,
     getNameList, getVisibleNodes, globalRegister, globalWhereIs,
     globalMultiWhereIs, globalWhereIsByPrefix, globalNSend,
     multicallByPrefix
@@ -12,8 +13,8 @@ import GHC.Generics (Generic)
 import Data.Binary (Binary)
 import Data.Typeable (Typeable)
 import Prelude hiding (log)
-import Control.Applicative ((<$>))
 import Control.Monad (void, when, forever, foldM)
+import Control.Concurrent (newEmptyMVar, putMVar, takeMVar)
 import Data.ByteString.UTF8 (fromString, toString)
 import Data.Maybe (isJust)
 import Data.List (delete)
@@ -34,7 +35,7 @@ import Control.Distributed.Process.Extras.Timer (sleepFor)
 import Types (NodeName, NodeNames, Ts, LogLevel(..))
 import qualified Settings as S
 import Utils (safeReceive, timeoutForCall, milliseconds)
-import Base.Logger (log)
+import qualified Base.Logger as L
 
 
 type Record = (Ts, ProcessId)
@@ -50,7 +51,8 @@ data State = State {
     registry :: T.Trie Record,
     pidIndex :: PidIndex,
     visibleNodes :: M.Map NodeId Bool,
-    nodeNames :: NodeNames
+    nodeNames :: NodeNames,
+    eventPort :: SendPort Event
     }
 
 
@@ -96,12 +98,27 @@ data RegistrationFailure =
 instance Binary RegistrationFailure
 
 
+data Event = NewNode NodeId NodeName deriving (Generic, Typeable)
+
+instance Binary Event
+
+
 globalRegistryServiceName :: String
 globalRegistryServiceName = "globalRegistry"
 
 
-globalRegistryProcess :: S.Settings -> Process ()
-globalRegistryProcess settings = do
+spawnGlobalRegistry :: S.Settings -> Process (ReceivePort Event)
+spawnGlobalRegistry settings = do
+    mvar <- liftIO newEmptyMVar
+    spawnLocal $ do
+        (sendPort, receivePort) <- newChan
+        liftIO $ putMVar mvar receivePort
+        globalRegistryProcess settings sendPort
+    liftIO $ takeMVar mvar
+
+
+globalRegistryProcess :: S.Settings -> SendPort Event -> Process ()
+globalRegistryProcess settings evPort = do
     register globalRegistryServiceName =<< getSelfPid
     selfNodeId <- getSelfNode
     let nns = S.nodeNames $ S.nodes settings
@@ -111,7 +128,8 @@ globalRegistryProcess settings = do
             registry=T.empty,
             pidIndex=M.empty,
             visibleNodes=vns,
-            nodeNames=nns
+            nodeNames=nns,
+            eventPort=evPort
             }
     runPing pingPeriod $ M.keys vns
     void $ loop state
@@ -197,6 +215,7 @@ handlePing state (Ping nodeId) =
             merge <- fmap Merge (getLocalRegistry state')
             nsendRemote nodeId globalRegistryServiceName merge
             log Info $ "New node: " ++ nodeName
+            sendChan (eventPort state) (NewNode nodeId nodeName)
             when quorumAchieved $ log Info "Quorum achieved"
             return state'
         Just True -> return state
@@ -251,7 +270,7 @@ handleMonitorNotification state (ProcessMonitorNotification _ pid _)
         let names = pidIndex state M.! pid
         log Debug $ "Unregister names: " ++ unwords (map toString names)
         return $ state{
-            registry=foldr T.delete (registry state) names,
+            registry=foldl (flip T.delete) (registry state) names,
             pidIndex=M.delete pid $ pidIndex state
             }
     | otherwise = return state
@@ -324,6 +343,10 @@ deleteName pid name index = index'
             case names' of
                 [] -> M.delete pid index
                 _ -> M.insert pid names' index
+
+
+log :: LogLevel -> String -> Process ()
+log level txt = L.log level $ "GlobalRegistry - " ++ txt
 
 
 request :: (Serializable a, Serializable b) => a -> TagPool -> Process b

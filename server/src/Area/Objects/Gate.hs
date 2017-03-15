@@ -5,7 +5,6 @@ module Area.Objects.Gate where
 import GHC.Generics (Generic)
 import Data.Binary (Binary)
 import Data.Typeable (Typeable)
-import Control.Applicative ((<$>), (<*>))
 import Control.Monad (mzero)
 
 import Data.Aeson (Value(Object), object, (.=), (.:), (.:?), (.!=))
