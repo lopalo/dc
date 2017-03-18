@@ -1,6 +1,10 @@
 cluster:
     respawn-delay-milliseconds: [500, 1200]
     node-ping-period-milliseconds: 1000
+    tcp:
+        connect-timeout-microseconds: 2000000 # null to disable
+        no-delay: true
+        user-timeout-milliseconds: 2000 # null to use the system default
 
 log:
     log-level: Debug

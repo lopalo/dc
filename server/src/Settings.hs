@@ -67,7 +67,8 @@ instance FromJSON LogSettings where
 
 data ClusterSettings = ClusterSettings {
     respawnDelayMilliseconds :: (Int, Int),
-    nodePingPeriodMilliseconds :: Int
+    nodePingPeriodMilliseconds :: Int,
+    tcp :: TCPSettings
     }
 
 instance FromJSON ClusterSettings where
@@ -75,7 +76,24 @@ instance FromJSON ClusterSettings where
     parseJSON (Object v) =
         ClusterSettings <$>
         v .: "respawn-delay-milliseconds" <*>
-        v .: "node-ping-period-milliseconds"
+        v .: "node-ping-period-milliseconds" <*>
+        v .: "tcp"
+    parseJSON _ = mzero
+
+
+data TCPSettings = TCPSettings {
+    connectTimeoutMicroseconds :: Maybe Int,
+    noDelay :: Bool,
+    userTimeoutMilliseconds :: Maybe Int
+    }
+
+instance FromJSON TCPSettings where
+
+    parseJSON (Object v) =
+        TCPSettings <$>
+        v .: "connect-timeout-microseconds" <*>
+        v .: "no-delay" <*>
+        v .: "user-timeout-milliseconds"
     parseJSON _ = mzero
 
 
@@ -93,8 +111,6 @@ instance FromJSON NodeSettings where
         v .: "node-port" <*>
         v .: "services"
     parseJSON _ = mzero
-
-
 
 
 data ServiceSettings = ServiceSettings {

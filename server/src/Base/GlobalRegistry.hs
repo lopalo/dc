@@ -4,8 +4,8 @@ module Base.GlobalRegistry (
     RegistrationFailure(RegistrationFailure),
     Event(..),
     spawnGlobalRegistry, isRunning,
-    getNameList, getVisibleNodes, globalRegister, globalWhereIs,
-    globalMultiWhereIs, globalWhereIsByPrefix, globalNSend,
+    getNameList, getVisibleNodes, globalRegister, globalRegisterAsync,
+    globalWhereIs, globalMultiWhereIs, globalWhereIsByPrefix, globalNSend,
     multicallByPrefix
     ) where
 
@@ -50,13 +50,13 @@ type NameList = [(String, ProcessId, Ts)]
 data State = State {
     registry :: T.Trie Record,
     pidIndex :: PidIndex,
-    visibleNodes :: M.Map NodeId Bool,
+    visibleNodes :: M.Map NodeId (Maybe ProcessId),
     nodeNames :: NodeNames,
     eventPort :: SendPort Event
     }
 
 
-data Ping = Ping NodeId deriving (Generic, Typeable)
+data Ping = Ping NodeId ProcessId deriving (Generic, Typeable)
 
 instance Binary Ping
 
@@ -66,9 +66,23 @@ data Merge = Merge (T.Trie Record) deriving (Generic, Typeable)
 instance Binary Merge
 
 
-data Register = Register String ProcessId deriving (Generic, Typeable)
+data MergeRequest = MergeRequest (T.Trie Record) deriving (Generic, Typeable)
+
+instance Binary MergeRequest
+
+
+data Register = Register String ProcessId Bool deriving (Generic, Typeable)
 
 instance Binary Register
+
+
+data RegistrationResult
+    = Success
+    | Failure
+    | Delegate [ProcessId] MergeRequest
+    deriving (Generic, Typeable)
+
+instance Binary RegistrationResult
 
 
 data WhereIs = WhereIs [String] deriving (Generic, Typeable)
@@ -122,7 +136,7 @@ globalRegistryProcess settings evPort = do
     register globalRegistryServiceName =<< getSelfPid
     selfNodeId <- getSelfNode
     let nns = S.nodeNames $ S.nodes settings
-        vns = M.delete selfNodeId $ M.map (const False) nns
+        vns = M.delete selfNodeId $ M.map (const Nothing) nns
         pingPeriod = S.nodePingPeriodMilliseconds $ S.cluster settings
         state = State{
             registry=T.empty,
@@ -139,7 +153,7 @@ thereIsQuorum :: State -> Bool
 thereIsQuorum state =
     let size = fromIntegral $ M.size (visibleNodes state) :: Float
         minCount = ceiling $ size / 2
-        count = M.size $ M.filter id $ visibleNodes state
+        count = M.size $ M.filter isJust $ visibleNodes state
     in count >= minCount
 
 
@@ -201,6 +215,7 @@ loop state = safeReceive handlers state >>= loop
             prepareCall handleGetNameList,
             prepareCall handleWhereIsByPrefix,
             prepare handlePing,
+            prepareCall handleMergeRequest,
             prepare handleNodeMonitorNotification,
             prepareCall handleGetVisibleNodes,
             matchUnknown (return state)
@@ -208,24 +223,24 @@ loop state = safeReceive handlers state >>= loop
 
 
 handlePing :: State -> Ping -> Process State
-handlePing state (Ping nodeId) =
+handlePing state (Ping nodeId grPid) =
     case M.lookup nodeId vns of
-        Just False -> do
+        Just Nothing -> do
             monitorNode nodeId
             merge <- fmap Merge (getLocalRegistry state')
-            nsendRemote nodeId globalRegistryServiceName merge
+            send grPid merge
             log Info $ "New node: " ++ nodeName
             sendChan (eventPort state) (NewNode nodeId nodeName)
             when quorumAchieved $ log Info "Quorum achieved"
             return state'
-        Just True -> return state
+        Just _ -> return state
         Nothing -> do
             log Error $ "Unknown node id: " ++ show nodeId
             return state
     where
         nodeName = nodeNames state M.! nodeId
         vns = visibleNodes state
-        state' = state{visibleNodes=M.insert nodeId True vns}
+        state' = state{visibleNodes=M.insert nodeId (Just grPid) vns}
         quorumAchieved = not (thereIsQuorum state) && thereIsQuorum state'
 
 
@@ -234,8 +249,14 @@ handleMerge state (Merge reg) = foldM merge state $ T.toList reg
     where merge state' (name, record) = mergeRecord state' name record
 
 
-handleRegister :: State -> Register -> Process (Bool, State)
-handleRegister state (Register name pid) = do
+handleMergeRequest :: State -> MergeRequest -> Process ((), State)
+handleMergeRequest state (MergeRequest reg) = do
+    state' <- handleMerge state (Merge reg)
+    return ((), state')
+
+
+handleRegister :: State -> Register -> Process (RegistrationResult, State)
+handleRegister state (Register name pid async) = do
     ts <- liftIO milliseconds
     let n = fromString name
         reg = registry state
@@ -245,14 +266,17 @@ handleRegister state (Register name pid) = do
             registry=T.insert n record reg,
             pidIndex=insertName pid n $ pidIndex state
             }
-        merge = Merge $ T.singleton n record
-        s (nodeId, True) =
-            nsendRemote nodeId globalRegistryServiceName merge
-        s _ = return ()
-    when ok $ do
-        monitor pid
-        mapM_ s $ M.toList $ visibleNodes state'
-    return $ if ok then (True, state') else (False, state)
+        grPids = [grPid | Just grPid <- M.elems $ visibleNodes state']
+        payload = T.singleton n record
+    if ok
+        then do
+            monitor pid
+            if async
+                then do
+                    mapM_ (\grPid -> send grPid (Merge payload)) grPids
+                    return (Success, state')
+                else return (Delegate grPids (MergeRequest payload), state')
+        else return (Failure, state)
 
 
 handleWhereIs :: State -> WhereIs -> Process ([Maybe ProcessId], State)
@@ -282,7 +306,7 @@ handleNodeMonitorNotification state notification = do
     let (NodeMonitorNotification _ nodeId _) = notification
         nodeName = nodeNames state M.! nodeId
         vns = visibleNodes state
-        state' = state{visibleNodes=M.insert nodeId False vns}
+        state' = state{visibleNodes=M.insert nodeId Nothing vns}
         noQuorum = not $ thereIsQuorum state'
         sendExit (_, localPid) = exit localPid RegistrationFailure
     log Info $ "Node disconnected: " ++ nodeName
@@ -312,16 +336,17 @@ handleGetVisibleNodes ::
     Process ((NodeName, M.Map NodeName Bool), State)
 handleGetVisibleNodes state _ = do
     selfNodeId <- getSelfNode
-    return ((name selfNodeId, M.mapKeys name $ visibleNodes state), state)
+    return ((name selfNodeId, M.map isJust (M.mapKeys name vns)), state)
     where
         name = (nodeNames state M.!)
+        vns = visibleNodes state
 
 
 runPing :: Ts -> [NodeId] -> Process ProcessId
 runPing ms nodeIds = do
     selfPid <- getSelfPid
     selfNodeId <- getSelfNode
-    let payload = Ping selfNodeId
+    let payload = Ping selfNodeId selfPid
         s nodeId = nsendRemote nodeId globalRegistryServiceName payload
         ping = forever $ sleepFor ms Millis >> mapM_ s nodeIds
     spawnLocal $ link selfPid >> ping
@@ -351,9 +376,9 @@ log level txt = L.log level $ "GlobalRegistry - " ++ txt
 
 request :: (Serializable a, Serializable b) => a -> TagPool -> Process b
 request msg tagPool = do
-    Just regPid <- whereis globalRegistryServiceName
+    Just grPid <- whereis globalRegistryServiceName
     tag <- getTag tagPool
-    Just res <- callTimeout regPid msg tag timeoutForCall
+    Just res <- callTimeout grPid msg tag timeoutForCall
     return res
 
 
@@ -372,8 +397,28 @@ getVisibleNodes :: TagPool -> Process (NodeName, M.Map NodeName Bool)
 getVisibleNodes = request GetVisibleNodes
 
 
-globalRegister :: String -> ProcessId -> TagPool -> Process Bool
-globalRegister name pid = request (Register name pid)
+failure :: Process ()
+failure = die RegistrationFailure
+
+
+globalRegister :: String -> ProcessId -> TagPool -> Process ()
+globalRegister name pid tagPool = do
+    res <- request (Register name pid False) tagPool
+    case res of
+        Delegate grPids mergeReq -> do
+            tag <- getTag tagPool
+            res' <- multicall grPids mergeReq tag timeoutForCall
+            let ok = length [True | Just () <- res'] == length grPids
+            when (not ok) failure
+        _ -> failure
+
+
+globalRegisterAsync :: String -> ProcessId -> TagPool -> Process ()
+globalRegisterAsync name pid tagPool = do
+    res <- request (Register name pid True) tagPool
+    case res of
+        Success -> return ()
+        _ -> failure
 
 
 globalMultiWhereIs :: [String] -> TagPool -> Process [Maybe ProcessId]
@@ -393,9 +438,9 @@ globalWhereIsByPrefix prefix = request (WhereIsByPrefix prefix)
 multicallByPrefix ::
     (Serializable a, Serializable b) => String -> a -> TagPool -> Process [b]
 multicallByPrefix prefix msg tagPool = do
-    nodeAgentPids <- globalWhereIsByPrefix prefix tagPool
+    pids <- globalWhereIsByPrefix prefix tagPool
     tag <- getTag tagPool
-    res <- multicall nodeAgentPids msg tag timeoutForCall
+    res <- multicall pids msg tag timeoutForCall
     return [val | Just val <- res]
 
 

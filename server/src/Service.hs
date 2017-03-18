@@ -28,14 +28,17 @@ import Types (
     SwitchOffService(..), prefix
     )
 import qualified Base.Logger as L
-import Base.GlobalRegistry (globalRegister, globalWhereIs)
+import Base.GlobalRegistry (
+    RegistrationFailure(..), globalRegister,
+    globalRegisterAsync, globalWhereIs
+    )
 import Area.Area (areaProcess)
 import DB.AreaDB (areaDBProcess)
 import DB.UserDB (userDBProcess)
 import HTTP.HTTP (httpProcess)
 import WS.WS (wsProcess)
 import Admin.Admin (adminProcess)
-import NodeAgent.NodeAgent (nodeAgentProcess, distributedWhereIs)
+import NodeAgent.NodeAgent (nodeAgentProcess)
 import LogAggregator.LogAggregator (logAggregatorProcess)
 import qualified Settings as S
 
@@ -83,20 +86,19 @@ spawnService nodeName node settings tagPool serviceSettings = do
             (delayFactor *) <$> randomDelay >>= sleep . milliSeconds
         serviceLoop service delayFactor = do
             pid <- getSelfPid
-            globalRegister uniqueName pid tagPool
+            let uniqueRegister = globalRegisterAsync uniqueName pid tagPool
+                handler _ RegistrationFailure = return ()
+                tryRegisterUnique = catchExit uniqueRegister handler
+            tryRegisterUnique
             wait delayFactor
             forever $ do
                 --log Debug $ "Try to start: " ++ name
-                globalRegister uniqueName pid tagPool
-                maybePid <- globalWhereIs name tagPool --optimization
+                tryRegisterUnique
+                maybePid <- globalWhereIs name tagPool
                 when (isNothing maybePid) $ do
-                    servicePids <- distributedWhereIs name tagPool
-                    --reduces probability of conflicts during disconnection
-                    when (null servicePids) $ do
-                        ok <- globalRegister name pid tagPool
-                        when ok $ do
-                            log Info $ "Start: " ++ name
-                            service
+                    globalRegister name pid tagPool
+                    log Info $ "Start: " ++ name
+                    service
                 wait 1
         spawnLoop service delayFactor =
             void $ spawnLocal $ spawning `respawnService` sequel

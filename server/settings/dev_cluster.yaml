@@ -7,6 +7,10 @@ log:
 cluster:
     respawn-delay-milliseconds: [500, 1200]
     node-ping-period-milliseconds: 1000
+    tcp:
+        connect-timeout-microseconds: 2000000 # null to disable
+        no-delay: true
+        user-timeout-milliseconds: 2000 # null to use the system default
 
 db:
     db-dir: ../dbs/dev
@@ -110,6 +114,11 @@ nodes:
             - type: area
               ident: gamma
               min-db-replicas: 1
+
+            - type: admin
+              ident: two
+              host: 0.0.0.0
+              port: 10623
 
     fourth:
         node-host: fourth-node

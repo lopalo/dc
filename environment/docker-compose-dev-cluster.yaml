@@ -21,7 +21,8 @@ services:
     third-node:
         <<: *first-node
         container_name: third-node
-        ports: []
+        ports:
+            - "10623:10623"
         command: ./server ../settings/dev_cluster.yaml third
     fourth-node:
         <<: *first-node

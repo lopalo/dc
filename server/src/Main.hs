@@ -7,9 +7,10 @@ import Control.Monad (forever)
 import System.Environment (getArgs)
 import Data.Map.Strict ((!))
 
+import Network.Socket (sOMAXCONN)
 import Control.Distributed.Process
 import Control.Distributed.Process.Extras (newTagPool)
-import Network.Transport.TCP (createTransport, defaultTCPParameters)
+import Network.Transport.TCP (TCPParameters(..), createTransport)
 import qualified Control.Distributed.Process.Node as Node
 import qualified Data.Aeson as Aeson
 import Data.Aeson (object)
@@ -62,7 +63,19 @@ main = do
             let nodeSettings = S.nodes settings ! nodeName
                 host = S.nodeHost nodeSettings
                 port = show $ S.nodePort nodeSettings
-            Right transport <- createTransport host port defaultTCPParameters
+                tcp = S.tcp $ S.cluster settings
+                tcpParameters = TCPParameters{
+                    tcpBacklog=sOMAXCONN,
+                    tcpReuseServerAddr=True,
+                    --Must select a new port from the ephemeral range
+                    tcpReuseClientAddr=False,
+                    --There is explicit heartbeat in GlobalRegistry
+                    tcpKeepAlive=False,
+                    transportConnectTimeout=S.connectTimeoutMicroseconds tcp,
+                    tcpNoDelay=S.noDelay tcp,
+                    tcpUserTimeout=S.userTimeoutMilliseconds tcp
+                    }
+            Right transport <- createTransport host port tcpParameters
             node <- Node.newLocalNode transport Node.initRemoteTable
             Node.runProcess node $ startNode node settings nodeName
             forever $ sleepSeconds 1

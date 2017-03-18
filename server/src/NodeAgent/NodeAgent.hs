@@ -5,7 +5,6 @@ module NodeAgent.NodeAgent (
     nodeAgentProcess,
     getNodeStatus,
     getClusterMesh,
-    distributedWhereIs,
     startService
     ) where
 
@@ -39,11 +38,6 @@ data GetClusterMesh = GetClusterMesh deriving (Generic, Typeable)
 instance Binary GetClusterMesh
 
 
-data WhereIs = WhereIs String deriving (Generic, Typeable)
-
-instance Binary WhereIs
-
-
 data StartService =
     StartService S.ServiceSettings
     deriving (Generic, Typeable)
@@ -73,19 +67,12 @@ nodeAgentProcess spawnService = do
         prepare h = match (h state)
         prepareCall h = callResponse (h state)
         handlers = [
-            prepareCall handleWhereIs,
             prepareCall handleGetNodeStatus,
             prepareCall handleGetClusterMesh,
             prepare handleStartService,
             matchUnknown (return ())
             ]
     forever $ safeReceive handlers ()
-
-
-handleWhereIs :: State -> WhereIs -> Process (Maybe ProcessId, ())
-handleWhereIs (tagPool, _) (WhereIs name) = do
-    maybePid <- GR.globalWhereIs name tagPool
-    return (maybePid, ())
 
 
 handleGetNodeStatus :: State -> GetNodeStatus -> Process (NodeStatus, ())
@@ -127,12 +114,6 @@ getNodeStatus = distributedRequest GetNodeStatus
 getClusterMesh :: TagPool -> Process (M.Map NodeName (M.Map NodeName Bool))
 getClusterMesh tagPool =
     M.fromList <$> distributedRequest GetClusterMesh tagPool
-
-
-distributedWhereIs :: String -> TagPool -> Process [ProcessId]
-distributedWhereIs name tagPool = do
-    res <- distributedRequest (WhereIs name) tagPool
-    return [pid | Just pid <- res]
 
 
 startService :: NodeName -> S.ServiceSettings -> Process ()

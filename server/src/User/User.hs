@@ -23,7 +23,7 @@ import Types (
     Ts, UserPid(UserPid), UserId(UserId),
     UserName, AreaId, LogLevel(..)
     )
-import Base.GlobalRegistry (globalRegister, globalWhereIs)
+import Base.GlobalRegistry (globalRegisterAsync, globalWhereIs)
 import qualified Base.GlobalCache as GC
 import qualified Base.Logger as L
 import qualified WS.Connection as C
@@ -146,8 +146,7 @@ userProcess userName conn userSettings = do
             terminate
         Nothing -> return ()
     pid <- getSelfPid
-    ok <- globalRegister (show uid) pid tagPool
-    unless ok terminate
+    globalRegisterAsync (show uid) pid tagPool
     res <- getUser uid minReplicas tagPool `onException` onDBError
     (userAsset, _) <-
         liftIO $ choice (US.initAssets userSettings) <$> getStdGen
