@@ -13,7 +13,7 @@ import Control.Distributed.Process.Node (LocalNode)
 import Control.Distributed.Process.Extras (newTagPool)
 import Web.Scotty hiding (settings, status)
 
-import Types (NodeNames, SwitchOffService(..))
+import Types (NodeNames)
 import Utils (milliseconds, execProcess)
 import qualified Base.GlobalRegistry as GR
 import qualified NodeAgent.NodeAgent as NA
@@ -93,7 +93,7 @@ killProcessByName node = do
     execProcess node $ do
         maybePid <- GR.globalWhereIs name =<< newTagPool
         case maybePid of
-            Just pid -> kill pid "admin"
+            Just pid -> kill pid "admin:kill"
             Nothing -> return ()
 
 
@@ -103,7 +103,7 @@ switchOffService node = do
     execProcess node $ do
         maybePid <- GR.globalWhereIs name =<< newTagPool
         case maybePid of
-            Just pid -> exit pid SwitchOffService
+            Just pid -> exit pid ("admin:switch-off" :: String)
             Nothing -> return ()
 
 

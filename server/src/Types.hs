@@ -130,11 +130,6 @@ data AreaStatus = AreaStatus {
 instance Binary AreaStatus
 
 
-data SwitchOffService = SwitchOffService deriving (Generic, Typeable)
-
-instance Binary SwitchOffService
-
-
 data ServiceType
     = AreaDB
     | UserDB

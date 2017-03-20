@@ -4,18 +4,12 @@ module Service (spawnService) where
 
 import Prelude hiding (log)
 import Control.Monad (forever, when, void, mzero)
-import Control.Monad.Catch (throwM)
 import Data.Maybe (isNothing)
+import Data.String.Utils (endswith)
 import System.Random (randomRIO)
-import Control.Exception (SomeException)
 
 import Control.Distributed.Process
-import Control.Distributed.Process.Internal.Types (
-    ProcessExitException(..),
-    messageFingerprint
-    )
-import Control.Distributed.Process.Serializable (fingerprint)
-import Control.Distributed.Process.Extras (TagPool, getTag)
+import Control.Distributed.Process.Extras (TagPool)
 import Control.Distributed.Process.Extras.Time (milliSeconds)
 import Control.Distributed.Process.Extras.Timer (sleep)
 import qualified Control.Distributed.Process.Node as Node
@@ -23,15 +17,9 @@ import qualified Data.Aeson as Aeson
 import Data.Aeson ((.:))
 import Data.Aeson.Types (parse)
 
-import Types (
-    NodeName, LogLevel(..), ServiceType(..),
-    SwitchOffService(..), prefix
-    )
+import Types (NodeName, LogLevel(..), ServiceType(..), prefix)
 import qualified Base.Logger as L
-import Base.GlobalRegistry (
-    RegistrationFailure(..), globalRegister,
-    globalRegisterAsync, globalWhereIs
-    )
+import Base.GlobalRegistry (globalRegister, globalWhereIs)
 import Area.Area (areaProcess)
 import DB.AreaDB (areaDBProcess)
 import DB.UserDB (userDBProcess)
@@ -47,14 +35,12 @@ spawnService ::
     NodeName -> Node.LocalNode -> S.Settings ->
     TagPool -> S.ServiceSettings -> Process ()
 spawnService nodeName node settings tagPool serviceSettings = do
-    tag <- getTag tagPool
     let delayR = S.respawnDelayMilliseconds $ S.cluster settings
         randomDelay = liftIO $ randomRIO delayR
         serviceType = S.serviceType serviceSettings
         ident = S.ident serviceSettings
         options = S.options serviceSettings
         name = prefix serviceType ++ ident
-        uniqueName = concat ["service:", nodeName, ":", name, ":", show tag]
 
         initService AreaDB _ =
             return $ areaDBProcess (S.db settings) ident
@@ -82,47 +68,39 @@ spawnService nodeName node settings tagPool serviceSettings = do
             return logAggregatorProcess
         initService _ _ = mzero
 
-        wait delayFactor = do
+        wait delayFactor =
             (delayFactor *) <$> randomDelay >>= sleep . milliSeconds
-        serviceLoop service delayFactor = do
+
+        service process supervisorPid = do
+            link supervisorPid
             pid <- getSelfPid
-            let uniqueRegister = globalRegisterAsync uniqueName pid tagPool
-                handler _ RegistrationFailure = return ()
-                tryRegisterUnique = catchExit uniqueRegister handler
-            tryRegisterUnique
-            wait delayFactor
             forever $ do
                 --log Debug $ "Try to start: " ++ name
-                tryRegisterUnique
                 maybePid <- globalWhereIs name tagPool
                 when (isNothing maybePid) $ do
                     globalRegister name pid tagPool
                     log Info $ "Start: " ++ name
-                    service
+                    process
                 wait 1
-        spawnLoop service delayFactor =
-            void $ spawnLocal $ spawning `respawnService` sequel
-            where
-                spawning = serviceLoop service (delayFactor :: Int)
-                sequel = spawnLoop service $ delayFactor + 1
+
+        supervisor service' = do
+            pid <- getSelfPid
+            let
+                loop delayFactor = do
+                    wait delayFactor
+                    spawnLocal (service' pid) >>= monitor
+                    ProcessMonitorNotification _ _ reason <-
+                        expect :: Process ProcessMonitorNotification
+                    case reason of
+                        DiedException str
+                            | endswith "switch-off" str -> return ()
+                        _ -> loop $ delayFactor + 1
+            loop 0
+
     case parse (initService serviceType) options of
-        Aeson.Success service -> void $ spawnLoop service 0
+        Aeson.Success process ->
+            void $ spawnLocal $ supervisor $ service process
         Aeson.Error err -> log Error $ "Init error: " ++ err
-
-
-respawnService :: Process () -> Process () -> Process ()
-spawning `respawnService` sequel = do
-    spawning `catches` [Handler handleExit, Handler handleAny]
-    sequel
-    where
-        handleExit ex@(ProcessExitException _ msg) =
-            if messageFingerprint msg == fingerprint SwitchOffService
-                then throwM ex
-                else sequel >> throwM ex
-
-        handleAny :: SomeException -> Process a
-        handleAny ex = sequel >> throwM ex
-
 
 
 log :: LogLevel -> String -> Process ()
