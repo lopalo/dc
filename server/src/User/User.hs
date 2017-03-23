@@ -31,7 +31,7 @@ import qualified User.Settings as US
 import qualified Area.External as AE
 import qualified User.External as UE
 import qualified User.UserArea as UA
-import DB.UserDB (putUser, getUser)
+import DB.DB (putUser, getUser)
 import User.Types
 import User.State
 import User.ClientCommands (handleClientCommand)

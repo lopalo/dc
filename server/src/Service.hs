@@ -22,7 +22,7 @@ import qualified Base.Logger as L
 import Base.GlobalRegistry (globalRegister, globalWhereIs)
 import Area.Area (areaProcess)
 import DB.AreaDB (areaDBProcess)
-import DB.UserDB (userDBProcess)
+import DB.DB (dbProcess)
 import HTTP.HTTP (httpProcess)
 import WS.WS (wsProcess)
 import Admin.Admin (adminProcess)
@@ -44,8 +44,8 @@ spawnService nodeName node settings tagPool serviceSettings = do
 
         initService AreaDB _ =
             return $ areaDBProcess (S.db settings) ident
-        initService UserDB _ =
-            return $ userDBProcess (S.db settings) ident
+        initService DB _ =
+            return $ dbProcess (S.db settings) ident
         initService WS opts = do
             host <- opts .: "host"
             port <- opts .: "port"

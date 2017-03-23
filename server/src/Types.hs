@@ -132,7 +132,7 @@ instance Binary AreaStatus
 
 data ServiceType
     = AreaDB
-    | UserDB
+    | DB
     | WS
     | HTTP
     | Admin
@@ -147,7 +147,7 @@ data ServiceType
 servicePrefixes :: M.Map ServiceType String
 servicePrefixes = M.fromList [
     (AreaDB, "area-db:"),
-    (UserDB, "user-db:"),
+    (DB, "db:"),
     (WS, "ws:"),
     (HTTP, "http:"),
     (Admin, "admin:"),

@@ -57,7 +57,7 @@ acceptConnection node inputHandler pending = do
         inputPid <- getSelfPid
         let conn = Connection outputPid inputPid
             final = do
-                exit outputPid "closed"
+                exit outputPid "connection:closed"
                 log Debug "Input closed"
             setUserPid (_, areaPid) userPid@(UserPid pid) = do
                 link pid
@@ -127,7 +127,7 @@ setArea (Connection _ inputPid) = send inputPid
 
 
 close :: Connection -> Process ()
-close conn = exit (input conn) "close connection"
+close conn = exit (input conn) "connection:closed"
 
 
 sendErrorAndClose :: Connection -> String -> Process ()

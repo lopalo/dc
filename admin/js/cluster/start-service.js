@@ -9,7 +9,7 @@ define(["mithril", "utils", "validation"], function (m, utils, v) {
     ServiceSettingsModel.prototype = {
         serviceTypes: [
             "area-db",
-            "user-db",
+            "db",
             "ws",
             "http",
             "admin",

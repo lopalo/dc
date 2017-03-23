@@ -124,7 +124,7 @@ nodes:
         node-host: fourth-node
         node-port: 10601
         services:
-            - type: user-db
+            - type: db
               ident: "[0-2]|a"
 
             - type: area-db
@@ -134,7 +134,7 @@ nodes:
         node-host: fifth-node
         node-port: 10601
         services:
-            - type: user-db
+            - type: db
               ident: "[1-2]|a"
 
             - type: area-db

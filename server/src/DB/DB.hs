@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveGeneric, DeriveDataTypeable, OverloadedStrings #-}
 
-module DB.UserDB (userDBProcess, putUser, getUser) where
+module DB.DB (dbProcess, putUser, getUser) where
 
 import GHC.Generics (Generic)
 import Data.Binary (Binary)
@@ -9,9 +9,11 @@ import Prelude hiding (log)
 import Control.Monad (forever, when)
 import Data.Maybe (fromMaybe)
 import Data.ByteString.Char8 (pack, unpack)
+import Data.ByteString.UTF8 (fromString)
 import Data.String.Utils (split, startswith)
 
 import Control.Distributed.Process
+import Control.Distributed.Process.Serializable (Serializable)
 import Control.Distributed.Process.Extras (TagPool, getTag)
 import Control.Distributed.Process.Extras.Call (
     callResponse, callTimeout, multicall
@@ -24,12 +26,12 @@ import Data.Digest.CRC32 (crc32)
 
 import Base.GlobalRegistry (getNameList)
 import Types (
-    UserId(..), ServiceId, ServiceType(UserDB),
+    UserId(..), ServiceId, ServiceType(DB),
     LogLevel(Error), Ts, prefix, delIdPrefix
     )
 import Utils (safeReceive, timeoutForCall, milliseconds)
 import User.Types (User, userId)
-import DB.Utils (dbProcess, key, log)
+import DB.Utils (baseDbProcess, log)
 import DB.Types (Persistent(fromByteString, toByteString))
 import qualified DB.Settings as DS
 
@@ -43,7 +45,7 @@ type ShardAmount = Int
 type ShardInfo = (ShardNumber, ShardAmount)
 
 
-data GetUpdateTs = GetUpdateTs UserId deriving (Generic, Typeable)
+data GetUpdateTs = GetUpdateTs String deriving (Generic, Typeable)
 
 instance Binary GetUpdateTs
 
@@ -62,8 +64,8 @@ updateTsKeyPrefix :: String
 updateTsKeyPrefix = "update-timestamp:"
 
 
-userDBProcess :: DS.Settings -> ServiceId -> Process ()
-userDBProcess settings ident = dbProcess loop settings $ "user" ++ ident
+dbProcess :: DS.Settings -> ServiceId -> Process ()
+dbProcess settings ident = baseDbProcess loop settings $ "shard" ++ ident
 
 
 loop :: DB -> Process ()
@@ -80,42 +82,41 @@ loop db = forever $ safeReceive handlers ()
 
 handleGetUser :: DB -> GetUser -> Process (Maybe User, ())
 handleGetUser db (GetUser uid) = do
-    res <- get db defaultReadOptions $ key uid
+    res <- get db defaultReadOptions $ fromString $ show uid
     return (res >>= Just . fromByteString, ())
 
 
 handleGetUpdateTs :: DB -> GetUpdateTs -> Process (Ts, ())
-handleGetUpdateTs db (GetUpdateTs (UserId ident)) = do
+handleGetUpdateTs db (GetUpdateTs key) = do
     res <- get db defaultReadOptions updateTsKey
     return (fromMaybe 0 $ read . unpack <$> res, ())
-    where updateTsKey = key $ updateTsKeyPrefix ++ ident
+    where updateTsKey = fromString $ updateTsKeyPrefix ++ key
 
 
 handlePutUser :: DB -> PutUser -> Process (Bool, ())
 handlePutUser db (PutUser user) = do
     ts <- liftIO milliseconds
-    let uid = userId user
-        UserId ident = uid
+    let key = show $ userId user
         batch = [
-            Put (key uid) (toByteString user),
-            Put (key $ updateTsKeyPrefix ++ ident) (pack $ show ts)
+            Put (fromString key) (toByteString user),
+            Put (fromString $ updateTsKeyPrefix ++ key) (pack $ show ts)
             ]
     write db defaultWriteOptions batch
     return (True, ())
 
 
-getDBForUser :: UserId -> TagPool -> Process [ProcessId]
-getDBForUser (UserId uid) tagPool = do
+getShardForKey :: String -> TagPool -> Process [ProcessId]
+getShardForKey key tagPool = do
     let namePair (name, pid, _) = (name, pid)
-    res <- fmap (map namePair) (getNameList (prefix UserDB) tagPool)
+    res <- fmap (map namePair) (getNameList (prefix DB) tagPool)
     case res of
         [] -> do
-            log Error $ "There are no user databases"
-            terminate
+            log Error $ "There are no databases"
+            return []
         nameList ->
             let name = fst $ head nameList
                 (_, amount) = getShardInfo name
-                hash = fromIntegral $ crc32 $ key uid
+                hash = fromIntegral $ crc32 $ fromString key
                 number = hash `rem` amount
                 shardPrefix = shardName (number, amount) ++ "|"
                 f = startswith shardPrefix . fst
@@ -125,7 +126,7 @@ getDBForUser (UserId uid) tagPool = do
 
 getShardInfo :: String -> ShardInfo
 getShardInfo name =
-    let dbId = delIdPrefix (init $ prefix UserDB) name
+    let dbId = delIdPrefix (init $ prefix DB) name
         [shardInfo, _] = split "|" dbId;
         [number, amount] = split "-" $ tail $ init shardInfo;
     in (read number, read amount)
@@ -133,44 +134,60 @@ getShardInfo name =
 
 shardName :: ShardInfo -> String
 shardName (number, amount) =
-    prefix UserDB ++ "[" ++ show number ++ "-" ++ show amount ++ "]"
+    prefix DB ++ "[" ++ show number ++ "-" ++ show amount ++ "]"
 
 
-replicaAmountError :: UserId -> Process ()
-replicaAmountError (UserId uid) =
-    log Error $ "Not enough replicas for user: " ++ uid
+getRecentReplica :: String -> Int -> TagPool -> Process ProcessId
+getRecentReplica key minReplicas tagPool = do
+    dbPids <- getShardForKey key tagPool
+    tag <- getTag tagPool
+    tsList <- multicall dbPids (GetUpdateTs key) tag timeoutForCall
+    let dbTsList = zip tsList dbPids :: [(Maybe Ts, ProcessId)]
+        dbTsList' = [(ts, p) | (Just ts, p) <- dbTsList]
+        (_, pid) = maximum dbTsList'
+        failure = length dbTsList' < minReplicas
+    when failure $ do
+        replicaAmountError key
+        terminate
+    return pid
+
+replicaAmountError :: String -> Process ()
+replicaAmountError key =
+    log Error $ "Not enough replicas for key: " ++ key
+
+
+getRecent :: (Serializable a, Serializable b) =>
+    a -> String -> Int -> TagPool -> Process b
+getRecent msg key minReplicas tagPool = do
+    pid <- getRecentReplica key minReplicas tagPool
+    tag <- getTag tagPool
+    Just res <- callTimeout pid msg tag timeoutForCall
+    return res
+
+
+put :: Serializable a => a -> String -> Int -> TagPool -> Process ()
+put msg key minReplicas tagPool = do
+    userPid <- getSelfPid
+    spawnLocal $ do
+        dbPids <- getShardForKey key tagPool
+        tag <- getTag tagPool
+        responses <- multicall dbPids msg tag timeoutForCall
+        let failure = length [True | Just True <- responses] < minReplicas
+        when failure $ do
+            exit userPid ("db:not-enough-replicas" :: String)
+            replicaAmountError key
+    return ()
 
 
 --external interface
 
 
 getUser :: UserId -> Int -> TagPool -> Process (Maybe User)
-getUser uid minReplicas tagPool = do
-    dbPids <- getDBForUser uid tagPool
-    tag <- getTag tagPool
-    tsList <- multicall dbPids (GetUpdateTs uid) tag timeoutForCall
-    let dbTsList = zip tsList dbPids :: [(Maybe Ts, ProcessId)]
-        dbTsList' = [(ts, p) | (Just ts, p) <- dbTsList]
-        (_, pid) = maximum dbTsList'
-        failure = length dbTsList' < minReplicas
-    when failure $ do
-        replicaAmountError uid
-        terminate
-    tag' <- getTag tagPool
-    Just res <- callTimeout pid (GetUser uid) tag' timeoutForCall
-    return res
+getUser uid = getRecent (GetUser uid) (show uid)
 
 
 putUser :: User -> Int -> TagPool -> Process ()
 putUser user minReplicas tagPool = do
-    userPid <- getSelfPid
-    spawnLocal $ do
-        dbPids <- getDBForUser (userId user) tagPool
-        tag <- getTag tagPool
-        responses <- multicall dbPids (PutUser user) tag timeoutForCall
-        let failure = length [True | Just True <- responses] < minReplicas
-        when failure $ do
-            exit userPid ("No db replicas" :: String)
-            replicaAmountError $ userId user
-    return ()
-
+    let key = show $ userId user
+        msg = PutUser user
+    put msg key minReplicas tagPool

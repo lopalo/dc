@@ -14,9 +14,11 @@ import Control.Monad (forever, when)
 import Data.Maybe (fromMaybe)
 import Data.ByteString (ByteString, isPrefixOf)
 import Data.ByteString.Char8 (pack, unpack)
+import Data.ByteString.UTF8 (fromString)
 import qualified Data.Set as Set
 
 import Control.Distributed.Process
+import Control.Distributed.Process.Serializable (Serializable)
 import Control.Distributed.Process.Extras (TagPool, getTag, newTagPool)
 import Control.Distributed.Process.Extras.Call (
     callResponse, callTimeout, multicall
@@ -43,7 +45,7 @@ import Area.Objects.Gate (Gate)
 import Area.Objects.Asteroid (Asteroid)
 import Area.Objects.ControlPoint (ControlPoint)
 import DB.Types (Persistent(fromByteString, toByteString))
-import DB.Utils (dbProcess, key, log)
+import DB.Utils (baseDbProcess, log)
 import qualified DB.Settings as DS
 
 data AreaObjects = AreaObjects {
@@ -78,7 +80,7 @@ updateTsKey = "update-timestamp"
 
 
 areaDBProcess :: DS.Settings -> ServiceId -> Process ()
-areaDBProcess = dbProcess loop
+areaDBProcess = baseDbProcess loop
 
 
 loop :: DB -> Process ()
@@ -134,7 +136,7 @@ handlePutAreaObjects db (PutAreaObjects objects) = do
     ts <- liftIO milliseconds
     let updateTs = Put updateTsKey $ pack $ show ts
         metaBatch = [updateTs]
-        putOp obj = Put (key $ objId obj) (toByteString obj)
+        putOp obj = Put (fromString $ show $ objId obj) (toByteString obj)
         batch =
             concat [
                 map putOp $ gates objects,
@@ -160,6 +162,21 @@ replicaAmountError (AreaId aid) =
     log Error $ "Not enough replicas for area: " ++ aid
 
 
+put :: Serializable a => a -> AreaId -> Int -> Process ()
+put msg aid minReplicas = do
+    areaPid <- getSelfPid
+    spawnLocal $ do
+        tagPool <- newTagPool
+        dbPids <- getDBForArea aid tagPool
+        tag <- getTag tagPool
+        responses <- multicall dbPids msg tag timeoutForCall
+        let failure = length [True | Just True <- responses] < minReplicas
+        when failure $ do
+            exit areaPid ("area-db:not-enough-replicas" :: String)
+            replicaAmountError aid
+    return ()
+
+
 --external interface
 
 
@@ -181,17 +198,7 @@ getAreaObjects aid minReplicas tagPool = do
 
 
 putAreaObjects :: AreaId -> Int -> AreaObjects -> Process ()
-putAreaObjects aid minReplicas objs = do
-    areaPid <- getSelfPid
-    spawnLocal $ do
-        tagPool <- newTagPool
-        dbPids <- getDBForArea aid tagPool
-        tag <- getTag tagPool
-        responses <- multicall dbPids (PutAreaObjects objs) tag timeoutForCall
-        let failure = length [True | Just True <- responses] < minReplicas
-        when failure $ do
-            exit areaPid ("No db replicas" :: String)
-            replicaAmountError aid
-    return ()
+putAreaObjects aid minReplicas objs =
+    put (PutAreaObjects objs) aid minReplicas
 
 

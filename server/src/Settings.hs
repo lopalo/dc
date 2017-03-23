@@ -137,7 +137,7 @@ instance FromJSON ServiceSettings where
             sType =
                 case typeName of
                     "area-db" -> AreaDB
-                    "user-db" -> UserDB
+                    "db" -> DB
                     "ws" -> WS
                     "http" -> HTTP
                     "admin" -> Admin

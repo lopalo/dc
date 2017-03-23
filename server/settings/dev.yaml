@@ -64,10 +64,10 @@ nodes:
         node-host: localhost
         node-port: 10500
         services:
-            - type: user-db
+            - type: db
               ident: "[0-2]|a"
 
-            - type: user-db
+            - type: db
               ident: "[1-2]|a"
 
             - type: ws
