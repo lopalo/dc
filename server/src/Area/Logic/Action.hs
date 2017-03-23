@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveGeneric, DeriveDataTypeable, RankNTypes #-}
 
-module Area.Action (
+module Area.Logic.Action (
     Active(..), Action(..),
     moveAction, publicAction,
     moveDistance, eternalRotation,
@@ -23,8 +23,11 @@ import Data.Lens.Strict (Lens, lens, (^%=))
 import Types (Ts)
 import Area.Utils (getIntervals)
 import Area.Types
-import Area.Vector (Vect, angle, toPos, fromPos, fromPolar, mul, sub, add)
-import Area.Signal (Signal(MoveAsteroid))
+import Area.Logic.Vector (
+    Vect, angle, toPos, fromPos,
+    fromPolar, mul, sub, add
+    )
+import Area.Logic.Signal (Signal(MoveAsteroid))
 
 
 type SignalW = Writer (Seq Signal)

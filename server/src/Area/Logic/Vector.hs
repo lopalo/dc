@@ -1,9 +1,12 @@
 
-module Area.Vector where
+module Area.Logic.Vector where
 
 import Area.Types (Pos(Pos), Angle)
 
-data Vect = Vect Float Float deriving (Show)
+data Vect =
+    Vect {-# UNPACK #-} !Float
+         {-# UNPACK #-} !Float
+    deriving (Show)
 
 
 degrees :: Float -> Float

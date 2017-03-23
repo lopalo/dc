@@ -12,7 +12,7 @@ import Data.Aeson (Value(Object), object, (.=), (.:), (.:?), (.!=))
 import Types (Size)
 import DB.Types (Persistent(toDB, fromDB))
 import Area.Types (Positioned(..), Object(..), Pos, Angle, ObjId)
-import Area.Action (
+import Area.Logic.Action (
     Active(..), Action(EternalRotation),
     eternalRotation, publicAction
     )

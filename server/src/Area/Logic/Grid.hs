@@ -1,5 +1,5 @@
 
-module Area.Grid where
+module Area.Logic.Grid where
 
 import Data.List (foldl')
 import qualified Data.Map.Strict as M
@@ -27,8 +27,8 @@ groupByCells cellSize defaultGroup reducer ps groups =
             in M.insert pos' group' groups'
 
 
-groupCells :: Groups g -> M.Map Pos [g]
-groupCells groups = M.mapWithKey m groups
+formZones :: Groups g -> M.Map Pos [g]
+formZones groups = M.mapWithKey m groups
     where
         m (Pos x y) center =
             let neighbours = [group | Just group <- map neighbour shifts]

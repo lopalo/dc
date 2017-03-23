@@ -15,13 +15,13 @@ import Area.Types (
     Positioned(..), Object(..), Destroyable(..),
     Pos, Angle, ObjId
     )
-import Area.Action (
+import Area.Logic.Action (
     Active(..),
     Action(EternalRotation, MoveCircularTrajectory, MoveDistance),
     eternalRotation, moveCircularTrajectory, moveDistance,
     publicAction
     )
-import Area.Collision (Collidable(collider), Collider(Circular))
+import Area.Logic.Collision (Collidable(collider), Collider(Circular))
 
 
 data Asteroid = Asteroid {

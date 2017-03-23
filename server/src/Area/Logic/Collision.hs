@@ -1,5 +1,5 @@
 
-module Area.Collision where
+module Area.Logic.Collision where
 
 import Data.List (foldl', minimumBy)
 import qualified Data.Map.Strict as M
@@ -8,8 +8,8 @@ import qualified Data.Set as Set
 import Data.Aeson (ToJSON, toJSON)
 
 import Area.Types (Object, ObjId, Pos(Pos), Positioned(..))
-import Area.Vector
-import Area.Grid (cellPos)
+import Area.Logic.Vector
+import Area.Logic.Grid (cellPos)
 
 
 class Object o => Collidable o where

@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveGeneric, DeriveDataTypeable #-}
 
-module Area.Signal where
+module Area.Logic.Signal where
 
 import GHC.Generics (Generic)
 import Data.Binary (Binary)

@@ -20,8 +20,8 @@ import qualified Area.Objects.User as U
 import qualified Area.Objects.Gate as G
 import qualified Area.Objects.Asteroid as A
 import qualified Area.Objects.ControlPoint as CP
-import Area.Signal (Signal, Signals)
-import Area.Collision (Colliders)
+import Area.Logic.Signal (Signal, Signals)
+import Area.Logic.Collision (Colliders)
 import Area.Settings (Settings)
 
 
@@ -64,7 +64,7 @@ data State = State {
     colliders :: !Colliders,
     signalBuffer :: !Signals,
     signalsForBroadcast :: !Signals,
-    sideEffects :: [Process ()]
+    sideEffects :: ![Process ()]
     }
 
 

@@ -25,17 +25,18 @@ import qualified User.External as UE
 import qualified User.UserArea as UA
 import qualified Area.Objects.User as U
 import Area.Utils (sendCmd)
-import Area.Misc (spawnUser, updateOwnerName)
+import Area.Misc (updateOwnerName)
+import Area.Logic.Misc (spawnUser)
 import Area.Types
 import Area.State
 import Area.ClientCommands (handleClientCommand, handleClientReq)
-import Area.Signal (
+import Area.Logic.Signal (
     Signal(Appearance, Disappearance),
     AReason(LogIn, Entry),
     DReason(LogOut)
     )
 import Area.Tick (handleTick, scheduleTick)
-import Area.Collision (emptyColliders)
+import Area.Logic.Collision (emptyColliders)
 
 
 handleEnter :: State -> (Enter, Connection) -> Process State

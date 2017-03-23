@@ -12,12 +12,12 @@ import Area.Types (
     Positioned(..), Object(..), Destroyable(..),
     Pos, Angle, ObjId(UId),
     )
-import Area.Action (
+import Area.Logic.Action (
     Active(..),
     Action(Rotation, MoveRoute, Recovery, PullingAsteroid),
     rotation, moveRoute, recovery, publicAction, pullingAsteroid
     )
-import Area.Collision (Collidable(collider), Collider(Circular))
+import Area.Logic.Collision (Collidable(collider), Collider(Circular))
 
 
 data User = User {

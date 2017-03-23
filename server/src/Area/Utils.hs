@@ -8,7 +8,7 @@ import Types (LogLevel)
 import qualified WS.Connection as C
 import qualified Base.Logger as L
 import Area.Types (Pos)
-import Area.Vector (len, sub, fromPos)
+import Area.Logic.Vector (len, sub, fromPos)
 
 
 distance :: Pos -> Pos -> Float
