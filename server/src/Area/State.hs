@@ -113,7 +113,7 @@ insertUser user us =
 deleteUser :: UserId -> Users -> Users
 deleteUser uid us = foldl (&) us fs
     where
-        usr = usersData  us M.! uid
+        usr = usersData us M.! uid
         conn = U.connection usr
         ref = U.monitorRef usr
         fs = [

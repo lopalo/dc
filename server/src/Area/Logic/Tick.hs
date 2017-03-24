@@ -48,7 +48,7 @@ import Area.Logic.Signal (
 import Area.Utils (distance)
 import Area.Logic.Grid (formZones, groupByCells)
 import Area.Logic.Misc (spawnUser)
-import Area.Types (Object(..), Destroyable(..), ObjId(..), Pos)
+import Area.Types (Object(..), Destroyable(..), Positioned(..), ObjId(..), Pos)
 import qualified Area.Objects.User as U
 import qualified Area.Objects.ControlPoint as CP
 import Area.External (enter)
@@ -164,7 +164,7 @@ checkDurability = do
         checkObjects lens = M.elems <$> access lens >>= mapM_ check
         check obj =
             when (getDurability obj <= 0) $
-                addSignalS $ Disappearance (objId obj) Destruction
+                addSignalS $ Disappearance (objId obj) Destruction (getPos obj)
 
 
 handleSignals :: StateS ()
@@ -184,7 +184,7 @@ handleSignals = do
 
 
 handleSignal :: Signal -> StateS (Maybe Signal)
-handleSignal signal@(Disappearance (UId uid) Destruction) = do
+handleSignal signal@(Disappearance (UId uid) Destruction _) = do
     mAttacker <- gets $ getPL $ userFieldPL uid U.lastAttackerL
     let
         resetUser u = u{
@@ -195,16 +195,17 @@ handleSignal signal@(Disappearance (UId uid) Destruction) = do
             }
     modify $ userPL uid ^%= resetUser
     modify $ spawnUser uid Nothing
-    addSignalS $ Appearance uid Recovery
+    Just pos <- gets $ getPL $ userFieldPL uid posL
+    addSignalS $ Appearance uid Recovery pos
     case mAttacker of
         Just (Just attackerId) ->
             modify $ userFieldPL attackerId U.killsL ^+= 1
         _ -> return ()
     return $ Just signal
-handleSignal signal@(Disappearance aid@(AsteroidId _) Destruction) = do
+handleSignal signal@(Disappearance aid@(AsteroidId _) Destruction _) = do
     asteroidsL %= M.delete aid
     return $ Just signal
-handleSignal (Disappearance cpid@(CPId _) Destruction) = do
+handleSignal (Disappearance cpid@(CPId _) Destruction _) = do
     modify $ cpPL cpid ^%= \cp -> cp{CP.durability=1, CP.owner=Nothing}
     return Nothing
 handleSignal (MoveAsteroid aid targetPos) = do
@@ -243,14 +244,21 @@ handleSignal (JumpToArea aid uid) = do
     fromArea <- gets areaId
     maybeUser <- gets $ getPL $ userPL uid
     case maybeUser of
-        Just user@U.User{U.pid=pid, U.monitorRef=ref, U.connection=conn} ->
+        Just user -> do
+            let
+                U.User{
+                    U.pid=pid,
+                    U.monitorRef=ref,
+                    U.connection=conn,
+                    U.pos=pos
+                    } = user
             addSideEffectS $ do
                 unmonitor ref
                 UE.switchArea pid aid
                 enter aid (U.userArea user) pid (Just fromArea) conn
+            addSignalS $ Disappearance (UId uid) Exit pos
         Nothing -> return ()
     modify $ usersL `modL` deleteUser uid
-    addSignalS $ Disappearance (UId uid) Exit
     return Nothing
 handleSignal signal = return $ Just signal
 
@@ -272,7 +280,6 @@ getBroadcastData ts = do
             object [
                 "areaId" .= aid,
                 "objects" .= concat commonObjects,
-                "signals" .= signals,
                 "timestamp" .= ts
                 ]
 
@@ -290,17 +297,22 @@ getBroadcastData ts = do
                 group reducer $ gg asteroids,
                 group userReducer $ gg $ usersData . users
                 ]
-        broadcastZone zone@(center:_) =
+
+        signalCells = groupByCells cellSize [] (flip (:)) signals M.empty
+        signalZones = M.map concat $ formZones signalCells
+
+        broadcastZone (pos, zone@(center:_)) =
             let objects = fst center
                 payload =
                     object [
                         "areaId" .= aid,
                         "objects" .= objects,
+                        "signals" .= M.findWithDefault [] pos signalZones,
                         "timestamp" .= ts
                         ]
             in (payload, concat $ map snd zone)
-        broadcastZone [] = (object [], [])
-        bd = map broadcastZone $ M.elems zones
+        broadcastZone (_, []) = (object [], [])
+        bd = map broadcastZone $ M.toList zones
         bd' = (commonPayload, connections) : bd
     return bd'
 

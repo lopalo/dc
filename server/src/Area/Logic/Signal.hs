@@ -10,7 +10,8 @@ import Data.Sequence (Seq)
 import Data.Aeson (ToJSON, FromJSON)
 
 import Types (UserId, AreaId)
-import Area.Types (ObjId, Pos)
+import Area.Types (Positioned(..), ObjId, Pos)
+import Area.Logic.Vector
 
 
 data AReason
@@ -40,8 +41,8 @@ instance Binary (DReason)
 
 
 data Signal
-    = Appearance {userId :: UserId, aReason :: AReason}
-    | Disappearance {objId :: ObjId, dReason :: DReason}
+    = Appearance {userId :: UserId, aReason :: AReason, pos :: Pos}
+    | Disappearance {objId :: ObjId, dReason :: DReason, pos :: Pos}
     | Shot {shooterPos :: Pos, targetPos :: Pos}
     | MoveAsteroid {objId :: ObjId, targetPos :: Pos}
     | JumpToArea {areaId :: AreaId, userId :: UserId}
@@ -53,6 +54,15 @@ instance ToJSON Signal
 instance FromJSON Signal
 
 instance Binary Signal
+
+instance Positioned Signal where
+
+    getPos Appearance{pos=p} = p
+    getPos Disappearance{pos=p} = p
+    getPos Shot{shooterPos=p, targetPos=p'} =
+        toPos $ fromPos p `add` fromPos p' `divide` 2
+
+    setPos p s = s{pos=p}
 
 
 type Signals = Seq Signal

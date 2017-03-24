@@ -42,11 +42,11 @@ httpProcess settings node host port  =
             scottyOptions = Options (HS.verbose settings) waiSettings
             clientPrefix = policy (stripPrefix "client/")
             clientDir = HS.clientDir settings
-            customPolicy =
-                only [
-                    ("", clientDir ++ "/index.html"),
-                    ("client/js/settings.json", HS.clientSettings settings)
-                    ]
+            customPolicy = only [
+                ("", clientDir ++ "/index.html"),
+                ("favicon.ico", clientDir ++ "/favicon.ico"),
+                ("client/js/settings.json", HS.clientSettings settings)
+                ]
             clientPolicy = clientPrefix >-> addBase clientDir
             staticMiddleware =
                 staticPolicy' cacheContainer $ customPolicy <|> clientPolicy

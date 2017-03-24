@@ -67,7 +67,9 @@ handleEnter state (Enter ua userPid maybeFromArea, conn)
                 }
             insUsr = usersL ^%= insertUser user
             reason = if isNothing maybeFromArea then LogIn else Entry
-            addSig = addSignal $ Appearance uid reason
+            addSig state'' =
+                let pos = U.pos $ usersData (users state'') M.! uid
+                in addSignal (Appearance uid reason pos) state''
         initConnection conn state'
         UE.syncState userPid $ U.userArea user
         return state'
@@ -99,7 +101,8 @@ handleMonitorNotification state (ProcessMonitorNotification ref _ _) =
         case ref `M.lookup` userMonitorRefIndex (users state) of
             Just uid ->
                 let delUser = usersL ^%= deleteUser uid
-                    addSig = addSignal $ Disappearance (UId uid) LogOut
+                    Just pos = getPL (userFieldPL uid posL) state
+                    addSig = addSignal $ Disappearance (UId uid) LogOut pos
                 in addSig $ delUser state
             Nothing -> state
 

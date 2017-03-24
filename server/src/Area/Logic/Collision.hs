@@ -112,8 +112,8 @@ findAllCollisions :: Colliders -> Collisions
 findAllCollisions colliderGroups = foldl' Set.union Set.empty groupCollisions
     where
         groupCollisions = map checkGroup $ M.elems colliderGroups
-        checkGroup field@(center:_) =
-            let colliders = foldl' Set.union Set.empty field
+        checkGroup zone@(center:_) =
+            let colliders = foldl' Set.union Set.empty zone
                 checkCollider collisions' coll =
                     Set.foldl (insertCollision coll) collisions' colliders
             in Set.foldl checkCollider Set.empty center
