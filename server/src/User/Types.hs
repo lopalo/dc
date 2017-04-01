@@ -19,6 +19,11 @@ import Types (UserId(..), UserName, AreaId, Size)
 
 ----messages----
 
+data GetUser = GetUser deriving (Generic, Typeable)
+
+instance Binary GetUser
+
+
 data Period = Period deriving (Generic, Typeable)
 
 instance Binary Period
@@ -65,6 +70,7 @@ instance Binary ClientCommand
 data User = User {
     userId :: !UserId,
     name :: !UserName,
+    passwordHash :: Int,
     area :: !AreaId,
     speed :: !Int, --units per second
     maxDurability :: !Int,
@@ -85,6 +91,7 @@ instance Persistent User where
         object [
             "id" .= userId u,
             "name" .= name u,
+            "password-hash" .= passwordHash u,
             "area" .= area u,
             "speed" .= speed u,
             "max-durability" .= maxDurability u,
@@ -99,6 +106,7 @@ instance Persistent User where
         User <$>
         v .: "id" <*>
         v .: "name" <*>
+        v .: "password-hash" <*>
         v .: "area" <*>
         v .: "speed" <*>
         v .: "max-durability" <*>

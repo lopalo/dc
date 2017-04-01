@@ -18,26 +18,89 @@
     </head>
     <body>
         <div class="container-fluid">
-            <div id="connect-form" class="form-horizontal col-xs-4 col-xs-offset-4">
+            <div id="auth" class="col-xs-4 col-xs-offset-4">
                 <h2 id="logo" class="text-center">
                     <img src="/client/img/logo.jpg" class="img-rounded">
                 </h2>
-                <div id="connect-error" class="form-group alert alert-danger"></div>
-                <div class="form-group">
-                    <label for="connect-address">Address</label>
-                    <select id="connect-address" class="form-control selectpicker">
-                    </select>
+                <div id="error" class="form-group alert alert-danger"></div>
+                <ul class="nav nav-tabs">
+                    <li class="active"><a data-toggle="tab" href="#login-form">Log In</a></li>
+                    <li><a data-toggle="tab" href="#signup-form">Sign Up</a></li>
+                </ul>
+                <div class="tab-content">
+                    <div id="login-form" class="tab-pane active">
+                        <div class="form-group">
+                            <label for="server-address">Address</label>
+                            <select id="server-address"
+                                    class="form-control server-address">
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="login">Login</label>
+                            <input id="login"
+                                   type="text"
+                                   class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="password">Password</label>
+                            <input id="password"
+                                   type="password"
+                                   class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <button type="button" id="submit-login" class="btn btn-default">
+                                Log In
+                            </button>
+                        </div>
+                    </div>
+                    <div id="signup-form" class="tab-pane">
+                        <div class="form-group">
+                            <label for="server-address">Address</label>
+                            <select id="server-address"
+                                    class="form-control server-address">
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="login">Login</label>
+                            <input id="login"
+                                   type="text"
+                                   class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="name">Name</label>
+                            <input id="name"
+                                   type="text"
+                                   class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="asset">Asset</label>
+                            <select id="asset"
+                                    class="form-control selectpicker">
+                                <option value='ship_1'>Ship 1</option>
+                                <option value='ship_2'>Ship 2</option>
+                                <option value='ship_3'>Ship 3</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="password">Password</label>
+                            <input id="password"
+                                   type="password"
+                                   class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="password">Confirm password</label>
+                            <input id="confirm-password"
+                                   type="password"
+                                   class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <button type="button" id="submit-signup"
+                                    class="btn btn-default">
+                                Sign Up
+                            </button>
+                        </div>
                 </div>
-                <div class="form-group">
-                    <label for="connect-name">Name</label>
-                    <input id="connect-name" type="text" class="form-control"
-                                                            value="anonymous">
-                </div>
-                <div class="form-group">
-                    <button type="button" id="connect" class="btn btn-default">
-                        Connect
-                    </button>
-                </div>
+            </div>
             </div>
             <div id="game">
                 <div id="viewport"></div>

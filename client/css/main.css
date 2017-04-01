@@ -19,7 +19,7 @@ body {
     display: none;
 }
 
-#connect-form {
+#auth {
     margin-top: 3%;
     padding-left: 3%;
     padding-right: 3%;
@@ -27,6 +27,19 @@ body {
     border-radius: 10px;
     border-color: #ffffff;
     overflow: hidden;
+}
+
+#auth .tab-pane {
+    margin-top: 1em;
+}
+
+
+#auth .nav li:not(.active) a {
+    color: #fff;
+}
+
+#auth .nav li:hover a {
+    color: #000;
 }
 
 #logo {

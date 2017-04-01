@@ -1,13 +1,13 @@
 {-# LANGUAGE DeriveGeneric, DeriveDataTypeable, OverloadedStrings #-}
 
-module DB.DB (dbProcess, putUser, getUser) where
+module DB.DB (dbProcess, putUser, getUser, registerUniqueName) where
 
 import GHC.Generics (Generic)
 import Data.Binary (Binary)
 import Data.Typeable (Typeable)
 import Prelude hiding (log)
 import Control.Monad (forever, when)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, isNothing)
 import Data.ByteString.Char8 (pack, unpack)
 import Data.ByteString.UTF8 (fromString)
 import Data.String.Utils (split, startswith)
@@ -19,7 +19,7 @@ import Control.Distributed.Process.Extras.Call (
     callResponse, callTimeout, multicall
     )
 import Database.LevelDB.Base (
-    DB, BatchOp(Put), get, write,
+    DB, BatchOp(Put), get, put, write,
     defaultReadOptions, defaultWriteOptions
     )
 import Data.Digest.CRC32 (crc32)
@@ -60,6 +60,13 @@ data PutUser = PutUser User deriving (Generic, Typeable)
 instance Binary PutUser
 
 
+data RegisterUniqueKey =
+    RegisterUniqueKey String String
+    deriving (Generic, Typeable)
+
+instance Binary RegisterUniqueKey
+
+
 updateTsKeyPrefix :: String
 updateTsKeyPrefix = "update-timestamp:"
 
@@ -76,6 +83,7 @@ loop db = forever $ safeReceive handlers ()
             prepareCall handlePutUser,
             prepareCall handleGetUpdateTs,
             prepareCall handleGetUser,
+            prepareCall handleRegisterUniqueKey,
             matchUnknown (return ())
             ]
 
@@ -103,6 +111,17 @@ handlePutUser db (PutUser user) = do
             ]
     write db defaultWriteOptions batch
     return (True, ())
+
+
+handleRegisterUniqueKey :: DB -> RegisterUniqueKey -> Process (Bool, ())
+handleRegisterUniqueKey db (RegisterUniqueKey key value) = do
+    let key' = fromString key
+    res <- get db defaultReadOptions key'
+    if isNothing res
+        then do
+            put db defaultWriteOptions key' $ fromString value
+            return (True, ())
+        else return (False, ())
 
 
 getShardForKey :: String -> TagPool -> Process [ProcessId]
@@ -165,8 +184,8 @@ getRecent msg key minReplicas tagPool = do
     return res
 
 
-put :: Serializable a => a -> String -> Int -> TagPool -> Process ()
-put msg key minReplicas tagPool = do
+putObj :: Serializable a => a -> String -> Int -> TagPool -> Process ()
+putObj msg key minReplicas tagPool = do
     userPid <- getSelfPid
     spawnLocal $ do
         dbPids <- getShardForKey key tagPool
@@ -190,4 +209,20 @@ putUser :: User -> Int -> TagPool -> Process ()
 putUser user minReplicas tagPool = do
     let key = show $ userId user
         msg = PutUser user
-    put msg key minReplicas tagPool
+    putObj msg key minReplicas tagPool
+
+
+registerUniqueName :: String -> UserId -> Int -> TagPool -> Process Bool
+registerUniqueName name uid minReplicas tagPool = do
+    let key = "name:" ++ name
+        value = show uid
+        msg = RegisterUniqueKey key value
+    dbPids <- getShardForKey key tagPool
+    tag <- getTag tagPool
+    responses <- multicall dbPids msg tag timeoutForCall
+    let values = [val | Just val <- responses]
+        failure = length values < minReplicas
+    when failure $ do
+        replicaAmountError key
+        terminate
+    return $ and values

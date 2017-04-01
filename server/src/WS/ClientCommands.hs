@@ -11,7 +11,7 @@ import Data.String.Utils (startswith)
 import WS.Connection (Connection, InputHandler, sendCmd, sendResponse, log)
 import qualified Area.External as AE
 import qualified User.External as UE
-import User.User (userProcess)
+import User.Auth (Login, Password, SignUpData, logIn, signUp)
 import Types (UserPid, AreaPid, RequestNumber, LogLevel(..), delPrefix)
 import Utils (evaluate)
 import Base.Logger (logException)
@@ -33,11 +33,18 @@ commandHandler ::
 commandHandler _ "echo" body req conn _ _ = do
     let Success txt = fromJSON body :: Result String
     seq txt $ sendResponse conn req $ "Echo: " ++ txt
-commandHandler settings "login" body 0 conn _ _ = do
-    let Success name = fromJSON body :: Result String
-    evaluate name
+commandHandler settings "log-in" body 0 conn _ _ = do
+    let Success (login, password) = fromJSON body :: Result (Login, Password)
+    evaluate login
+    evaluate password
     sendCmd conn "init" Null
-    spawnLocal $ userProcess name conn $ S.user settings
+    spawnLocal $ logIn login password conn $ S.user settings
+    return ()
+commandHandler settings "sign-up" body 0 conn _ _ = do
+    let Success signUpData = fromJSON body :: Result SignUpData
+    evaluate signUpData
+    sendCmd conn "init" Null
+    spawnLocal $ signUp signUpData conn $ S.user settings
     return ()
 commandHandler _ path body req conn _ (Just areaPid)
     | "area." `startswith` path =

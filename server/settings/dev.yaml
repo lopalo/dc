@@ -20,7 +20,7 @@ user:
     size: [80, 40]
     speed: 300 # 60 # units per second
     init-durability: 100
-    init-assets: [ship_1, ship_2, ship_3]
+    password-hash-salt: 777
     logout-seconds: 10
     period-milliseconds: 1000
     min-db-replicas: 1

@@ -1,24 +1,21 @@
 {-# LANGUAGE DeriveGeneric, DeriveDataTypeable, OverloadedStrings #-}
 
-module User.User (userProcess) where
+module User.User (userProcess, reconnect, getUser) where
 
 import Prelude hiding (log)
-import Control.Monad (forever, when, unless)
-import Control.Monad.Catch (onException)
-import Data.Maybe (fromMaybe)
-import Text.Printf (printf)
+import Control.Monad (forever, when)
 import qualified Data.Map.Strict as M
 import qualified Data.Sequence as Seq
 import Data.Foldable (toList)
-import System.Random (getStdGen)
 
 import Data.Aeson (ToJSON, Value, object, (.=))
 import Control.Distributed.Process hiding (reconnect, onException)
-import Control.Distributed.Process.Extras (TagPool, newTagPool)
+import Control.Distributed.Process.Extras (TagPool, getTag)
 import Control.Distributed.Process.Extras.Time (TimeUnit(..))
 import Control.Distributed.Process.Extras.Timer (sleepFor)
+import Control.Distributed.Process.Extras.Call (callResponse, callTimeout)
 
-import Utils (safeReceive, milliseconds, choice)
+import Utils (safeReceive, milliseconds, timeoutForCall)
 import Types (
     Ts, UserPid(UserPid), UserId(UserId),
     UserName, AreaId, LogLevel(..)
@@ -31,7 +28,7 @@ import qualified User.Settings as US
 import qualified Area.External as AE
 import qualified User.External as UE
 import qualified User.UserArea as UA
-import DB.DB (putUser, getUser)
+import DB.DB (putUser)
 import User.Types
 import User.State
 import User.ClientCommands (handleClientCommand)
@@ -85,6 +82,10 @@ handleReconnection state (Reconnection conn) = do
     where usr = user state
 
 
+handleGetUser :: State -> GetUser -> Process (User, State)
+handleGetUser state _ = return (user state, state)
+
+
 handleSyncState :: State -> UE.SyncState -> Process State
 handleSyncState state (UE.SyncState ua) = do
     let usr = user state
@@ -133,40 +134,15 @@ handleNewCacheValue state newCacheValue = do
     return state
 
 
-userProcess :: UserName -> C.Connection -> US.Settings -> Process ()
-userProcess userName conn userSettings = do
-    let uid = UserId userName
-        minReplicas = US.minDBReplicas userSettings
-        onDBError = C.sendErrorAndClose conn "Cannot load user from DB"
-    tagPool <- newTagPool
-    maybeUserPid <- globalWhereIs (show uid) tagPool
-    case maybeUserPid of
-        Just pid -> do
-            reconnect pid conn
-            terminate
-        Nothing -> return ()
+userProcess :: User -> C.Connection -> US.Settings -> TagPool -> Process ()
+userProcess usr conn userSettings tagPool = do
+    let uid = userId usr
+        UserId login = uid
     pid <- getSelfPid
     globalRegisterAsync (show uid) pid tagPool
-    res <- getUser uid minReplicas tagPool `onException` onDBError
-    (userAsset, _) <-
-        liftIO $ choice (US.initAssets userSettings) <$> getStdGen
-    let startArea = US.startArea userSettings
-        usr = fromMaybe newUser res
-        areaId = area usr
-        maxDur = US.initDurability userSettings
+    let areaId = area usr
+        minReplicas = US.minDBReplicas userSettings
         mConn = Just conn
-        newUser = User{
-            userId=uid,
-            name=userName,
-            area=startArea,
-            speed=US.speed userSettings,
-            maxDurability=maxDur,
-            durability=maxDur,
-            size=US.size userSettings,
-            asset=userAsset,
-            kills=0,
-            deaths=0
-            }
         state = State{
             user=usr,
             settings=userSettings,
@@ -180,7 +156,7 @@ userProcess userName conn userSettings = do
     initConnection conn state
     userPid <- makeSelfPid
     AE.enter areaId (userArea usr) userPid Nothing conn
-    log Info $ "Login: " ++ userName
+    log Info $ "Log In: " ++ login
     runPeriodic $ US.periodMilliseconds userSettings
     loop state
 
@@ -189,7 +165,7 @@ loop :: State -> Process ()
 loop state = safeReceive handlers state >>= loop
     where
         prepare h = match (h state)
-        --NOTE: handlers are matched by a type
+        prepareCall h = callResponse (h state)
         handlers = [
             prepare handlePeriod,
             prepare handleSyncState,
@@ -198,6 +174,7 @@ loop state = safeReceive handlers state >>= loop
             prepare handleSwitchArea,
             prepare handleMonitorNotification,
             prepare handleReconnection,
+            prepareCall handleGetUser,
             prepare handleNewCacheValue,
             matchUnknown (return state)
             ]
@@ -216,6 +193,13 @@ sendCmd conn cmd = C.sendCmd conn ("user." ++ cmd)
 
 makeSelfPid :: Process UserPid
 makeSelfPid = fmap UserPid getSelfPid
+
+
+getUser :: ProcessId -> TagPool -> Process User
+getUser pid tagPool = do
+    tag <- getTag tagPool
+    Just res <- callTimeout pid GetUser tag timeoutForCall
+    return res
 
 
 reconnect :: ProcessId -> C.Connection -> Process ()

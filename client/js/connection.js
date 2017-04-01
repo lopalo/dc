@@ -40,6 +40,10 @@ define(function (require) {
         close: function () {
             this._ws.close();
         },
+        error: function (error) {
+            this.lastError = error;
+            this.close();
+        },
         connect: function (address, timeout, onOpen, onTimeout) {
             var self = this;
             var ws;
